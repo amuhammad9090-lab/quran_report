@@ -1,0 +1,28 @@
+#================================================
+# Android - ExamBrowser
+#================================================
+
+# Gradle
+.gradle/
+gradle-wrapper.jar
+
+# Build
+/captures/
+.cxx/
+
+# Flutter Generated
+GeneratedPluginRegistrant.java
+
+# Local SDK
+local.properties
+
+# Signing (JANGAN DI-COMMIT)
+key.properties
+*.keystore
+*.jks
+
+# Build Scripts
+# Hapus komentar di bawah jika memang tidak ingin menyimpan wrapper
+# Tapi umumnya DIANJURKAN untuk tetap di-commit.
+# /gradlew
+# /gradlew.bat

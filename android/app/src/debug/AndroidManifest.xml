@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dibutuhkan Flutter tooling (hot reload/VM service) saat debug.
+         Tidak ikut ke build release. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>
