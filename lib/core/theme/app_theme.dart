@@ -40,8 +40,10 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: baseTextTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
+        // Disamakan dengan ukuran judul di Statistik/Laporan (headlineSmall
+        // w800), sebelumnya titleLarge w700 kelihatan kekecilan.
+        titleTextStyle: baseTextTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w800,
           color: colorScheme.onSurface,
         ),
         iconTheme: IconThemeData(color: colorScheme.onSurface),
