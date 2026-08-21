@@ -20,8 +20,7 @@ class AppTheme {
       isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
     );
 
-    // Warna dasar surface untuk card, dropdown menu, bottom sheet —
-    // disamakan biar dropdown/date-picker nggak "beda dunia" sama input lain.
+    // Warna dasar surface untuk card, dropdown menu, bottom sheet
     final surfaceElevated = isDark ? const Color(0xFF181F26) : Colors.white;
     final shadowColor = isDark
         ? Colors.black.withValues(alpha: 0.55)
@@ -41,13 +40,8 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        // Karena backgroundColor transparan, Flutter nggak bisa nebak
-        // otomatis kontras ikon status bar — di-set eksplisit biar
-        // konsisten sama status bar fix di MainShell.
         systemOverlayStyle:
             isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-        // Disamakan dengan ukuran judul di Statistik/Laporan (headlineSmall
-        // w800), sebelumnya titleLarge w700 kelihatan kekecilan.
         titleTextStyle: baseTextTheme.headlineSmall?.copyWith(
           fontWeight: FontWeight.w800,
           color: colorScheme.onSurface,
