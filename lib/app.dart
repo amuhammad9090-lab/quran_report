@@ -6,15 +6,15 @@ import 'core/theme/app_theme.dart';
 import 'providers/theme_provider.dart';
 import 'presentation/screens/home/main_shell.dart';
 
-class LaporanHafalanApp extends StatelessWidget {
-  const LaporanHafalanApp({super.key});
+class QuranReportApp extends StatelessWidget {
+  const QuranReportApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
 
     return MaterialApp(
-      title: 'Laporan Hafalan',
+      title: 'Quran Report',
       debugShowCheckedModeBanner: false,
       themeMode: themeProvider.mode,
       theme: AppTheme.light(),

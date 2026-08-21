@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 /// Kotak ikon bertinta lembut — satu-satunya sumber gaya "ikon dalam kotak
 /// warna soft" yang dipakai di SELURUH aplikasi (Home, form laporan,
@@ -738,6 +739,265 @@ class CategoryTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Kartu kelompok per tanggal — dipakai di halaman Detail Santri,
+/// Kehadiran, dan Rekap Bulanan (Statistik). Header tanggal + jumlah item,
+/// lalu baris-baris [rows] dipisah garis tipis, semuanya digabung jadi
+/// SATU card per tanggal (biar "digabung" senada gaya Home, bukan card
+/// bertumpuk per item).
+class DateGroupCard extends StatelessWidget {
+  final DateTime date;
+  final List<Widget> rows;
+
+  const DateGroupCard({super.key, required this.date, required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final dateLabel = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SoftIconBox(
+                  icon: Icons.calendar_today_rounded,
+                  color: cs.primary,
+                  size: 14,
+                  padding: 7,
+                  radius: 10,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    dateLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${rows.length}',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cs.primary),
+                  ),
+                ),
+              ],
+            ),
+            for (final row in rows) ...[
+              Divider(height: 22, color: Theme.of(context).dividerTheme.color),
+              row,
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Baris ringkas laporan tahfizh/tahsin di dalam [DateGroupCard] — dipakai
+/// di halaman Detail Santri. Cukup status + capaian + keterangan, tanpa
+/// nama (karena sudah dalam konteks 1 santri) dan tanpa tanggal (sudah
+/// jadi header grup).
+class RecordSummaryRow extends StatelessWidget {
+  final IconData statusIcon;
+  final Color statusColor;
+  final String statusLabel;
+  final String capaianText;
+  final Widget keteranganChip;
+  final VoidCallback? onTap;
+
+  const RecordSummaryRow({
+    super.key,
+    required this.statusIcon,
+    required this.statusColor,
+    required this.statusLabel,
+    required this.capaianText,
+    required this.keteranganChip,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            SoftIconBox(icon: statusIcon, color: statusColor, size: 15, padding: 7, radius: 10),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    statusLabel,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    capaianText,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            keteranganChip,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Baris ringkas 1 santri di dalam [DateGroupCard] — dipakai di halaman
+/// Kehadiran (siapa hadir/izin/alpa per tanggal).
+class SantriAttendanceRow extends StatelessWidget {
+  final String nama;
+  final String kelas;
+  final String halaqoh;
+  final Widget keteranganChip;
+  final VoidCallback? onTap;
+
+  const SantriAttendanceRow({
+    super.key,
+    required this.nama,
+    required this.kelas,
+    required this.halaqoh,
+    required this.keteranganChip,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 15,
+              backgroundColor: cs.primaryContainer,
+              child: Text(
+                nama.isNotEmpty ? nama[0].toUpperCase() : '?',
+                style: TextStyle(
+                  color: cs.onPrimaryContainer,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nama,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'Kelas $kelas • Halaqoh $halaqoh',
+                    style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            keteranganChip,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Header pinned seragam untuk halaman non-Home yang dibuka lewat push
+/// (Daftar Santri, Detail Santri, Kehadiran, Rekap Bulanan) — tombol
+/// kembali + judul + subjudul opsional, nempel di atas pas discroll,
+/// senada gaya SliverAppBar pinned di Home.
+class PushedPageHeader extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+
+  const PushedPageHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SliverAppBar(
+      pinned: true,
+      automaticallyImplyLeading: false,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.10),
+      toolbarHeight: subtitle != null ? 68 : 56,
+      titleSpacing: 4,
+      title: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle!,
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          if (trailing != null) trailing!,
+          const SizedBox(width: 4),
+        ],
       ),
     );
   }
