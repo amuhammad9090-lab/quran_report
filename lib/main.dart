@@ -27,7 +27,7 @@ void main() async {
         ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider.value(value: recordsProvider),
       ],
-      child: const QuranReportApp(),
+      child: const LaporanHafalanApp(),
     ),
   );
 }

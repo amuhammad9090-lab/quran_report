@@ -11,10 +11,17 @@ class AboutScreen extends StatelessWidget {
     final engine = QuranEngineService.instance;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tentang Aplikasi')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-        children: [
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            const PushedPageHeader(
+              title: 'Tentang Aplikasi',
+              subtitle: 'Informasi seputar aplikasi ini',
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+              sliver: SliverList.list(
+                children: [
           Center(
             child: Container(
               width: 96,
@@ -154,7 +161,11 @@ class AboutScreen extends StatelessWidget {
               ],
             ),
           ),
-        ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

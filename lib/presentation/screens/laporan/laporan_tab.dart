@@ -110,12 +110,12 @@ class _LaporanTabState extends State<LaporanTab> {
           'Laporan',
           style: Theme.of(context)
               .textTheme
-              .titleLarge
+              .headlineSmall
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         Text(
           'Rekap capaian tahsin & tahfizh santri',
-          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5),
+          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
         ),
       ],
     );
