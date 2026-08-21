@@ -24,150 +24,167 @@ class BerandaTab extends StatelessWidget {
       onLihatLaporan();
     }
 
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: provider.load,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 18),
-            WelcomeHeroCard(
-              title: 'Selamat datang di\nAplikasi Laporan Al Quran!',
-              subtitle:
-                  'Kelola laporan tahsin & tahfizh santri dengan mudah dan terstruktur.',
-              actions: Row(
-                children: [
-                  Expanded(
-                    child: HeroActionItem(
-                      label: 'Tambah\nLaporan',
-                      icon: Icons.add_rounded,
-                      onTap: () => showRecordFormSheet(context),
+    return RefreshIndicator(
+      onRefresh: provider.load,
+      // CustomScrollView + SliverAppBar pinned: sapaan "Assalamu'alaikum"
+      // nempel di atas (batas header persis di atas banner hijau), konten
+      // di bawahnya (mulai dari banner) scroll lewat di belakangnya.
+      child: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            automaticallyImplyLeading: false,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            scrolledUnderElevation: 3,
+            shadowColor: Colors.black.withValues(alpha: 0.10),
+            toolbarHeight: 76,
+            titleSpacing: 20,
+            title: _buildHeader(context),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            sliver: SliverList.list(
+              children: [
+                WelcomeHeroCard(
+                title: 'Selamat datang di\nAplikasi Laporan Al Quran!',
+                subtitle:
+                    'Kelola laporan tahsin & tahfizh santri dengan mudah dan terstruktur.',
+                actions: Row(
+                  children: [
+                    Expanded(
+                      child: HeroActionItem(
+                        label: 'Tambah\nLaporan',
+                        icon: Icons.add_rounded,
+                        onTap: () => showRecordFormSheet(context),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Colors.white.withValues(alpha: 0.18),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: HeroActionItem(
-                      label: 'Ekspor\nData',
-                      icon: Icons.ios_share_rounded,
-                      onTap: () => showExportSheet(context),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: Colors.white.withValues(alpha: 0.18),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: HeroActionItem(
+                        label: 'Ekspor\nData',
+                        icon: Icons.ios_share_rounded,
+                        onTap: () => showExportSheet(context),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            SectionCard(
-              title: 'Ringkasan Hari Ini',
-              onSeeAll: onLihatLaporan,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: StatItem(
-                      label: 'Laporan Baru',
-                      value: '${provider.laporanBaruHariIni}',
-                      icon: Icons.post_add_rounded,
-                      color: cs.primary,
+              const SizedBox(height: 20),
+              SectionCard(
+                title: 'Ringkasan Hari Ini',
+                onSeeAll: onLihatLaporan,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: StatItem(
+                        label: 'Laporan Baru',
+                        value: '${provider.laporanBaruHariIni}',
+                        icon: Icons.post_add_rounded,
+                        color: cs.primary,
+                      ),
                     ),
-                  ),
-                  const VDivider(),
-                  Expanded(
-                    child: StatItem(
-                      label: 'Total Baris',
-                      value: '${provider.totalBarisHariIni}',
-                      icon: Icons.format_list_numbered_rounded,
-                      color: const Color(0xFF6C5CE7),
+                    const VDivider(),
+                    Expanded(
+                      child: StatItem(
+                        label: 'Total Baris',
+                        value: '${provider.totalBarisHariIni}',
+                        icon: Icons.format_list_numbered_rounded,
+                        color: const Color(0xFF6C5CE7),
+                      ),
                     ),
-                  ),
-                  const VDivider(),
-                  Expanded(
-                    child: StatItem(
-                      label: 'Santri Aktif',
-                      value: '${provider.santriAktifHariIni}',
-                      icon: Icons.groups_2_rounded,
-                      color: const Color(0xFFB8860B),
+                    const VDivider(),
+                    Expanded(
+                      child: StatItem(
+                        label: 'Santri Aktif',
+                        value: '${provider.santriAktifHariIni}',
+                        icon: Icons.groups_2_rounded,
+                        color: const Color(0xFFB8860B),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            SectionCard(
-              title: 'Kategori Cepat',
-              onSeeAll: onLihatLaporan,
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CategoryTile(
-                          label: 'Tahfizh',
-                          icon: Icons.auto_stories_rounded,
-                          color: const Color(0xFF0E7C61),
-                          active: provider.filterStatus == HafalanStatus.tahfizh,
-                          onTap: () => goToFiltered(
-                            provider.filterStatus == HafalanStatus.tahfizh
-                                ? null
-                                : HafalanStatus.tahfizh,
+              const SizedBox(height: 20),
+              SectionCard(
+                title: 'Kategori Cepat',
+                onSeeAll: onLihatLaporan,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CategoryTile(
+                            label: 'Tahfizh',
+                            icon: Icons.auto_stories_rounded,
+                            color: const Color(0xFF0E7C61),
+                            active: provider.filterStatus == HafalanStatus.tahfizh,
+                            onTap: () => goToFiltered(
+                              provider.filterStatus == HafalanStatus.tahfizh
+                                  ? null
+                                  : HafalanStatus.tahfizh,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: CategoryTile(
-                          label: 'Tahsin',
-                          icon: Icons.menu_book_rounded,
-                          color: const Color(0xFFB8860B),
-                          active: provider.filterStatus == HafalanStatus.tahsin,
-                          onTap: () => goToFiltered(
-                            provider.filterStatus == HafalanStatus.tahsin
-                                ? null
-                                : HafalanStatus.tahsin,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: CategoryTile(
+                            label: 'Tahsin',
+                            icon: Icons.menu_book_rounded,
+                            color: const Color(0xFFB8860B),
+                            active: provider.filterStatus == HafalanStatus.tahsin,
+                            onTap: () => goToFiltered(
+                              provider.filterStatus == HafalanStatus.tahsin
+                                  ? null
+                                  : HafalanStatus.tahsin,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CategoryTile(
-                          label: 'Semua Santri',
-                          icon: Icons.groups_2_rounded,
-                          color: cs.primary,
-                          active: !provider.hasActiveFilters,
-                          onTap: () {
-                            provider.clearFilters();
-                            onLihatLaporan();
-                          },
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CategoryTile(
+                            label: 'Semua Santri',
+                            icon: Icons.groups_2_rounded,
+                            color: cs.primary,
+                            active: !provider.hasActiveFilters,
+                            onTap: () {
+                              provider.clearFilters();
+                              onLihatLaporan();
+                            },
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: CategoryTile(
-                          label: 'Filter Lainnya',
-                          icon: Icons.tune_rounded,
-                          color: const Color(0xFFD64545),
-                          onTap: () {
-                            onLihatLaporan();
-                            showFilterSheet(context);
-                          },
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: CategoryTile(
+                            label: 'Filter Lainnya',
+                            icon: Icons.tune_rounded,
+                            color: const Color(0xFFD64545),
+                            onTap: () {
+                              onLihatLaporan();
+                              showFilterSheet(context);
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

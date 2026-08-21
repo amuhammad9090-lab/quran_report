@@ -128,8 +128,119 @@ class SectionLabel extends StatelessWidget {
   }
 }
 
+/// Ikon di dalam kotak bulat bertinta warna — dipakai sebagai leading/prefix
+/// yang seragam di semua kolom form (tanggal, dropdown, input teks) biar
+/// "satu bahasa desain" dari atas sampai bawah.
+class FieldIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+  const FieldIcon({
+    super.key,
+    required this.icon,
+    required this.color,
+    this.size = 38,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(size * 0.29),
+      ),
+      child: Icon(icon, size: size * 0.5, color: color),
+    );
+  }
+}
+
+/// Dekorasi input seragam untuk semua kolom form (TextFormField &
+/// DropdownButtonFormField): ikon dalam kotak warna sebagai prefix, isian
+/// rounded-16 tanpa border, dengan aksen warna saat fokus/error.
+InputDecoration fieldDecoration(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  String? hint,
+  String? errorText,
+  Color? accent,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  final color = accent ?? cs.primary;
+  final fill = Theme.of(context).inputDecorationTheme.fillColor;
+  return InputDecoration(
+    labelText: label,
+    hintText: hint,
+    errorText: errorText,
+    filled: true,
+    fillColor: fill,
+    prefixIcon: Padding(
+      padding: const EdgeInsets.all(8),
+      child: FieldIcon(icon: icon, color: color, size: 34),
+    ),
+    prefixIconConstraints: const BoxConstraints(minWidth: 50, minHeight: 34),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide.none,
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: color, width: 1.6),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: cs.error, width: 1.2),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: cs.error, width: 1.6),
+    ),
+  );
+}
+
+/// Versi [InputDecorationTheme] dari [fieldDecoration] — dipakai widget yang
+/// minta tema, bukan instance dekorasi langsung (mis. [DropdownMenu]).
+InputDecorationTheme fieldDecorationTheme(
+  BuildContext context, {
+  required Color accent,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  final fill = Theme.of(context).inputDecorationTheme.fillColor;
+  return InputDecorationTheme(
+    filled: true,
+    fillColor: fill,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide.none,
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: accent, width: 1.6),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: cs.error, width: 1.2),
+    ),
+  );
+}
+
 /// Field gabungan dropdown + ketik bebas (pakai [DropdownMenu]) — dipakai
 /// buat Kelas/Halaqoh/Nama Santri: bisa pilih dari daftar, atau ketik baru.
+/// Diskin biar senada sama [fieldDecoration]: ikon dalam kotak warna,
+/// menu popup rounded matching card, bukan tampilan default Material.
 class DropdownTypeField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -137,6 +248,7 @@ class DropdownTypeField extends StatelessWidget {
   final IconData icon;
   final List<String> options;
   final String? errorText;
+  final Color? accent;
 
   const DropdownTypeField({
     super.key,
@@ -146,22 +258,104 @@ class DropdownTypeField extends StatelessWidget {
     required this.options,
     this.hint,
     this.errorText,
+    this.accent,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = accent ?? cs.primary;
     return DropdownMenu<String>(
       controller: controller,
       expandedInsets: EdgeInsets.zero,
       enableFilter: true,
       requestFocusOnTap: true,
-      leadingIcon: Icon(icon),
+      leadingIcon: Padding(
+        padding: const EdgeInsets.all(8),
+        child: FieldIcon(icon: icon, color: color, size: 34),
+      ),
+      trailingIcon: Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
+      selectedTrailingIcon:
+          Icon(Icons.expand_less_rounded, color: cs.onSurfaceVariant),
       label: Text(label),
       hintText: hint,
       errorText: errorText,
+      textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5),
+      inputDecorationTheme: fieldDecorationTheme(context, accent: color),
+      menuStyle: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(Theme.of(context).cardTheme.color),
+        elevation: const WidgetStatePropertyAll(6),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
       dropdownMenuEntries:
           options.map((o) => DropdownMenuEntry(value: o, label: o)).toList(),
       onSelected: (_) {},
+    );
+  }
+}
+
+/// Kartu section form (Tanggal, Identitas Santri, Status Capaian,
+/// Keterangan, dst) — judul kecil + ikon di atas, konten di bawah, dibungkus
+/// card senada dengan card lain di aplikasi (bukan cuma label polos).
+class FormSectionCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  const FormSectionCard({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: (Theme.of(context).cardTheme.shape as RoundedRectangleBorder?)
+                  ?.side
+                  .color ??
+              Colors.transparent,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: cs.primary),
+              const SizedBox(width: 7),
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurfaceVariant,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
     );
   }
 }

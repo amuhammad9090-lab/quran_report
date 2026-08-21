@@ -291,92 +291,122 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                     padding: EdgeInsets.fromLTRB(
                         20, 16, 20, mq.viewInsets.bottom + 24),
                     children: [
-                      const SectionLabel('TANGGAL'),
-                      _buildDateField(cs),
-                      const SizedBox(height: 20),
-                      const SectionLabel('IDENTITAS SANTRI'),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownTypeField(
-                              controller: _kelasCtrl,
-                              label: 'Kelas',
-                              hint: 'mis. 7, 8, 9',
-                              icon: Icons.class_outlined,
-                              options: dataset.distinctKelas,
-                              errorText: _kelasError,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownTypeField(
-                              controller: _halaqohCtrl,
-                              label: 'Halaqoh',
-                              hint: 'mis. A, B, C',
-                              icon: Icons.groups_outlined,
-                              options: dataset.distinctHalaqoh,
-                              errorText: _halaqohError,
-                            ),
-                          ),
-                        ],
+                      FormSectionCard(
+                        title: 'Tanggal',
+                        icon: Icons.event_rounded,
+                        child: _buildDateField(cs),
                       ),
-                      const SizedBox(height: 12),
-                      DropdownTypeField(
-                        controller: _namaCtrl,
-                        label: 'Nama Anak',
-                        icon: Icons.person_outline_rounded,
-                        options: dataset.distinctNamaSantri,
-                        errorText: _namaError,
-                      ),
-                      const SizedBox(height: 20),
-                      const SectionLabel('STATUS CAPAIAN'),
-                      _buildStatusSelector(cs),
-                      if (!_wajibIsiStatusCapaian) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.info_outline_rounded,
-                                  size: 16, color: Color(0xFFB8860B)),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Keterangan "${_keterangan.label}" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan.',
-                                  style: const TextStyle(
-                                    fontSize: 11.5,
-                                    color: Color(0xFFB8860B),
-                                    fontWeight: FontWeight.w600,
+                      const SizedBox(height: 16),
+                      FormSectionCard(
+                        title: 'Identitas Santri',
+                        icon: Icons.badge_outlined,
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownTypeField(
+                                    controller: _kelasCtrl,
+                                    label: 'Kelas',
+                                    hint: 'mis. 7, 8, 9',
+                                    icon: Icons.class_outlined,
+                                    options: dataset.distinctKelas,
+                                    errorText: _kelasError,
+                                    accent: cs.primary,
                                   ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: DropdownTypeField(
+                                    controller: _halaqohCtrl,
+                                    label: 'Halaqoh',
+                                    hint: 'mis. A, B, C',
+                                    icon: Icons.groups_outlined,
+                                    options: dataset.distinctHalaqoh,
+                                    errorText: _halaqohError,
+                                    accent: cs.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownTypeField(
+                              controller: _namaCtrl,
+                              label: 'Nama Anak',
+                              icon: Icons.person_outline_rounded,
+                              options: dataset.distinctNamaSantri,
+                              errorText: _namaError,
+                              accent: cs.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FormSectionCard(
+                        title: 'Status Capaian',
+                        icon: Icons.trending_up_rounded,
+                        child: Column(
+                          children: [
+                            _buildStatusSelector(cs),
+                            if (!_wajibIsiStatusCapaian) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.info_outline_rounded,
+                                        size: 16, color: Color(0xFFB8860B)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Keterangan "${_keterangan.label}" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan.',
+                                        style: const TextStyle(
+                                          fontSize: 11.5,
+                                          color: Color(0xFFB8860B),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
-                          ),
+                            const SizedBox(height: 16),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              child: _status == HafalanStatus.tahfizh
+                                  ? _buildTahfizhFields(cs)
+                                  : _buildTahsinFields(cs),
+                            ),
+                          ],
                         ),
-                      ],
-                      const SizedBox(height: 18),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 220),
-                        child: _status == HafalanStatus.tahfizh
-                            ? _buildTahfizhFields(cs)
-                            : _buildTahsinFields(cs),
                       ),
-                      const SizedBox(height: 20),
-                      const SectionLabel('KETERANGAN'),
-                      _buildKeteranganSelector(cs),
-                      const SizedBox(height: 20),
-                      const SectionLabel('CATATAN (OPSIONAL)'),
-                      TextFormField(
-                        controller: _catatanCtrl,
-                        maxLines: 3,
-                        decoration: const InputDecoration(
-                          hintText: 'Catatan tambahan untuk musyrif/ortu...',
+                      const SizedBox(height: 16),
+                      FormSectionCard(
+                        title: 'Keterangan',
+                        icon: Icons.fact_check_outlined,
+                        child: _buildKeteranganSelector(cs),
+                      ),
+                      const SizedBox(height: 16),
+                      FormSectionCard(
+                        title: 'Catatan (Opsional)',
+                        icon: Icons.edit_note_rounded,
+                        child: TextFormField(
+                          controller: _catatanCtrl,
+                          maxLines: 3,
+                          decoration: fieldDecoration(
+                            context,
+                            icon: Icons.notes_rounded,
+                            label: 'Catatan',
+                            hint: 'Catatan tambahan untuk musyrif/ortu...',
+                            accent: cs.primary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 28),
@@ -407,62 +437,60 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
   }
 
   Widget _buildDateField(ColorScheme cs) {
+    // Skin senada dengan kolom lain (fieldDecoration: ikon dalam kotak
+    // warna, rounded-16, filled) — nggak beda desain lagi dari kolom teks.
     return InkWell(
       onTap: _pickDate,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Tanggal',
-          prefixIcon: Icon(Icons.calendar_today_rounded),
+        decoration: fieldDecoration(
+          context,
+          icon: Icons.calendar_month_rounded,
+          label: 'Tanggal Laporan',
+          accent: cs.primary,
+        ).copyWith(
+          suffixIcon:
+              Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
         ),
-        child: Text(DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(_tanggal)),
+        child: Text(
+          DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(_tanggal),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5),
+        ),
       ),
     );
   }
 
   Widget _buildStatusSelector(ColorScheme cs) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+    // Bungkus card lama dilepas — section-nya sekarang sudah dibungkus
+    // FormSectionCard di build(), jadi cukup Row polos biar nggak dobel-kartu.
+    return Row(
+      children: [
+        Expanded(
+          child: CategoryTile(
+            label: HafalanStatus.tahfizh.label,
+            icon: HafalanStatus.tahfizh.icon,
+            color: cs.primary,
+            active: _status == HafalanStatus.tahfizh,
+            onTap: () => setState(() {
+              _status = HafalanStatus.tahfizh;
+              _generateError = null;
+            }),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: CategoryTile(
-              label: HafalanStatus.tahfizh.label,
-              icon: HafalanStatus.tahfizh.icon,
-              color: cs.primary,
-              active: _status == HafalanStatus.tahfizh,
-              onTap: () => setState(() {
-                _status = HafalanStatus.tahfizh;
-                _generateError = null;
-              }),
-            ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: CategoryTile(
+            label: HafalanStatus.tahsin.label,
+            icon: HafalanStatus.tahsin.icon,
+            color: const Color(0xFFB8860B),
+            active: _status == HafalanStatus.tahsin,
+            onTap: () => setState(() {
+              _status = HafalanStatus.tahsin;
+              _generateError = null;
+            }),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: CategoryTile(
-              label: HafalanStatus.tahsin.label,
-              icon: HafalanStatus.tahsin.icon,
-              color: const Color(0xFFB8860B),
-              active: _status == HafalanStatus.tahsin,
-              onTap: () => setState(() {
-                _status = HafalanStatus.tahsin;
-                _generateError = null;
-              }),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -474,10 +502,16 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         DropdownButtonFormField<int>(
           initialValue: _surahNumber,
           isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Surah',
-            prefixIcon: Icon(Icons.menu_book_rounded),
+          borderRadius: BorderRadius.circular(16),
+          icon: Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
+          decoration: fieldDecoration(
+            context,
+            icon: Icons.menu_book_rounded,
+            label: 'Surah',
+            accent: cs.primary,
           ),
+          style: TextStyle(
+              fontWeight: FontWeight.w600, fontSize: 14.5, color: cs.onSurface),
           items: kSurahNames.entries
               .map((e) => DropdownMenuItem(
                   value: e.key, child: Text('${e.key}. ${e.value}')))
@@ -497,7 +531,12 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
               child: TextFormField(
                 controller: _ayatMulaiCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Dari Ayat'),
+                decoration: fieldDecoration(
+                  context,
+                  icon: Icons.first_page_rounded,
+                  label: 'Dari Ayat',
+                  accent: cs.primary,
+                ),
                 onChanged: (_) => setState(() => _generated = null),
                 validator: (v) => !_wajibIsiStatusCapaian
                     ? null
@@ -509,7 +548,12 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
               child: TextFormField(
                 controller: _ayatSelesaiCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Sampai Ayat'),
+                decoration: fieldDecoration(
+                  context,
+                  icon: Icons.last_page_rounded,
+                  label: 'Sampai Ayat',
+                  accent: cs.primary,
+                ),
                 onChanged: (_) => setState(() => _generated = null),
                 validator: (v) => !_wajibIsiStatusCapaian
                     ? null
@@ -685,10 +729,16 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         DropdownButtonFormField<WafaLevel>(
           initialValue: _wafaLevel,
           isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Jenjang WAFA',
-            prefixIcon: Icon(Icons.auto_stories_outlined),
+          borderRadius: BorderRadius.circular(16),
+          icon: Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
+          decoration: fieldDecoration(
+            context,
+            icon: Icons.auto_stories_outlined,
+            label: 'Jenjang WAFA',
+            accent: const Color(0xFFB8860B),
           ),
+          style: TextStyle(
+              fontWeight: FontWeight.w600, fontSize: 14.5, color: cs.onSurface),
           items: WafaLevel.values
               .map((w) => DropdownMenuItem(value: w, child: Text(w.label)))
               .toList(),
@@ -700,10 +750,12 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         const SizedBox(height: 12),
         TextFormField(
           controller: _halamanWafaCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Halaman',
-            hintText: 'mis. 12 atau 12-13',
-            prefixIcon: Icon(Icons.tag_rounded),
+          decoration: fieldDecoration(
+            context,
+            icon: Icons.tag_rounded,
+            label: 'Halaman',
+            hint: 'mis. 12 atau 12-13',
+            accent: const Color(0xFFB8860B),
           ),
           validator: (v) => !_wajibIsiStatusCapaian
               ? null
@@ -714,18 +766,19 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
   }
 
   Widget _buildKeteranganSelector(ColorScheme cs) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: Keterangan.values.map((k) {
-        final selected = _keterangan == k;
-        final color = _keteranganColor(k);
-        return InkWell(
+    // Dibuat justify (Expanded per tombol, 2 baris 3+2) biar tepinya rata
+    // rapi — bukan Wrap bebas yang tepinya bergerigi kalau labelnya beda-beda
+    // panjang.
+    Widget chip(Keterangan k) {
+      final selected = _keterangan == k;
+      final color = _keteranganColor(k);
+      return Expanded(
+        child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () => setState(() => _keterangan = k),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
               color: selected
                   ? color.withValues(alpha: 0.14)
@@ -734,16 +787,17 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
               border: Border.all(
                   color: selected ? color : Colors.transparent, width: 1.3),
             ),
-            child: Row(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(k.icon,
-                    size: 15, color: selected ? color : cs.onSurfaceVariant),
-                const SizedBox(width: 6),
+                    size: 17, color: selected ? color : cs.onSurfaceVariant),
+                const SizedBox(height: 4),
                 Text(
-                  k.label,
+                  k.shortLabel,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: selected ? color : cs.onSurfaceVariant,
                   ),
@@ -751,8 +805,29 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
               ],
             ),
           ),
+        ),
+      );
+    }
+
+    final values = Keterangan.values;
+    final firstRow = values.sublist(0, 3);
+    final secondRow = values.sublist(3);
+
+    Widget spacedRow(List<Keterangan> row) => Row(
+          children: [
+            for (int i = 0; i < row.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              chip(row[i]),
+            ],
+          ],
         );
-      }).toList(),
+
+    return Column(
+      children: [
+        spacedRow(firstRow),
+        const SizedBox(height: 8),
+        spacedRow(secondRow),
+      ],
     );
   }
 
