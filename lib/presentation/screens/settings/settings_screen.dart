@@ -28,26 +28,14 @@ class SettingsScreen extends StatelessWidget {
             elevation: 0,
             scrolledUnderElevation: 3,
             shadowColor: Colors.black.withValues(alpha: 0.10),
-            toolbarHeight: 82,
+            toolbarHeight: 56,
             titleSpacing: 20,
-            title: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Ukuran & bobot disamakan dengan header Statistik/Laporan.
-                Text(
-                  'Pengaturan',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Kelola tampilan & data aplikasi',
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                ),
-              ],
+            title: Text(
+              'Pengaturan',
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
           SliverPadding(

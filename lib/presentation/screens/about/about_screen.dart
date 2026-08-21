@@ -16,7 +16,6 @@ class AboutScreen extends StatelessWidget {
           slivers: [
             const PushedPageHeader(
               title: 'Tentang Aplikasi',
-              subtitle: 'Informasi seputar aplikasi ini',
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
@@ -50,7 +49,7 @@ class AboutScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            'Laporan Hafalan',
+            'Quran Report',
             textAlign: TextAlign.center,
             style: Theme.of(context)
                 .textTheme
@@ -61,7 +60,7 @@ class AboutScreen extends StatelessWidget {
           Text(
             'Versi 1.0.0',
             textAlign: TextAlign.center,
-            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13.5),
           ),
           const SizedBox(height: 24),
           Card(
@@ -75,7 +74,7 @@ class AboutScreen extends StatelessWidget {
                       Icon(Icons.info_outline_rounded, size: 18, color: cs.primary),
                       const SizedBox(width: 8),
                       const Text('Tentang',
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -84,7 +83,7 @@ class AboutScreen extends StatelessWidget {
                     '(tahfizh) dan bacaan (tahsin) Al-Qur\'an santri, lengkap dengan '
                     'generator baris setoran otomatis berbasis pemetaan baris mushaf '
                     'rasm Utsmani (Madinah 15 baris).',
-                    style: TextStyle(fontSize: 13.5, height: 1.55),
+                    style: TextStyle(fontSize: 14.5, height: 1.55),
                   ),
                 ],
               ),
@@ -140,13 +139,13 @@ class AboutScreen extends StatelessWidget {
                 const Text(
                   'Dibuat untuk kemudahan para musyrif/ah',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '© 2026 MiraiLabs  •  Arie Muhammad',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 14),
                 Text(
@@ -154,7 +153,7 @@ class AboutScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontStyle: FontStyle.italic,
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     color: cs.onSurfaceVariant,
                   ),
                 ),
@@ -209,7 +208,7 @@ class _InfoRow extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     color: cs.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
                   ),
@@ -218,7 +217,7 @@ class _InfoRow extends StatelessWidget {
                 Text(
                   value,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 13.5, height: 1.35),
+                      fontWeight: FontWeight.w700, fontSize: 14.5, height: 1.35),
                 ),
               ],
             ),

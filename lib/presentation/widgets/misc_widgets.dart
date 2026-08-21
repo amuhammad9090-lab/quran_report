@@ -150,7 +150,7 @@ class SectionLabel extends StatelessWidget {
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 14.5,
                 fontWeight: FontWeight.w700,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 letterSpacing: 0.2,
@@ -197,13 +197,13 @@ class FieldIcon extends StatelessWidget {
 /// DropdownButtonFormField): ikon dalam kotak warna sebagai prefix, isian
 /// rounded-16 tanpa border, dengan aksen warna saat fokus/error.
 InputDecoration fieldDecoration(
-  BuildContext context, {
-  required IconData icon,
-  required String label,
-  String? hint,
-  String? errorText,
-  Color? accent,
-}) {
+    BuildContext context, {
+      required IconData icon,
+      required String label,
+      String? hint,
+      String? errorText,
+      Color? accent,
+    }) {
   final cs = Theme.of(context).colorScheme;
   final color = accent ?? cs.primary;
   final fill = Theme.of(context).inputDecorationTheme.fillColor;
@@ -247,9 +247,9 @@ InputDecoration fieldDecoration(
 /// Versi [InputDecorationTheme] dari [fieldDecoration] — dipakai widget yang
 /// minta tema, bukan instance dekorasi langsung (mis. [DropdownMenu]).
 InputDecorationTheme fieldDecorationTheme(
-  BuildContext context, {
-  required Color accent,
-}) {
+    BuildContext context, {
+      required Color accent,
+    }) {
   final cs = Theme.of(context).colorScheme;
   final fill = Theme.of(context).inputDecorationTheme.fillColor;
   return InputDecorationTheme(
@@ -314,7 +314,7 @@ class DropdownTypeField extends StatelessWidget {
       ),
       trailingIcon: Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
       selectedTrailingIcon:
-          Icon(Icons.expand_less_rounded, color: cs.onSurfaceVariant),
+      Icon(Icons.expand_less_rounded, color: cs.onSurfaceVariant),
       // Nggak pakai `label:` (itu yang bikin teksnya "terbang" ke atas pas
       // di-tap) — pakai hintText aja, tetap kelihatan selama kolom kosong.
       hintText: hint != null ? '$label ($hint)' : label,
@@ -329,7 +329,7 @@ class DropdownTypeField extends StatelessWidget {
         ),
       ),
       dropdownMenuEntries:
-          options.map((o) => DropdownMenuEntry(value: o, label: o)).toList(),
+      options.map((o) => DropdownMenuEntry(value: o, label: o)).toList(),
       onSelected: (_) {},
     );
   }
@@ -980,16 +980,13 @@ class PushedPageHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (subtitle != null)
                   Text(
                     subtitle!,
-                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                    style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
                     overflow: TextOverflow.ellipsis,
                   ),
               ],

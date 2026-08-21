@@ -11,19 +11,22 @@ import '../../widgets/misc_widgets.dart';
 
 /// Menampilkan modal bottom sheet full-height untuk tambah/edit laporan.
 Future<void> showRecordFormSheet(BuildContext context,
-    {SantriRecord? existing}) {
+    {SantriRecord? existing, String? initialFolderId}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => RecordFormSheet(existing: existing),
+    builder: (_) => RecordFormSheet(existing: existing, initialFolderId: initialFolderId),
   );
 }
 
 class RecordFormSheet extends StatefulWidget {
   final SantriRecord? existing;
-  const RecordFormSheet({super.key, this.existing});
+  // Kalau laporan ini dibuat langsung dari dalam halaman folder, laporan
+  // baru otomatis masuk ke folder tersebut.
+  final String? initialFolderId;
+  const RecordFormSheet({super.key, this.existing, this.initialFolderId});
 
   @override
   State<RecordFormSheet> createState() => _RecordFormSheetState();
@@ -231,6 +234,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       halamanWafa: isTahsin ? _halamanWafaCtrl.text.trim() : null,
       catatan:
           _catatanCtrl.text.trim().isEmpty ? null : _catatanCtrl.text.trim(),
+      folderId: widget.existing?.folderId ?? widget.initialFolderId,
     );
 
     context.read<RecordsProvider>().upsert(record);
@@ -772,9 +776,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
   }
 
   Widget _buildKeteranganSelector(ColorScheme cs) {
-    // Dibuat justify (Expanded per tombol, 2 baris 3+2) biar tepinya rata
-    // rapi — bukan Wrap bebas yang tepinya bergerigi kalau labelnya beda-beda
-    // panjang.
+    // Dibuat justify
     Widget chip(Keterangan k) {
       final selected = _keterangan == k;
       final color = _keteranganColor(k);
@@ -815,7 +817,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       );
     }
 
-    final values = Keterangan.values;
+    const values = Keterangan.values;
     final firstRow = values.sublist(0, 3);
     final secondRow = values.sublist(3);
 

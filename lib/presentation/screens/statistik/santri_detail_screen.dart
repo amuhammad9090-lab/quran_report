@@ -17,7 +17,8 @@ class SantriDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<RecordsProvider>();
-    final cs = Theme.of(context).colorScheme;
+    Theme.of(context).colorScheme;
+
     final records = provider.recordsForSantri(namaAnak);
     final grouped = provider.groupByDate(records);
     final dates = grouped.keys.toList();
@@ -36,7 +37,7 @@ class SantriDetailScreen extends StatelessWidget {
               subtitle: latest != null ? 'Kelas ${latest.kelas} • Halaqoh ${latest.halaqoh}' : null,
             ),
             if (records.isEmpty)
-              SliverFillRemaining(
+              const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
                   icon: Icons.inbox_rounded,

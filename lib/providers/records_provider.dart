@@ -99,6 +99,50 @@ class RecordsProvider extends ChangeNotifier {
     await load();
   }
 
+  // --- Folder ---
+
+  /// Laporan yang tidak berada di folder mana pun, dengan search/filter
+  /// aktif tetap diterapkan — ini yang tampil di section "Laporan".
+  List<SantriRecord> get filteredRoot =>
+      filtered.where((r) => r.folderId == null).toList();
+
+  /// Semua laporan di dalam satu folder (tidak terpengaruh search/filter
+  /// tab Laporan), terbaru duluan.
+  List<SantriRecord> recordsInFolder(String folderId) {
+    final list = _all.where((r) => r.folderId == folderId).toList()
+      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+    return list;
+  }
+
+  int countInFolder(String folderId) => _all.where((r) => r.folderId == folderId).length;
+
+  SantriRecord? _findById(String id) {
+    for (final r in _all) {
+      if (r.id == id) return r;
+    }
+    return null;
+  }
+
+  Future<void> moveToFolder(String recordId, String? folderId) async {
+    final record = _findById(recordId);
+    if (record == null) return;
+    await StorageService.instance.upsert(
+      folderId == null ? record.copyWith(clearFolder: true) : record.copyWith(folderId: folderId),
+    );
+    await load();
+  }
+
+  Future<void> moveManyToFolder(Iterable<String> recordIds, String? folderId) async {
+    for (final id in recordIds) {
+      final record = _findById(id);
+      if (record == null) continue;
+      await StorageService.instance.upsert(
+        folderId == null ? record.copyWith(clearFolder: true) : record.copyWith(folderId: folderId),
+      );
+    }
+    await load();
+  }
+
   Future<void> clearAllData() async {
     await StorageService.instance.clearAll();
     clearFilters();

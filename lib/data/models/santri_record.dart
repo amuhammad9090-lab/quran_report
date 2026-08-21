@@ -25,6 +25,10 @@ class SantriRecord {
 
   final String? catatan;
 
+  // Folder tempat laporan ini disimpan (null = tidak di dalam folder mana pun,
+  // tampil di section "Laporan" biasa).
+  final String? folderId;
+
   SantriRecord({
     required this.id,
     required this.tanggal,
@@ -43,6 +47,7 @@ class SantriRecord {
     this.wafaLevel,
     this.halamanWafa,
     this.catatan,
+    this.folderId,
   });
 
   SantriRecord copyWith({
@@ -61,8 +66,10 @@ class SantriRecord {
     WafaLevel? wafaLevel,
     String? halamanWafa,
     String? catatan,
+    String? folderId,
     bool clearTahfizh = false,
     bool clearTahsin = false,
+    bool clearFolder = false,
   }) {
     return SantriRecord(
       id: id,
@@ -82,6 +89,7 @@ class SantriRecord {
       wafaLevel: clearTahsin ? null : (wafaLevel ?? this.wafaLevel),
       halamanWafa: clearTahsin ? null : (halamanWafa ?? this.halamanWafa),
       catatan: catatan ?? this.catatan,
+      folderId: clearFolder ? null : (folderId ?? this.folderId),
     );
   }
 
@@ -117,6 +125,7 @@ class SantriRecord {
         'wafaLevel': wafaLevel?.name,
         'halamanWafa': halamanWafa,
         'catatan': catatan,
+        'folderId': folderId,
       };
 
   factory SantriRecord.fromJson(Map<String, dynamic> json) => SantriRecord(
@@ -141,5 +150,6 @@ class SantriRecord {
             : null,
         halamanWafa: json['halamanWafa'] as String?,
         catatan: json['catatan'] as String?,
+        folderId: json['folderId'] as String?,
       );
 }

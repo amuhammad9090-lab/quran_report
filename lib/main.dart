@@ -6,6 +6,7 @@ import 'app.dart';
 import 'data/services/quran_engine_service.dart';
 import 'data/services/storage_service.dart';
 import 'providers/records_provider.dart';
+import 'providers/folders_provider.dart';
 import 'providers/theme_provider.dart';
 
 void main() async {
@@ -21,13 +22,17 @@ void main() async {
   final recordsProvider = RecordsProvider();
   await recordsProvider.load();
 
+  final foldersProvider = FoldersProvider();
+  await foldersProvider.load();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider.value(value: recordsProvider),
+        ChangeNotifierProvider.value(value: foldersProvider),
       ],
-      child: const LaporanHafalanApp(),
+      child: const QuranReportApp(),
     ),
   );
 }

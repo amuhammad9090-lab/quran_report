@@ -7,18 +7,28 @@ import '../../../data/models/santri_record.dart';
 import '../../../data/services/export_service.dart';
 import '../../../providers/records_provider.dart';
 
-Future<void> showExportSheet(BuildContext context) {
+Future<void> showExportSheet(
+  BuildContext context, {
+  List<SantriRecord>? records,
+  String? judul,
+}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const ExportSheet(),
+    builder: (_) => ExportSheet(fixedRecords: records, judul: judul),
   );
 }
 
 class ExportSheet extends StatefulWidget {
-  const ExportSheet({super.key});
+  // Kalau diisi (mis. dari halaman folder), sheet ini export data yang
+  // sudah ditentukan dari luar, dan opsi "filter aktif / semua data"
+  // disembunyikan.
+  final List<SantriRecord>? fixedRecords;
+  final String? judul;
+
+  const ExportSheet({super.key, this.fixedRecords, this.judul});
 
   @override
   State<ExportSheet> createState() => _ExportSheetState();
@@ -29,9 +39,12 @@ class _ExportSheetState extends State<ExportSheet> {
   bool _loading = false;
   ExportFormat? _loadingFormat;
 
+  bool get _isFixed => widget.fixedRecords != null;
+
   Future<void> _doExport(ExportFormat format) async {
     final provider = context.read<RecordsProvider>();
-    final List<SantriRecord> records = _useFilteredOnly ? provider.filtered : provider.all;
+    final List<SantriRecord> records =
+        widget.fixedRecords ?? (_useFilteredOnly ? provider.filtered : provider.all);
 
     if (records.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -46,7 +59,7 @@ class _ExportSheetState extends State<ExportSheet> {
     });
 
     try {
-      const judul = 'Laporan Capaian Hafalan Al-Quran';
+      final judul = widget.judul ?? 'Laporan Capaian Hafalan Al-Quran';
       File file;
       switch (format) {
         case ExportFormat.pdf:
@@ -80,7 +93,8 @@ class _ExportSheetState extends State<ExportSheet> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final provider = context.watch<RecordsProvider>();
-    final count = _useFilteredOnly ? provider.filtered.length : provider.all.length;
+    final count = widget.fixedRecords?.length ??
+        (_useFilteredOnly ? provider.filtered.length : provider.all.length);
 
     return SafeArea(
       child: Container(
@@ -111,36 +125,37 @@ class _ExportSheetState extends State<ExportSheet> {
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
             ),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(14),
+            if (!_isFixed)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    RadioListTile<bool>(
+                      value: true,
+                      // ignore: deprecated_member_use
+                      groupValue: _useFilteredOnly,
+                      // ignore: deprecated_member_use
+                      onChanged: (v) => setState(() => _useFilteredOnly = v ?? true),
+                      title: const Text('Sesuai filter/pencarian aktif', style: TextStyle(fontSize: 13.5)),
+                      dense: true,
+                    ),
+                    RadioListTile<bool>(
+                      value: false,
+                      // ignore: deprecated_member_use
+                      groupValue: _useFilteredOnly,
+                      // ignore: deprecated_member_use
+                      onChanged: (v) => setState(() => _useFilteredOnly = v ?? false),
+                      title: const Text('Semua data', style: TextStyle(fontSize: 13.5)),
+                      dense: true,
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                children: [
-                  RadioListTile<bool>(
-                    value: true,
-                    // ignore: deprecated_member_use
-                    groupValue: _useFilteredOnly,
-                    // ignore: deprecated_member_use
-                    onChanged: (v) => setState(() => _useFilteredOnly = v ?? true),
-                    title: const Text('Sesuai filter/pencarian aktif', style: TextStyle(fontSize: 13.5)),
-                    dense: true,
-                  ),
-                  RadioListTile<bool>(
-                    value: false,
-                    // ignore: deprecated_member_use
-                    groupValue: _useFilteredOnly,
-                    // ignore: deprecated_member_use
-                    onChanged: (v) => setState(() => _useFilteredOnly = v ?? false),
-                    title: const Text('Semua data', style: TextStyle(fontSize: 13.5)),
-                    dense: true,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+            SizedBox(height: _isFixed ? 4 : 20),
             _ExportOptionTile(
               icon: Icons.picture_as_pdf_rounded,
               color: const Color(0xFFD64545),

@@ -5,6 +5,8 @@ import '../record_form/record_form_sheet.dart';
 import '../settings/settings_screen.dart';
 import '../laporan/laporan_tab.dart';
 import '../statistik/statistik_tab.dart';
+import '../folder/folder_form_sheet.dart';
+import '../../widgets/speed_dial_fab.dart';
 import 'beranda_tab.dart';
 
 /// Shell utama aplikasi — bottom navigation 4 tab (Beranda, Laporan,
@@ -19,6 +21,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+  bool _laporanSelecting = false;
 
   void _switchTab(int index) {
     if (index == _index) return;
@@ -55,16 +58,22 @@ class _MainShellState extends State<MainShell> {
           index: _index,
           children: [
             BerandaTab(onLihatLaporan: _goToLaporan),
-            const LaporanTab(),
+            LaporanTab(
+              onSelectionModeChanged: (v) => setState(() => _laporanSelecting = v),
+            ),
             const StatistikTab(),
             const SettingsScreen(),
           ],
         ),
-        floatingActionButton: _index == 1
-            ? FloatingActionButton.extended(
-                onPressed: () => showRecordFormSheet(context),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Laporan Baru'),
+        // Tab Laporan: FAB cuma "+", ditekan nyembul jadi 2 pilihan
+        // (Buat Folder / Buat Laporan). Tab lain: FAB disembunyikan lagi
+        // seperti semula. Pas mode pilih-banyak aktif, FAB ikut disembunyikan
+        // juga — bar aksi "Pindahkan" di bawah butuh ruang penuh tanpa FAB
+        // numpang di atasnya.
+        floatingActionButton: _index == 1 && !_laporanSelecting
+            ? SpeedDialFab(
+                onBuatFolder: () => showFolderFormSheet(context),
+                onBuatLaporan: () => showRecordFormSheet(context),
               )
             : null,
         bottomNavigationBar: Container(

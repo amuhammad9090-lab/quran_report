@@ -35,7 +35,7 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            PushedPageHeader(
+            const PushedPageHeader(
               title: 'Kehadiran',
               subtitle: 'Rekap kehadiran santri per tanggal',
             ),
