@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
@@ -40,6 +41,11 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        // Karena backgroundColor transparan, Flutter nggak bisa nebak
+        // otomatis kontras ikon status bar — di-set eksplisit biar
+        // konsisten sama status bar fix di MainShell.
+        systemOverlayStyle:
+            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         // Disamakan dengan ukuran judul di Statistik/Laporan (headlineSmall
         // w800), sebelumnya titleLarge w700 kelihatan kekecilan.
         titleTextStyle: baseTextTheme.headlineSmall?.copyWith(
@@ -146,15 +152,8 @@ class AppTheme {
             : Colors.black.withValues(alpha: 0.06),
         space: 1,
       ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      listTileTheme: ListTileThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      // Dipakai oleh showDatePicker() di record_form_sheet.dart — biar
-      // kalender ikut nuansa teal/amber, bukan ungu default Material.
+
+      // Dipakai oleh showDatePicker() di record_form_sheet.dart
       datePickerTheme: DatePickerThemeData(
         backgroundColor: surfaceElevated,
         elevation: isDark ? 0 : 6,
@@ -179,10 +178,8 @@ class AppTheme {
         ),
         rangePickerBackgroundColor: surfaceElevated,
       ),
+
       // Dipakai oleh DropdownButtonFormField di record_form_sheet.dart.
-      // (Menu-nya sendiri ambil warna dari `canvasColor` di atas; borderRadius
-      // menu perlu di-pass langsung lewat parameter `borderRadius:` pada
-      // widget DropdownButtonFormField karena Flutter belum expose lewat Theme.)
       popupMenuTheme: PopupMenuThemeData(
         color: surfaceElevated,
         surfaceTintColor: Colors.transparent,
@@ -197,10 +194,9 @@ class AppTheme {
           ),
         ),
       ),
+
       // Dipakai oleh CircularProgressIndicator di export_sheet.dart &
-      // record_form_sheet.dart (loading state saat generate/simpan laporan).
-      // Bottom nav pill-style: indikator hijau di belakang ikon aktif,
-      // label selalu tampil, mengikuti desain referensi.
+      // record_form_sheet.dart
       navigationBarTheme: NavigationBarThemeData(
         height: 72,
         backgroundColor: Colors.transparent,
@@ -233,6 +229,22 @@ class AppTheme {
         color: colorScheme.primary,
         linearTrackColor: colorScheme.primary.withValues(alpha: 0.12),
         circularTrackColor: colorScheme.primary.withValues(alpha: 0.12),
+      ),
+
+      // Snackbar minimalis
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isDark ? const Color(0xFF232C34) : const Color(0xFF1F2A24),
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+        ),
+        actionTextColor: colorScheme.primary,
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        dismissDirection: DismissDirection.horizontal,
       ),
     );
   }

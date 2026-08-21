@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../record_form/record_form_sheet.dart';
 import '../settings/settings_screen.dart';
@@ -19,66 +20,93 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
-  void _goToLaporan() => setState(() => _index = 1);
+  void _switchTab(int index) {
+    if (index == _index) return;
+    // Snackbar (mis. dari bell notifikasi di Home) numpang di satu
+    // Scaffold yang sama antar-tab (IndexedStack) — kalau nggak di-hide
+    // dulu, dia bisa "nyasar" nongol di tab lain waktu pindah tab.
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    setState(() => _index = index);
+  }
+
+  void _goToLaporan() => _switchTab(1);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _index,
-        children: [
-          BerandaTab(onLihatLaporan: _goToLaporan),
-          const LaporanTab(),
-          const StatistikTab(),
-          const SettingsScreen(),
-        ],
-      ),
-      floatingActionButton: _index == 1
-          ? FloatingActionButton.extended(
-              onPressed: () => showRecordFormSheet(context),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Laporan Baru'),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Fix: tanpa ini, ikon status bar (jam/baterai/sinyal) nggak ikut
+    // kontras tema — bisa "ketutup"/nyaris invisible di light theme
+    // karena warnanya nggak di-set sama sekali secara default.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: isDark
+          ? SystemUiOverlayStyle.light.copyWith(
+              statusBarColor: Colors.transparent,
+              systemNavigationBarColor: const Color(0xFF181F26),
+              systemNavigationBarIconBrightness: Brightness.light,
             )
-          : null,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 24,
-              offset: const Offset(0, -6),
+          : SystemUiOverlayStyle.dark.copyWith(
+              statusBarColor: Colors.transparent,
+              systemNavigationBarColor: Colors.white,
+              systemNavigationBarIconBrightness: Brightness.dark,
             ),
+      child: Scaffold(
+        body: IndexedStack(
+          index: _index,
+          children: [
+            BerandaTab(onLihatLaporan: _goToLaporan),
+            const LaporanTab(),
+            const StatistikTab(),
+            const SettingsScreen(),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.calendar_month_outlined),
-                selectedIcon: Icon(Icons.calendar_month_rounded),
-                label: 'Laporan',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.bar_chart_outlined),
-                selectedIcon: Icon(Icons.bar_chart_rounded),
-                label: 'Statistik',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings_rounded),
-                label: 'Pengaturan',
+        floatingActionButton: _index == 1
+            ? FloatingActionButton.extended(
+                onPressed: () => showRecordFormSheet(context),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Laporan Baru'),
+              )
+            : null,
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
+                blurRadius: 24,
+                offset: const Offset(0, -6),
               ),
             ],
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            child: NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: _switchTab,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home_rounded),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  selectedIcon: Icon(Icons.calendar_month_rounded),
+                  label: 'Laporan',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.bar_chart_outlined),
+                  selectedIcon: Icon(Icons.bar_chart_rounded),
+                  label: 'Statistik',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings_rounded),
+                  label: 'Pengaturan',
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -6,20 +6,100 @@ import 'status_badge.dart';
 
 class RecordCard extends StatelessWidget {
   final SantriRecord record;
-  final VoidCallback onTap;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const RecordCard({
     super.key,
     required this.record,
-    required this.onTap,
+    required this.onEdit,
     required this.onDelete,
   });
+
+  void _showActions(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SafeArea(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).bottomSheetTheme.backgroundColor,
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 17,
+                      backgroundColor: cs.primaryContainer,
+                      child: Text(
+                        record.namaAnak.isNotEmpty
+                            ? record.namaAnak[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          color: cs.onPrimaryContainer,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        record.namaAnak,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 18, indent: 18, endIndent: 18),
+              ListTile(
+                leading: Icon(Icons.edit_outlined, color: cs.primary),
+                title: const Text('Ubah', style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onEdit();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_outline_rounded, color: cs.error),
+                title: Text('Hapus',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: cs.error)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onDelete();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final dateStr = DateFormat('d MMM yyyy', 'id_ID').format(record.tanggal);
+    final timeStr = DateFormat('HH:mm').format(record.createdAt ?? record.tanggal);
 
     return Slidable(
       key: ValueKey(record.id),
@@ -39,7 +119,8 @@ class RecordCard extends StatelessWidget {
       ),
       child: Card(
         child: InkWell(
-          onTap: onTap,
+          onTap: () => _showActions(context),
+          onLongPress: () => _showActions(context),
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -124,6 +205,13 @@ class RecordCard extends StatelessWidget {
                     const SizedBox(width: 5),
                     Text(
                       dateStr,
+                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                    ),
+                    const SizedBox(width: 10),
+                    Icon(Icons.access_time_rounded, size: 13, color: cs.onSurfaceVariant),
+                    const SizedBox(width: 5),
+                    Text(
+                      timeStr,
                       style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                     ),
                     const Spacer(),

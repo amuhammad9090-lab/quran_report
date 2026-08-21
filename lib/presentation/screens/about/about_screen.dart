@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/quran_engine_service.dart';
+import '../../widgets/misc_widgets.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -188,14 +189,7 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, size: 18, color: cs.primary),
-          ),
+          SoftIconBox(icon: icon, color: cs.primary, size: 18),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

@@ -4,6 +4,7 @@ import 'enums.dart';
 class SantriRecord {
   final String id;
   final DateTime tanggal;
+  final DateTime? createdAt; // waktu laporan ini benar-benar diinput (buat jam di kartu)
   final String kelas; // contoh: "789"
   final String halaqoh; // contoh: "ABCD"
   final String namaAnak;
@@ -27,6 +28,7 @@ class SantriRecord {
   SantriRecord({
     required this.id,
     required this.tanggal,
+    this.createdAt,
     required this.kelas,
     required this.halaqoh,
     required this.namaAnak,
@@ -65,6 +67,7 @@ class SantriRecord {
     return SantriRecord(
       id: id,
       tanggal: tanggal ?? this.tanggal,
+      createdAt: createdAt,
       kelas: kelas ?? this.kelas,
       halaqoh: halaqoh ?? this.halaqoh,
       namaAnak: namaAnak ?? this.namaAnak,
@@ -99,6 +102,7 @@ class SantriRecord {
   Map<String, dynamic> toJson() => {
         'id': id,
         'tanggal': tanggal.toIso8601String(),
+        'createdAt': createdAt?.toIso8601String(),
         'kelas': kelas,
         'halaqoh': halaqoh,
         'namaAnak': namaAnak,
@@ -118,6 +122,9 @@ class SantriRecord {
   factory SantriRecord.fromJson(Map<String, dynamic> json) => SantriRecord(
         id: json['id'] as String,
         tanggal: DateTime.parse(json['tanggal'] as String),
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'] as String)
+            : null,
         kelas: json['kelas'] as String,
         halaqoh: json['halaqoh'] as String,
         namaAnak: json['namaAnak'] as String,

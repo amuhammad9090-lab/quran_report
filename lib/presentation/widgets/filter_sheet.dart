@@ -49,10 +49,9 @@ class FilterSheet extends StatelessWidget {
                   child: Text('Filter', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
                 ),
                 TextButton(
-                  onPressed: () {
-                    provider.clearFilters();
-                    Navigator.pop(context);
-                  },
+                  onPressed: provider.hasActiveFilters
+                      ? () => provider.clearFilters()
+                      : null,
                   child: const Text('Reset'),
                 ),
               ],

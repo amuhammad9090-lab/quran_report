@@ -82,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Data',
                   children: [
                     ListTile(
-                      leading: _IconBox(
+                      leading: SoftIconBox(
                         icon: Icons.delete_sweep_outlined,
                         color: cs.error,
                       ),
@@ -97,7 +97,7 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Lainnya',
                   children: [
                     ListTile(
-                      leading: _IconBox(
+                      leading: SoftIconBox(
                         icon: Icons.info_outline_rounded,
                         color: cs.primary,
                       ),
@@ -141,25 +141,9 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-/// Kotak ikon bertinta lembut — dipakai konsisten di semua leading icon
-/// list tile pengaturan, senada dengan gaya CategoryTile/StatItem di Home.
-class _IconBox extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  const _IconBox({required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(icon, size: 20, color: color),
-    );
-  }
-}
+/// Kotak ikon bertinta lembut untuk leading icon list tile pengaturan —
+/// pakai [SoftIconBox] bersama dari misc_widgets.dart, bukan versi sendiri,
+/// biar seragam dengan CategoryTile/StatItem/InfoRow di halaman lain.
 
 class _SectionCard extends StatelessWidget {
   final String title;
@@ -218,7 +202,7 @@ class _ThemeOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return ListTile(
-      leading: _IconBox(
+      leading: SoftIconBox(
         icon: icon,
         color: selected ? cs.primary : cs.onSurfaceVariant,
       ),

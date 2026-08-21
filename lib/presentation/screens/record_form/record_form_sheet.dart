@@ -215,6 +215,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     final record = SantriRecord(
       id: widget.existing?.id ?? const Uuid().v4(),
       tanggal: _tanggal,
+      createdAt: widget.existing?.createdAt ?? DateTime.now(),
       kelas: _kelasCtrl.text.trim(),
       halaqoh: _halaqohCtrl.text.trim().toUpperCase(),
       namaAnak: _namaCtrl.text.trim(),
@@ -308,7 +309,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                   child: DropdownTypeField(
                                     controller: _kelasCtrl,
                                     label: 'Kelas',
-                                    hint: 'mis. 7, 8, 9',
                                     icon: Icons.class_outlined,
                                     options: dataset.distinctKelas,
                                     errorText: _kelasError,
@@ -320,7 +320,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                   child: DropdownTypeField(
                                     controller: _halaqohCtrl,
                                     label: 'Halaqoh',
-                                    hint: 'mis. A, B, C',
                                     icon: Icons.groups_outlined,
                                     options: dataset.distinctHalaqoh,
                                     errorText: _halaqohError,
@@ -417,10 +416,12 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                             backgroundColor: cs.primary.withValues(alpha: 0.14),
                             foregroundColor: cs.primary,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            textStyle: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w800),
                           ),
                           onPressed: _submit,
-                          icon: const Icon(Icons.check_rounded),
+                          icon: const Icon(Icons.check_rounded, size: 24),
                           label: Text(
                               _isEdit ? 'Simpan Perubahan' : 'Simpan Laporan'),
                         ),
@@ -566,13 +567,18 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         SizedBox(
           width: double.infinity,
           child: FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              textStyle: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w800),
+            ),
             onPressed: _generating ? null : () => _generateLines(),
             icon: _generating
                 ? const SizedBox(
-                    width: 16,
-                    height: 16,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.auto_fix_high_rounded),
+                : const Icon(Icons.auto_fix_high_rounded, size: 22),
             label: Text(_generating ? 'Menghitung...' : 'Generate Baris'),
           ),
         ),

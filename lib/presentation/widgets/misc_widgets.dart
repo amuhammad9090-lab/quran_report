@@ -1,5 +1,40 @@
 import 'package:flutter/material.dart';
 
+/// Kotak ikon bertinta lembut — satu-satunya sumber gaya "ikon dalam kotak
+/// warna soft" yang dipakai di SELURUH aplikasi (Home, form laporan,
+/// pengaturan, tentang aplikasi). Jangan bikin versi manual lain di file
+/// screen, biar seragam.
+class SoftIconBox extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final Color? background;
+  final double size;
+  final double padding;
+  final double radius;
+
+  const SoftIconBox({
+    super.key,
+    required this.icon,
+    required this.color,
+    this.background,
+    this.size = 20,
+    this.padding = 9,
+    this.radius = 12,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(padding),
+      decoration: BoxDecoration(
+        color: background ?? color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: Icon(icon, size: size, color: color),
+    );
+  }
+}
+
 class EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -172,8 +207,10 @@ InputDecoration fieldDecoration(
   final color = accent ?? cs.primary;
   final fill = Theme.of(context).inputDecorationTheme.fillColor;
   return InputDecoration(
-    labelText: label,
-    hintText: hint,
+    // Nggak pakai labelText (itu yang bikin teks "terbang" ke atas pas
+    // kolom di-tap) — pakai hintText aja, tetap kelihatan selama kosong,
+    // baru ilang begitu user isi.
+    hintText: hint != null ? '$label ($hint)' : label,
     errorText: errorText,
     filled: true,
     fillColor: fill,
@@ -277,8 +314,9 @@ class DropdownTypeField extends StatelessWidget {
       trailingIcon: Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
       selectedTrailingIcon:
           Icon(Icons.expand_less_rounded, color: cs.onSurfaceVariant),
-      label: Text(label),
-      hintText: hint,
+      // Nggak pakai `label:` (itu yang bikin teksnya "terbang" ke atas pas
+      // di-tap) — pakai hintText aja, tetap kelihatan selama kolom kosong.
+      hintText: hint != null ? '$label ($hint)' : label,
       errorText: errorText,
       textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5),
       inputDecorationTheme: fieldDecorationTheme(context, accent: color),
@@ -314,47 +352,33 @@ class FormSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: (Theme.of(context).cardTheme.shape as RoundedRectangleBorder?)
-                  ?.side
-                  .color ??
-              Colors.transparent,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.035),
-            blurRadius: 14,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: cs.primary),
-              const SizedBox(width: 7),
-              Text(
-                title.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurfaceVariant,
-                  letterSpacing: 0.3,
+    // Pakai Card resmi (dari cardTheme) — konsisten sama SectionCard di
+    // Home dan semua card lain, bukan bikin shadow/border manual sendiri.
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: cs.primary),
+                const SizedBox(width: 7),
+                Text(
+                  title.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurfaceVariant,
+                    letterSpacing: 0.3,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
-        ],
+              ],
+            ),
+            const SizedBox(height: 14),
+            child,
+          ],
+        ),
       ),
     );
   }
@@ -459,13 +483,10 @@ class HeroActionItem extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(11),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: Colors.white, size: 20),
+              SoftIconBox(
+                icon: icon,
+                color: Colors.white,
+                background: Colors.white.withValues(alpha: 0.16),
               ),
               const SizedBox(width: 10),
               Flexible(
@@ -504,55 +525,47 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
+    // Pakai widget Card resmi (dari cardTheme) — bukan Container manual —
+    // biar shadow/radius-nya 100% sama dengan semua card lain di aplikasi.
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
+                  ),
                 ),
-              ),
-              if (onSeeAll != null)
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onSeeAll,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Text(
-                        'Lihat Semua',
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12.5,
+                if (onSeeAll != null)
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onSeeAll,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Text(
+                          'Lihat Semua',
+                          style: TextStyle(
+                            color: cs.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12.5,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
       ),
     );
   }
@@ -579,14 +592,7 @@ class StatItem extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, size: 20, color: color),
-        ),
+        SoftIconBox(icon: icon, color: color),
         const SizedBox(height: 10),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
         const SizedBox(height: 2),
@@ -716,14 +722,7 @@ class CategoryTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 18),
-              ),
+              SoftIconBox(icon: icon, color: color, size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

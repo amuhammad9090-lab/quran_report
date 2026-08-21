@@ -8,7 +8,8 @@ import '../../widgets/filter_sheet.dart';
 import '../record_form/record_form_sheet.dart';
 
 /// Tab "Laporan" — pencarian, filter, dan daftar lengkap laporan santri.
-/// Ini adalah konten list yang sebelumnya jadi satu dengan Home.
+/// Header + search bar dibikin pinned (nempel atas), list scroll di
+/// belakangnya.
 class LaporanTab extends StatefulWidget {
   const LaporanTab({super.key});
 
@@ -30,13 +31,38 @@ class _LaporanTabState extends State<LaporanTab> {
     final provider = context.watch<RecordsProvider>();
     final records = provider.filtered;
 
+    // Sinkronin controller lokal ke provider — biar kalau search di-reset
+    // dari luar (mis. tombol Reset di Filter, atau tile "Semua Santri" di
+    // Home), kolom pencarian ikut kekosongin, bukan cuma state provider-nya.
+    if (_searchCtrl.text != provider.searchQuery) {
+      _searchCtrl.value = _searchCtrl.value.copyWith(
+        text: provider.searchQuery,
+        selection: TextSelection.collapsed(offset: provider.searchQuery.length),
+      );
+    }
+
     return SafeArea(
+      bottom: false,
       child: RefreshIndicator(
         onRefresh: provider.load,
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _buildHeader(context)),
-            SliverToBoxAdapter(child: _buildSearchAndFilter(context, provider)),
+            SliverAppBar(
+              pinned: true,
+              floating: false,
+              automaticallyImplyLeading: false,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              toolbarHeight: 68,
+              titleSpacing: 20,
+              title: _buildTitle(context),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(76),
+                child: _buildSearchAndFilter(context, provider),
+              ),
+            ),
             if (records.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
@@ -62,7 +88,7 @@ class _LaporanTabState extends State<LaporanTab> {
                     final r = records[i];
                     return RecordCard(
                       record: r,
-                      onTap: () => showRecordFormSheet(context, existing: r),
+                      onEdit: () => showRecordFormSheet(context, existing: r),
                       onDelete: () => _confirmDelete(context, r.id),
                     );
                   },
@@ -74,33 +100,31 @@ class _LaporanTabState extends State<LaporanTab> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildTitle(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Laporan',
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          Text(
-            'Rekap capaian tahsin & tahfizh santri',
-            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-          ),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Laporan',
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        Text(
+          'Rekap capaian tahsin & tahfizh santri',
+          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5),
+        ),
+      ],
     );
   }
 
   Widget _buildSearchAndFilter(BuildContext context, RecordsProvider provider) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
       child: Row(
         children: [
           Expanded(
