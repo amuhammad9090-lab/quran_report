@@ -22,6 +22,11 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
   bool _laporanSelecting = false;
+  // Counter, bukan bool — biar aman kalau ada 2 snackbar nyaris bebarengan
+  // (mis. drag-drop cepat 2x): FAB baru muncul lagi kalau semua "pemegang"
+  // sudah selesai (count balik ke 0), gak ada yang keburu nge-reset ke true
+  // duluan padahal snackbar lain masih tampil.
+  int _snackbarHidingFab = 0;
 
   void _switchTab(int index) {
     if (index == _index) return;
@@ -34,6 +39,13 @@ class _MainShellState extends State<MainShell> {
 
   void _goToLaporan() => _switchTab(1);
 
+  void _setFabVisible(bool visible) {
+    setState(() {
+      _snackbarHidingFab = (visible ? _snackbarHidingFab - 1 : _snackbarHidingFab + 1)
+          .clamp(0, 1 << 30);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -44,15 +56,15 @@ class _MainShellState extends State<MainShell> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: isDark
           ? SystemUiOverlayStyle.light.copyWith(
-              statusBarColor: Colors.transparent,
-              systemNavigationBarColor: const Color(0xFF181F26),
-              systemNavigationBarIconBrightness: Brightness.light,
-            )
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: const Color(0xFF181F26),
+        systemNavigationBarIconBrightness: Brightness.light,
+      )
           : SystemUiOverlayStyle.dark.copyWith(
-              statusBarColor: Colors.transparent,
-              systemNavigationBarColor: Colors.white,
-              systemNavigationBarIconBrightness: Brightness.dark,
-            ),
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
       child: Scaffold(
         body: IndexedStack(
           index: _index,
@@ -60,6 +72,7 @@ class _MainShellState extends State<MainShell> {
             BerandaTab(onLihatLaporan: _goToLaporan),
             LaporanTab(
               onSelectionModeChanged: (v) => setState(() => _laporanSelecting = v),
+              onFabVisibilityChanged: _setFabVisible,
             ),
             const StatistikTab(),
             const SettingsScreen(),
@@ -67,14 +80,15 @@ class _MainShellState extends State<MainShell> {
         ),
         // Tab Laporan: FAB cuma "+", ditekan nyembul jadi 2 pilihan
         // (Buat Folder / Buat Laporan). Tab lain: FAB disembunyikan lagi
-        // seperti semula. Pas mode pilih-banyak aktif, FAB ikut disembunyikan
-        // juga — bar aksi "Pindahkan" di bawah butuh ruang penuh tanpa FAB
-        // numpang di atasnya.
-        floatingActionButton: _index == 1 && !_laporanSelecting
+        // seperti semula. Pas mode pilih-banyak aktif ATAU snackbar
+        // "dipindahkan/dikeluarkan" lagi tampil, FAB ikut disembunyikan
+        // juga — biar snackbar bisa nempel rapi di atas bottom nav tanpa
+        // numpuk/ngambang di atas ikon FAB.
+        floatingActionButton: _index == 1 && !_laporanSelecting && _snackbarHidingFab == 0
             ? SpeedDialFab(
-                onBuatFolder: () => showFolderFormSheet(context),
-                onBuatLaporan: () => showRecordFormSheet(context),
-              )
+          onBuatFolder: () => showFolderFormSheet(context),
+          onBuatLaporan: () => showRecordFormSheet(context),
+        )
             : null,
         bottomNavigationBar: Container(
           decoration: BoxDecoration(

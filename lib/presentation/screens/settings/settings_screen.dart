@@ -15,9 +15,6 @@ class SettingsScreen extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      // CustomScrollView + SliverAppBar pinned: judul "menempel" di atas dan
-      // list section di bawahnya scroll lewat di belakangnya (dapat shadow
-      // tipis via scrolledUnderElevation), bukan AppBar polos seperti biasa.
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -28,14 +25,17 @@ class SettingsScreen extends StatelessWidget {
             elevation: 0,
             scrolledUnderElevation: 3,
             shadowColor: Colors.black.withValues(alpha: 0.10),
-            toolbarHeight: 56,
+            toolbarHeight: 62,
             titleSpacing: 20,
-            title: Text(
-              'Pengaturan',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
+            title: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Pengaturan',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
             ),
           ),
           SliverPadding(
@@ -130,8 +130,7 @@ class SettingsScreen extends StatelessWidget {
 }
 
 /// Kotak ikon bertinta lembut untuk leading icon list tile pengaturan —
-/// pakai [SoftIconBox] bersama dari misc_widgets.dart, bukan versi sendiri,
-/// biar seragam dengan CategoryTile/StatItem/InfoRow di halaman lain.
+/// pakai [SoftIconBox] bersama dari misc_widgets.dart.
 
 class _SectionCard extends StatelessWidget {
   final String title;
@@ -204,7 +203,7 @@ class _ThemeOption extends StatelessWidget {
       trailing: selected
           ? Icon(Icons.check_circle_rounded, color: cs.primary)
           : Icon(Icons.circle_outlined,
-              color: cs.onSurfaceVariant.withValues(alpha: 0.35)),
+          color: cs.onSurfaceVariant.withValues(alpha: 0.35)),
       onTap: onTap,
     );
   }

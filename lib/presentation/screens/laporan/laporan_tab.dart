@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/folder.dart';
+import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../../providers/folders_provider.dart';
 import '../../widgets/misc_widgets.dart';
@@ -12,13 +13,14 @@ import '../record_form/record_form_sheet.dart';
 import '../folder/folder_detail_screen.dart';
 import '../folder/folder_form_sheet.dart';
 import '../folder/move_to_folder_sheet.dart';
+import 'search_results_screen.dart';
 
 /// Tab "Laporan" — pencarian, filter, section Folder, dan daftar laporan
-/// (yang belum masuk folder mana pun) santri. Header + search bar dibikin
-/// pinned (nempel atas), konten scroll di belakangnya.
+/// (yang belum masuk folder mana pun) santri.
 class LaporanTab extends StatefulWidget {
   final ValueChanged<bool>? onSelectionModeChanged;
-  const LaporanTab({super.key, this.onSelectionModeChanged});
+  final ValueChanged<bool>? onFabVisibilityChanged;
+  const LaporanTab({super.key, this.onSelectionModeChanged, this.onFabVisibilityChanged});
 
   @override
   State<LaporanTab> createState() => _LaporanTabState();
@@ -64,14 +66,52 @@ class _LaporanTabState extends State<LaporanTab> {
     final result = await showFolderPickerSheet(context, itemCount: _selected.length);
     if (result == null || !mounted) return;
     final provider = context.read<RecordsProvider>();
+    final count = _selected.length;
     await provider.moveManyToFolder(_selected, result.isEmpty ? null : result);
-    if (mounted) {
-      setState(() {
+    if (!mounted) return;
+    _exitSelectionMode();
+    _showMovedSnackBar(count);
+  }
+
+  /// Dipicu saat kartu (atau beberapa kartu kecentang sekaligus) di-drag
+  /// lalu dilepas ke atas sebuah folder.
+  Future<void> _dropRecordsToFolder(List<String> ids, ReportFolder folder) async {
+    final provider = context.read<RecordsProvider>();
+    await provider.moveManyToFolder(ids, folder.id);
+    if (!mounted) return;
+    if (_selectionMode) _exitSelectionMode();
+    _showMovedSnackBar(ids.length, folderName: folder.nama);
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
       _selectionMode = false;
       _selected.clear();
     });
-      widget.onSelectionModeChanged?.call(false);
-    }
+    widget.onSelectionModeChanged?.call(false);
+  }
+
+  void _showMovedSnackBar(int count, {String? folderName}) {
+    showAppSnackbar(
+      context,
+      folderName != null
+          ? '$count laporan dipindahkan ke "$folderName"'
+          : '$count laporan dipindahkan',
+      icon: Icons.drive_file_move_outline,
+      onFabVisibilityChanged: widget.onFabVisibilityChanged,
+    );
+  }
+
+  void _setSelectAll(bool select, List<SantriRecord> records) {
+    setState(() {
+      if (select) {
+        _selected
+          ..clear()
+          ..addAll(records.map((r) => r.id));
+      } else {
+        _selected.clear();
+      }
+    });
   }
 
   @override
@@ -80,10 +120,10 @@ class _LaporanTabState extends State<LaporanTab> {
     final foldersProvider = context.watch<FoldersProvider>();
     final records = provider.filteredRoot;
     final folders = foldersProvider.all;
+    final matchesInFolders = provider.searchQuery.isEmpty
+        ? 0
+        : provider.filtered.where((r) => r.folderId != null).length;
 
-    // Sinkronin controller lokal ke provider — biar kalau search di-reset
-    // dari luar (mis. tombol Reset di Filter, atau tile "Semua Santri" di
-    // Home), kolom pencarian ikut kekosongin, bukan cuma state provider-nya.
     if (_searchCtrl.text != provider.searchQuery) {
       _searchCtrl.value = _searchCtrl.value.copyWith(
         text: provider.searchQuery,
@@ -111,10 +151,17 @@ class _LaporanTabState extends State<LaporanTab> {
                   titleSpacing: 20,
                   title: _buildTitle(context),
                   bottom: PreferredSize(
-                    preferredSize: const Size.fromHeight(76),
+                    preferredSize: const Size.fromHeight(136),
                     child: _buildSearchAndFilter(context, provider),
                   ),
                 ),
+                if (matchesInFolders > 0)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: _buildSearchAllFoldersBanner(context, matchesInFolders),
+                    ),
+                  ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
                   sliver: SliverToBoxAdapter(
@@ -167,7 +214,26 @@ class _LaporanTabState extends State<LaporanTab> {
               ],
             ),
           ),
-          if (_selectionMode) _buildSelectionBar(context),
+          if (_selectionMode)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: SelectionActionBar(
+                selectedCount: _selected.length,
+                totalCount: records.length,
+                onSelectAllChanged: (v) => _setSelectAll(v, records),
+                onCancel: _toggleSelectionMode,
+                actions: [
+                  SelectionAction(
+                    icon: Icons.drive_file_move_outline,
+                    label: 'Pindahkan',
+                    onTap: _selected.isEmpty ? null : _moveSelected,
+                    filled: true,
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -188,15 +254,13 @@ class _LaporanTabState extends State<LaporanTab> {
       children: [
         SectionLabel(
           'Folder',
-          trailing: TextButton.icon(
+          trailing: IconButton(
             onPressed: () => showFolderFormSheet(context),
-            icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text('Buat folder', style: TextStyle(fontSize: 12.5)),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            tooltip: 'Buat folder',
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ),
         if (folders.isEmpty)
@@ -233,7 +297,7 @@ class _LaporanTabState extends State<LaporanTab> {
                     ),
                     onRename: () => showFolderFormSheet(context, existing: f),
                     onDelete: () => _confirmDeleteFolder(context, f.id),
-                    onDropRecord: (ids) => provider.moveManyToFolder(ids, f.id),
+                    onDropRecord: (ids) => _dropRecordsToFolder(ids, f),
                   ),
                 );
               },
@@ -243,39 +307,30 @@ class _LaporanTabState extends State<LaporanTab> {
     );
   }
 
-  Widget _buildSelectionBar(BuildContext context) {
+
+  Widget _buildSearchAllFoldersBanner(BuildContext context, int count) {
     final cs = Theme.of(context).colorScheme;
-    return Positioned(
-      left: 16,
-      right: 16,
-      bottom: 16,
-      child: Material(
-        elevation: 4,
-        shadowColor: Colors.black.withValues(alpha: 0.15),
-        color: Theme.of(context).cardTheme.color ?? cs.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: cs.outlineVariant),
+    return Material(
+      color: cs.primary.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SearchResultsScreen()),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
+              Icon(Icons.travel_explore_rounded, size: 18, color: cs.primary),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${_selected.length} dipilih',
-                  style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700),
+                  '$count laporan lagi cocok di dalam folder',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: cs.primary),
                 ),
               ),
-              TextButton(
-                onPressed: _toggleSelectionMode,
-                child: Text('Batal', style: TextStyle(color: cs.onSurfaceVariant)),
-              ),
-              FilledButton.icon(
-                onPressed: _selected.isEmpty ? null : _moveSelected,
-                icon: const Icon(Icons.drive_file_move_outline, size: 18),
-                label: const Text('Pindahkan'),
-              ),
+              Icon(Icons.chevron_right_rounded, size: 18, color: cs.primary),
             ],
           ),
         ),
@@ -289,27 +344,12 @@ class _LaporanTabState extends State<LaporanTab> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Laporan',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
-            ),
-            IconButton(
-              onPressed: _toggleSelectionMode,
-              icon: Icon(
-                _selectionMode ? Icons.close_rounded : Icons.checklist_rounded,
-                color: cs.primary,
-                size: 28,
-              ),
-              tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa laporan',
-            ),
-          ],
+        Text(
+          'Laporan',
+          style: Theme.of(context)
+              .textTheme
+              .headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w800),
         ),
         Text(
           'Rekap capaian tahsin & tahfizh santri',
@@ -323,55 +363,74 @@ class _LaporanTabState extends State<LaporanTab> {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: provider.setSearch,
-              decoration: InputDecoration(
-                hintText: 'Cari nama santri...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _searchCtrl.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          provider.setSearch('');
-                        },
-                      )
-                    : null,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Stack(
-            clipBehavior: Clip.none,
+          Row(
             children: [
-              IconButton.filledTonal(
-                onPressed: () => showFilterSheet(context),
-                icon: const Icon(Icons.tune_rounded),
-                style: IconButton.styleFrom(
-                  minimumSize: const Size(52, 52),
-                ),
-              ),
-              if (provider.hasActiveFilters)
-                Positioned(
-                  right: 6,
-                  top: 6,
-                  child: Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: cs.error,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        width: 1.5,
-                      ),
-                    ),
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: provider.setSearch,
+                  decoration: InputDecoration(
+                    hintText: 'Cari nama santri...',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: _searchCtrl.text.isNotEmpty
+                        ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        provider.setSearch('');
+                      },
+                    )
+                        : null,
                   ),
                 ),
+              ),
+              const SizedBox(width: 10),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton.filledTonal(
+                    onPressed: () => showFilterSheet(context),
+                    icon: const Icon(Icons.tune_rounded),
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(52, 52),
+                    ),
+                  ),
+                  if (provider.hasActiveFilters)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: cs.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton.filledTonal(
+                onPressed: _toggleSelectionMode,
+                icon: Icon(
+                  _selectionMode ? Icons.close_rounded : Icons.checklist_rounded,
+                  size: 20,
+                ),
+                tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa laporan',
+              ),
             ],
           ),
         ],
