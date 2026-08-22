@@ -59,7 +59,7 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                           label: k.shortLabel,
                           icon: k.icon,
                           selected: _filter == k,
-                          color: AppColors.keteranganColor(k.name),
+                          color: AppColors.keteranganColorOn(context, k.name),
                           onTap: () => setState(() => _filter = _filter == k ? null : k),
                         ),
                         const SizedBox(width: 8),

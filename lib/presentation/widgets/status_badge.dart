@@ -8,7 +8,9 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = status == HafalanStatus.tahfizh ? AppColors.tahfizh : AppColors.tahsin;
+    final color = status == HafalanStatus.tahfizh
+        ? AppColors.tahfizhOn(context)
+        : AppColors.tahsinOn(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -41,7 +43,7 @@ class KeteranganChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.keteranganColor(keterangan.name);
+    final color = AppColors.keteranganColorOn(context, keterangan.name);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: compact ? 4 : 5),
       decoration: BoxDecoration(

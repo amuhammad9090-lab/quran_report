@@ -966,7 +966,9 @@ class PushedPageHeader extends StatelessWidget {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 3,
-      shadowColor: Colors.black.withValues(alpha: 0.10),
+      shadowColor: Colors.black.withValues(
+        alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10,
+      ),
       toolbarHeight: subtitle != null ? 68 : 56,
       titleSpacing: 4,
       title: Row(

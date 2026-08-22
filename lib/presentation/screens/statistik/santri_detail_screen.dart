@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/enums.dart';
@@ -56,7 +57,7 @@ class SantriDetailScreen extends StatelessWidget {
                           label: 'Tahfizh',
                           value: '$totalTahfizh',
                           icon: Icons.auto_stories_rounded,
-                          color: const Color(0xFF0E7C61),
+                          color: AppColors.tahfizhOn(context),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -65,7 +66,7 @@ class SantriDetailScreen extends StatelessWidget {
                           label: 'Tahsin',
                           value: '$totalTahsin',
                           icon: Icons.menu_book_rounded,
-                          color: const Color(0xFFB8860B),
+                          color: AppColors.tahsinOn(context),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -74,7 +75,7 @@ class SantriDetailScreen extends StatelessWidget {
                           label: 'Total Baris',
                           value: '$totalBaris',
                           icon: Icons.format_list_numbered_rounded,
-                          color: const Color(0xFF6C5CE7),
+                          color: AppColors.purpleOn(context),
                         ),
                       ),
                     ],
@@ -95,8 +96,8 @@ class SantriDetailScreen extends StatelessWidget {
                           .map((r) => RecordSummaryRow(
                                 statusIcon: r.status.icon,
                                 statusColor: r.status == HafalanStatus.tahfizh
-                                    ? const Color(0xFF0E7C61)
-                                    : const Color(0xFFB8860B),
+                                    ? AppColors.tahfizhOn(context)
+                                    : AppColors.tahsinOn(context),
                                 statusLabel: r.status.label,
                                 capaianText: r.capaianText,
                                 keteranganChip:

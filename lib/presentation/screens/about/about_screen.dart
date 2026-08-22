@@ -8,6 +8,7 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final engine = QuranEngineService.instance;
 
     return Scaffold(
@@ -32,7 +33,7 @@ class AboutScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(26),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
+                            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -43,8 +44,8 @@ class AboutScreen extends StatelessWidget {
                           color: cs.primary,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.auto_stories_rounded,
-                            color: Colors.white, size: 34),
+                        child: Icon(Icons.auto_stories_rounded,
+                            color: cs.onPrimary, size: 34),
                       ),
                     ),
                   ),
@@ -84,7 +85,8 @@ class AboutScreen extends StatelessWidget {
                                 '(tahfizh) dan bacaan (tahsin) Al-Qur\'an santri, lengkap dengan '
                                 'generator baris setoran otomatis berbasis pemetaan baris mushaf '
                                 'rasm Utsmani (Madinah 15 baris).',
-                            style: TextStyle(fontSize: 14.5, height: 1.55),
+                            style: TextStyle(
+                                fontSize: 14.5, height: 1.55, fontWeight: FontWeight.normal),
                           ),
                         ],
                       ),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/record_card.dart';
+import '../export/export_sheet.dart';
 import '../record_form/record_form_sheet.dart';
 
 /// Rekap semua record tahfizh & tahsin dalam SATU bulan, dengan navigasi
@@ -51,9 +53,22 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const PushedPageHeader(
+            PushedPageHeader(
               title: 'Rekap Bulanan',
               subtitle: 'Semua capaian tahfizh & tahsin dalam sebulan',
+              trailing: records.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Ekspor',
+                      onPressed: () => showExportSheet(
+                        context,
+                        records: records,
+                        judul:
+                            'Rekap Bulanan ${DateFormat('MMMM yyyy', 'id_ID').format(_month)}',
+                        periode: DateFormat('MMMM yyyy', 'id_ID').format(_month),
+                      ),
+                      icon: const Icon(Icons.ios_share_rounded),
+                    ),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
@@ -95,7 +110,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                           label: 'Tahfizh',
                           value: '$totalTahfizh',
                           icon: Icons.auto_stories_rounded,
-                          color: const Color(0xFF0E7C61),
+                          color: AppColors.tahfizhOn(context),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -104,7 +119,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                           label: 'Tahsin',
                           value: '$totalTahsin',
                           icon: Icons.menu_book_rounded,
-                          color: const Color(0xFFB8860B),
+                          color: AppColors.tahsinOn(context),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -113,7 +128,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                           label: 'Total Baris',
                           value: '$totalBaris',
                           icon: Icons.format_list_numbered_rounded,
-                          color: const Color(0xFF6C5CE7),
+                          color: AppColors.purpleOn(context),
                         ),
                       ),
                     ],
@@ -132,14 +147,14 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                             label: 'Tahfizh',
                             count: totalTahfizh,
                             ratio: tahfizhRatio,
-                            color: const Color(0xFF0E7C61),
+                            color: AppColors.tahfizhOn(context),
                           ),
                           const SizedBox(height: 18),
                           _DistribusiRow(
                             label: 'Tahsin',
                             count: totalTahsin,
                             ratio: tahsinRatio,
-                            color: const Color(0xFFB8860B),
+                            color: AppColors.tahsinOn(context),
                           ),
                         ],
                       ),

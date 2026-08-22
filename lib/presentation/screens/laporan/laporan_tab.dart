@@ -151,7 +151,7 @@ class _LaporanTabState extends State<LaporanTab> {
                   titleSpacing: 20,
                   title: _buildTitle(context),
                   bottom: PreferredSize(
-                    preferredSize: const Size.fromHeight(136),
+                    preferredSize: const Size.fromHeight(76),
                     child: _buildSearchAndFilter(context, provider),
                   ),
                 ),
@@ -363,74 +363,55 @@ class _LaporanTabState extends State<LaporanTab> {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchCtrl,
-                  onChanged: provider.setSearch,
-                  decoration: InputDecoration(
-                    hintText: 'Cari nama santri...',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: _searchCtrl.text.isNotEmpty
-                        ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 18),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        provider.setSearch('');
-                      },
-                    )
-                        : null,
-                  ),
-                ),
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: provider.setSearch,
+              decoration: InputDecoration(
+                hintText: 'Cari nama santri...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _searchCtrl.text.isNotEmpty
+                    ? IconButton(
+                  icon: const Icon(Icons.clear_rounded, size: 18),
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    provider.setSearch('');
+                  },
+                )
+                    : null,
               ),
-              const SizedBox(width: 10),
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  IconButton.filledTonal(
-                    onPressed: () => showFilterSheet(context),
-                    icon: const Icon(Icons.tune_rounded),
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(52, 52),
-                    ),
-                  ),
-                  if (provider.hasActiveFilters)
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        width: 9,
-                        height: 9,
-                        decoration: BoxDecoration(
-                          color: cs.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).scaffoldBackgroundColor,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          const SizedBox(width: 10),
+          Stack(
+            clipBehavior: Clip.none,
             children: [
               IconButton.filledTonal(
-                onPressed: _toggleSelectionMode,
-                icon: Icon(
-                  _selectionMode ? Icons.close_rounded : Icons.checklist_rounded,
-                  size: 20,
+                onPressed: () => showFilterSheet(context),
+                icon: const Icon(Icons.tune_rounded),
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(52, 52),
                 ),
-                tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa laporan',
               ),
+              if (provider.hasActiveFilters)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    width: 9,
+                    height: 9,
+                    decoration: BoxDecoration(
+                      color: cs.error,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ],

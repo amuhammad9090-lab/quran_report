@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/enums.dart';
@@ -38,7 +39,7 @@ class BerandaTab extends StatelessWidget {
             surfaceTintColor: Colors.transparent,
             elevation: 0,
             scrolledUnderElevation: 3,
-            shadowColor: Colors.black.withValues(alpha: 0.10),
+            shadowColor: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10),
             toolbarHeight: 76,
             titleSpacing: 20,
             title: _buildHeader(context),
@@ -97,7 +98,7 @@ class BerandaTab extends StatelessWidget {
                         label: 'Total Baris',
                         value: '${provider.totalBarisHariIni}',
                         icon: Icons.format_list_numbered_rounded,
-                        color: const Color(0xFF6C5CE7),
+                        color: AppColors.purpleOn(context),
                       ),
                     ),
                     const VDivider(),
@@ -106,7 +107,7 @@ class BerandaTab extends StatelessWidget {
                         label: 'Santri Aktif',
                         value: '${provider.santriAktifHariIni}',
                         icon: Icons.groups_2_rounded,
-                        color: const Color(0xFFB8860B),
+                        color: AppColors.tahsinOn(context),
                       ),
                     ),
                   ],
@@ -124,7 +125,7 @@ class BerandaTab extends StatelessWidget {
                           child: CategoryTile(
                             label: 'Tahfizh',
                             icon: Icons.auto_stories_rounded,
-                            color: const Color(0xFF0E7C61),
+                            color: AppColors.tahfizhOn(context),
                             active: provider.filterStatus == HafalanStatus.tahfizh,
                             onTap: () => goToFiltered(
                               provider.filterStatus == HafalanStatus.tahfizh
@@ -138,7 +139,7 @@ class BerandaTab extends StatelessWidget {
                           child: CategoryTile(
                             label: 'Tahsin',
                             icon: Icons.menu_book_rounded,
-                            color: const Color(0xFFB8860B),
+                            color: AppColors.tahsinOn(context),
                             active: provider.filterStatus == HafalanStatus.tahsin,
                             onTap: () => goToFiltered(
                               provider.filterStatus == HafalanStatus.tahsin
@@ -169,7 +170,7 @@ class BerandaTab extends StatelessWidget {
                           child: CategoryTile(
                             label: 'Filter Lainnya',
                             icon: Icons.tune_rounded,
-                            color: const Color(0xFFD64545),
+                            color: AppColors.redOn(context),
                             onTap: () {
                               onLihatLaporan();
                               showFilterSheet(context);
@@ -235,7 +236,7 @@ class BerandaTab extends StatelessWidget {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2E9E5B),
+                        color: AppColors.greenOn(context),
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: Theme.of(context).cardTheme.color ?? Colors.white,

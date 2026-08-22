@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -363,15 +364,15 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.info_outline_rounded,
-                                        size: 16, color: Color(0xFFB8860B)),
+                                    Icon(Icons.info_outline_rounded,
+                                        size: 16, color: AppColors.tahsinOn(context)),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         'Keterangan "${_keterangan.label}" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan.',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11.5,
-                                          color: Color(0xFFB8860B),
+                                          color: AppColors.tahsinOn(context),
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -420,12 +421,12 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                             backgroundColor: cs.primary.withValues(alpha: 0.14),
                             foregroundColor: cs.primary,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            padding: const EdgeInsets.symmetric(vertical: 22),
                             textStyle: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w800),
+                                fontSize: 18, fontWeight: FontWeight.w800),
                           ),
                           onPressed: _submit,
-                          icon: const Icon(Icons.check_rounded, size: 24),
+                          icon: const Icon(Icons.check_rounded, size: 26),
                           label: Text(
                               _isEdit ? 'Simpan Perubahan' : 'Simpan Laporan'),
                         ),
@@ -487,7 +488,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           child: CategoryTile(
             label: HafalanStatus.tahsin.label,
             icon: HafalanStatus.tahsin.icon,
-            color: const Color(0xFFB8860B),
+            color: AppColors.tahsinOn(context),
             active: _status == HafalanStatus.tahsin,
             onTap: () => setState(() {
               _status = HafalanStatus.tahsin;
@@ -572,17 +573,17 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           width: double.infinity,
           child: FilledButton.tonalIcon(
             style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 18),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               textStyle: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w800),
+                  fontSize: 17, fontWeight: FontWeight.w800),
             ),
             onPressed: _generating ? null : () => _generateLines(),
             icon: _generating
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.auto_fix_high_rounded, size: 22),
+                : const Icon(Icons.auto_fix_high_rounded, size: 24),
             label: Text(_generating ? 'Menghitung...' : 'Generate Baris'),
           ),
         ),
@@ -639,8 +640,8 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                         ),
                         child: Text(
                           '${_generated!.totalBaris} baris baru',
-                          style: const TextStyle(
-                              color: Colors.white,
+                          style: TextStyle(
+                              color: cs.onPrimary,
                               fontWeight: FontWeight.w700,
                               fontSize: 12),
                         ),
@@ -661,15 +662,15 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.history_rounded,
-                              size: 15, color: Color(0xFFB8860B)),
+                          Icon(Icons.history_rounded,
+                              size: 15, color: AppColors.tahsinOn(context)),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               '${_generated!.alreadyCountedLines.length} baris sudah pernah dihitung di laporan sebelumnya (tidak dihitung dobel)',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 11.5,
-                                  color: Color(0xFFB8860B),
+                                  color: AppColors.tahsinOn(context),
                                   fontWeight: FontWeight.w600),
                             ),
                           ),
@@ -745,7 +746,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             context,
             icon: Icons.auto_stories_outlined,
             label: 'Jenjang WAFA',
-            accent: const Color(0xFFB8860B),
+            accent: AppColors.tahsinOn(context),
           ),
           style: TextStyle(
               fontWeight: FontWeight.w600, fontSize: 14.5, color: cs.onSurface),
@@ -765,7 +766,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             icon: Icons.tag_rounded,
             label: 'Halaman',
             hint: 'mis. 12 atau 12-13',
-            accent: const Color(0xFFB8860B),
+            accent: AppColors.tahsinOn(context),
           ),
           validator: (v) => !_wajibIsiStatusCapaian
               ? null
@@ -779,7 +780,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     // Dibuat justify
     Widget chip(Keterangan k) {
       final selected = _keterangan == k;
-      final color = _keteranganColor(k);
+      final color = AppColors.keteranganColorOn(context, k.name);
       return Expanded(
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -839,18 +840,4 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     );
   }
 
-  Color _keteranganColor(Keterangan k) {
-    switch (k) {
-      case Keterangan.hadir:
-        return const Color(0xFF2E9E5B);
-      case Keterangan.izinSakit:
-        return const Color(0xFFE0724A);
-      case Keterangan.izinLomba:
-        return const Color(0xFF6C5CE7);
-      case Keterangan.izinPelatihan:
-        return const Color(0xFF2F80B4);
-      case Keterangan.alpa:
-        return const Color(0xFFD64545);
-    }
-  }
 }

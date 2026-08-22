@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -40,7 +41,7 @@ class StatistikTab extends StatelessWidget {
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               scrolledUnderElevation: 3,
-              shadowColor: Colors.black.withValues(alpha: 0.10),
+              shadowColor: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10),
               toolbarHeight: 68,
               titleSpacing: 20,
               title: Column(
@@ -84,7 +85,7 @@ class StatistikTab extends StatelessWidget {
                           label: 'Total Hadir',
                           value: '${provider.totalHadir}',
                           icon: Icons.check_circle_rounded,
-                          color: const Color(0xFF2E9E5B),
+                          color: AppColors.greenOn(context),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const KehadiranScreen()),
                           ),
@@ -114,14 +115,14 @@ class StatistikTab extends StatelessWidget {
                                 label: 'Tahfizh',
                                 count: totalTahfizhBulanIni,
                                 ratio: tahfizhRatio,
-                                color: const Color(0xFF0E7C61),
+                                color: AppColors.tahfizhOn(context),
                               ),
                               const SizedBox(height: 18),
                               _DistribusiRow(
                                 label: 'Tahsin',
                                 count: totalTahsinBulanIni,
                                 ratio: tahsinRatio,
-                                color: const Color(0xFFB8860B),
+                                color: AppColors.tahsinOn(context),
                               ),
                               const SizedBox(height: 14),
                               Row(

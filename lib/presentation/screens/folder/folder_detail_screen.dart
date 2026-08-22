@@ -276,6 +276,7 @@ class _ActionButtonsRow extends StatelessWidget {
               context,
               records: records,
               judul: folder.nama,
+              periode: 'Folder: ${folder.nama}',
             ),
           ),
         ],

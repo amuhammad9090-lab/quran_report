@@ -115,10 +115,13 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
                 child: FilledButton(
                   onPressed: _saving ? null : _save,
                   child: _saving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
                         )
                       : Text(_isEdit ? 'Simpan' : 'Buat Folder'),
                 ),

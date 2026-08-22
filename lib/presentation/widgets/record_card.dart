@@ -300,8 +300,8 @@ class RecordCard extends StatelessWidget {
                       ),
                       child: Text(
                         '${dragIds.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.w800,
                           fontSize: 12,
                         ),
