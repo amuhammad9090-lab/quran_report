@@ -8,9 +8,7 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = status == HafalanStatus.tahfizh
-        ? AppColors.tahfizhOn(context)
-        : AppColors.tahsinOn(context);
+    final color = AppColors.statusOn(context, status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(

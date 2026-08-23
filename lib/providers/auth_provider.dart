@@ -27,6 +27,7 @@ class AuthProvider extends ChangeNotifier {
   bool _restoring = true;
   bool _loggingIn = false;
   String? _error;
+  List<UserAccount> _allAccounts = [];
 
   UserAccount? get currentUser => _currentUser;
   School? get currentSchool => _currentSchool;
@@ -34,6 +35,10 @@ class AuthProvider extends ChangeNotifier {
   bool get isRestoring => _restoring;
   bool get isLoggingIn => _loggingIn;
   String? get error => _error;
+
+  /// Semua akun terdaftar (di-cache saat [restoreSession]) — dipakai buat
+  /// [guruPembimbingNameFor] saat export rekap per Kelas+Halaqoh.
+  List<UserAccount> get allAccounts => _allAccounts;
 
   /// Null kalau belum login. Dipakai provider lain (mis. RecordsProvider)
   /// buat nge-scope data — lihat catatan di [AccessScope].
@@ -44,6 +49,7 @@ class AuthProvider extends ChangeNotifier {
   /// supaya user tidak perlu login ulang tiap buka app.
   Future<void> restoreSession() async {
     _restoring = true;
+    _allAccounts = await _authRepo.allAccounts();
     final userId = AppPrefsService.instance.sessionUserId;
     if (userId != null) {
       final user = await _authRepo.findById(userId);
@@ -79,6 +85,30 @@ class AuthProvider extends ChangeNotifier {
     _loggingIn = false;
     notifyListeners();
     return true;
+  }
+
+  /// Cari nama guru pembimbing yang mengampu pasangan Kelas+Halaqoh
+  /// tertentu (dipakai saat export rekap per kelompok, lihat
+  /// RecordsProvider.groupByKelasHalaqoh). Null kalau tidak ketemu (mis.
+  /// kelas/halaqoh belum/tidak di-assign ke siapa pun).
+  String? guruPembimbingNameFor(String kelas, String halaqoh) {
+    for (final acc in _allAccounts) {
+      if (acc.role != UserRole.guruPembimbing) continue;
+      final match = acc.assignments.any((a) => a.kelas == kelas && a.halaqoh == halaqoh);
+      if (match) return acc.displayName;
+    }
+    return null;
+  }
+
+  /// Fallback: cari nama akun dari [id] (mis. `ownerId` record) kalau
+  /// [guruPembimbingNameFor] tidak ketemu (assignment sudah berubah sejak
+  /// laporan dibuat).
+  String? displayNameForId(String? id) {
+    if (id == null) return null;
+    for (final acc in _allAccounts) {
+      if (acc.id == id) return acc.displayName;
+    }
+    return null;
   }
 
   Future<void> logout() async {

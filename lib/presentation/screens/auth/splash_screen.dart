@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../data/services/app_prefs_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../home/main_shell.dart';
@@ -58,37 +60,46 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: cs.primary,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(24),
+    // Sengaja warna TETAP (bukan `Theme.of(context).colorScheme.primary`):
+    // `primary` hasil ColorScheme.fromSeed versi dark mode itu nada terang
+    // (dibuat buat jadi warna TEKS/IKON di atas permukaan gelap, bukan buat
+    // jadi warna BACKGROUND satu layar penuh) — kalau dipakai sebagai
+    // backgroundColor di sini hasilnya ijo pucat/luntur, beda jauh &
+    // "jelek" dibanding versi light mode. Splash adalah momen branding,
+    // jadi warna brand-nya sengaja disamain persis di kedua tema.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light, // ikon status bar putih, background-nya selalu gelap
+      child: Scaffold(
+        backgroundColor: AppColors.seed,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 42),
               ),
-              child: const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 42),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Quran Report',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 22,
+              const SizedBox(height: 20),
+              const Text(
+                'Quran Report',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Laporan tahsin & tahfizh santri',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
-            ),
-          ],
+              const SizedBox(height: 6),
+              Text(
+                'Laporan tahsin & tahfizh santri',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
+              ),
+            ],
+          ),
         ),
       ),
     );

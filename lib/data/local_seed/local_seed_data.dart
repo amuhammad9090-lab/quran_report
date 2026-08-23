@@ -9,10 +9,10 @@
 /// kode yang memanggil repository ini (provider, UI) tidak perlu berubah.
 ///
 /// PENTING soal `assignments`: kelas & halaqoh SELALU pasangan
-/// (lihat `KelasHalaqoh`), sesuai data sekolah asli — satu guru bisa
-/// punya beberapa assignment, tapi tiap assignment adalah kombinasi
-/// kelas+halaqoh SPESIFIK, bukan kelas manapun x halaqoh manapun dari
-/// daftar masing-masing.
+/// (lihat `KelasHalaqoh`), sesuai data sekolah asli — satu guru
+/// pembimbing bisa punya beberapa assignment, tapi tiap assignment
+/// adalah kombinasi kelas+halaqoh SPESIFIK, bukan kelas manapun x
+/// halaqoh manapun dari daftar masing-masing.
 ///
 /// Password asli (plaintext, HANYA ada di file Excel sumber, tidak
 /// pernah disimpan di sini): lihat `EXCEL_FORMAT.md` / catat sendiri
@@ -44,7 +44,7 @@ const List<Map<String, dynamic>> kSeedAccountsJson = [
     'username': "rudi",
     'displayName': "Rudi, S.Pd.I",
     'passwordHash': "0af14a28e1574c89",
-    'role': "musyrif",
+    'role': "guru_pembimbing",
     'assignments': [{'kelas': "IX Gazza", 'halaqoh': "Halaqoh B"}],
     'schoolId': "smpit_al_madinah_tanjungpinang",
   },
@@ -53,7 +53,7 @@ const List<Map<String, dynamic>> kSeedAccountsJson = [
     'username': "adir",
     'displayName': "Adir Tia Pradiansyah, S.Pd",
     'passwordHash': "d2f8a17b7508de61",
-    'role': "musyrif",
+    'role': "guru_pembimbing",
     'assignments': [{'kelas': "VII Jeddah", 'halaqoh': "Halaqoh B"}, {'kelas': "VIII Baghdad", 'halaqoh': "Halaqoh C"}, {'kelas': "VIII Kairo", 'halaqoh': "Halaqoh A"}, {'kelas': "IX Gazza", 'halaqoh': "Halaqoh C"}],
     'schoolId': "smpit_al_madinah_tanjungpinang",
   },
@@ -62,7 +62,7 @@ const List<Map<String, dynamic>> kSeedAccountsJson = [
     'username': "kahar",
     'displayName': "Kaharudin, S.Pd",
     'passwordHash': "179e1f791c1fef9e",
-    'role': "musyrif",
+    'role': "guru_pembimbing",
     'assignments': [{'kelas': "VII Istanbul", 'halaqoh': "Halaqoh C"}, {'kelas': "VIII Baghdad", 'halaqoh': "Halaqoh A"}, {'kelas': "VIII Kairo", 'halaqoh': "Halaqoh C"}, {'kelas': "IX Gazza", 'halaqoh': "Halaqoh A"}],
     'schoolId': "smpit_al_madinah_tanjungpinang",
   },
@@ -71,7 +71,7 @@ const List<Map<String, dynamic>> kSeedAccountsJson = [
     'username': "faina",
     'displayName': "Faina, S.Pd",
     'passwordHash': "5ea7c7211fe6f6d0",
-    'role': "musyrif",
+    'role': "guru_pembimbing",
     'assignments': [{'kelas': "VII Jeddah", 'halaqoh': "Halaqoh C"}, {'kelas': "VII Aleksandria", 'halaqoh': "Halaqoh A"}, {'kelas': "IX Mekkah", 'halaqoh': "Halaqoh A"}, {'kelas': "IX Andalusia", 'halaqoh': "Halaqoh C"}],
     'schoolId': "smpit_al_madinah_tanjungpinang",
   },
@@ -80,7 +80,7 @@ const List<Map<String, dynamic>> kSeedAccountsJson = [
     'username': "berlian",
     'displayName': "Berlian Nurul Fazri, S.Pd",
     'passwordHash': "103e06f95ab20314",
-    'role': "musyrif",
+    'role': "guru_pembimbing",
     'assignments': [{'kelas': "VII Granada", 'halaqoh': "Halaqoh A"}, {'kelas': "VIII Cordova", 'halaqoh': "Halaqoh C"}, {'kelas': "IX Mekkah", 'halaqoh': "Halaqoh C"}, {'kelas': "IX Andalusia", 'halaqoh': "Halaqoh B"}],
     'schoolId': "smpit_al_madinah_tanjungpinang",
   },
@@ -89,7 +89,7 @@ const List<Map<String, dynamic>> kSeedAccountsJson = [
     'username': "fakhri",
     'displayName': "Fakhri Hamidah Ahmad, S.Pd",
     'passwordHash': "735ecb6878851826",
-    'role': "musyrif",
+    'role': "guru_pembimbing",
     'assignments': [{'kelas': "VII Aleksandria", 'halaqoh': "Halaqoh B"}, {'kelas': "VIII Cordova", 'halaqoh': "Halaqoh B"}, {'kelas': "VIII Damaskus", 'halaqoh': "Halaqoh A"}, {'kelas': "IX Mekkah", 'halaqoh': "Halaqoh D"}],
     'schoolId': "smpit_al_madinah_tanjungpinang",
   },
@@ -98,7 +98,7 @@ const List<Map<String, dynamic>> kSeedAccountsJson = [
     'username': "ulfa",
     'displayName': "Ulfa Alfisyah, S.Ag",
     'passwordHash': "62afbfc1cb2e6e47",
-    'role': "musyrif",
+    'role': "guru_pembimbing",
     'assignments': [{'kelas': "VII Istanbul", 'halaqoh': "Halaqoh B"}, {'kelas': "VII Aleksandria", 'halaqoh': "Halaqoh C"}, {'kelas': "VII Granada", 'halaqoh': "Halaqoh C"}, {'kelas': "VIII Damaskus", 'halaqoh': "Halaqoh B"}, {'kelas': "IX Mekkah", 'halaqoh': "Halaqoh B"}, {'kelas': "IX Andalusia", 'halaqoh': "Halaqoh A"}],
     'schoolId': "smpit_al_madinah_tanjungpinang",
   },
@@ -107,7 +107,7 @@ const List<Map<String, dynamic>> kSeedAccountsJson = [
     'username': "dearty",
     'displayName': "Dearty Tri Adilla, S.Ag",
     'passwordHash': "b4a8b419dd5ecf25",
-    'role': "musyrif",
+    'role': "guru_pembimbing",
     'assignments': [{'kelas': "VII Granada", 'halaqoh': "Halaqoh B"}, {'kelas': "VIII Cordova", 'halaqoh': "Halaqoh A"}, {'kelas': "VIII Damaskus", 'halaqoh': "Halaqoh C"}, {'kelas': "IX Andalusia", 'halaqoh': "Halaqoh D"}],
     'schoolId': "smpit_al_madinah_tanjungpinang",
   },

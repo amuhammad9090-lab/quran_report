@@ -5,7 +5,7 @@ import '../data/models/enums.dart';
 import '../data/models/santri_record.dart';
 import '../data/services/storage_service.dart';
 
-/// Dilempar [RecordsProvider.upsert] kalau musyrif mencoba menyimpan
+/// Dilempar [RecordsProvider.upsert] kalau guru pembimbing mencoba menyimpan
 /// laporan untuk kelas/halaqoh di luar assignment-nya. Ini enforcement
 /// SUNGGUHAN di level data (bukan cuma UI) — lihat AccessScope & bagian I
 /// spesifikasi access control.
@@ -53,7 +53,7 @@ class RecordsProvider extends ChangeNotifier {
   HafalanStatus? get filterStatus => _filterStatus;
   Keterangan? get filterKeterangan => _filterKeterangan;
 
-  /// True kalau user yang login adalah musyrif (dibatasi assignment) —
+  /// True kalau user yang login adalah guru pembimbing (dibatasi assignment) —
   /// dipakai UI buat, mis., mengunci pilihan kelas/halaqoh di form.
   bool get isScoped => _scope != null && !_scope!.isAdmin;
   AccessScope? get scope => _scope;
@@ -68,7 +68,7 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   /// Data laporan yang sudah difilter access scope — ini yang dipakai
-  /// SEMUA getter/query di bawah, supaya musyrif tidak pernah kebocoran
+  /// SEMUA getter/query di bawah, supaya guru pembimbing tidak pernah kebocoran
   /// data kelas/halaqoh lain walau lewat jalur statistik/search/export.
   List<SantriRecord> get _scoped => _scope == null ? _all : _scope!.scopeRecords(_all);
 
@@ -132,7 +132,7 @@ class RecordsProvider extends ChangeNotifier {
       _filterStatus != null ||
       _filterKeterangan != null;
 
-  /// Simpan laporan baru/edit. Kalau user musyrif (scope aktif, bukan
+  /// Simpan laporan baru/edit. Kalau user guru pembimbing (scope aktif, bukan
   /// admin) mencoba simpan untuk kelas/halaqoh di luar assignment-nya,
   /// ditolak di sini — INI enforcement access-control yang sesungguhnya,
   /// bukan sekadar UI yang membatasi pilihan.
@@ -147,7 +147,7 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   Future<void> delete(String id) async {
-    // Cari lewat data TER-SCOPE — musyrif nggak bisa hapus record di luar
+    // Cari lewat data TER-SCOPE — guru pembimbing nggak bisa hapus record di luar
     // assignment-nya walau tahu id-nya (mis. dari deep link/cache lama).
     final record = _findById(id);
     if (record == null) return;
@@ -207,8 +207,19 @@ class RecordsProvider extends ChangeNotifier {
 
   // --- Statistik ringkas untuk header ---
   int get totalSantri => _scoped.map((r) => r.namaAnak).toSet().length;
-  int get totalTahfizh => _scoped.where((r) => r.status == HafalanStatus.tahfizh).length;
-  int get totalTahsin => _scoped.where((r) => r.status == HafalanStatus.tahsin).length;
+  // Tahsin+Tahfizh dihitung masuk KEDUA total ini juga (punya kedua
+  // komponennya sekaligus) — biar "Tahfizh"/"Tahsin" di kartu ringkasan
+  // tetap mencerminkan seluruh laporan yang punya komponen itu, bukan
+  // cuma yang statusnya persis satu itu saja.
+  bool _hasTahfizhComponent(SantriRecord r) =>
+      r.status == HafalanStatus.tahfizh || r.status == HafalanStatus.tahsinTahfizh;
+  bool _hasTahsinComponent(SantriRecord r) =>
+      r.status == HafalanStatus.tahsin || r.status == HafalanStatus.tahsinTahfizh;
+
+  int get totalTahfizh => _scoped.where(_hasTahfizhComponent).length;
+  int get totalTahsin => _scoped.where(_hasTahsinComponent).length;
+  int get totalMurojaahTasmi =>
+      _scoped.where((r) => r.status == HafalanStatus.murojaahTasmi).length;
   int get totalHadir => _scoped.where((r) => r.keterangan == Keterangan.hadir).length;
   int get totalIzinAlpa => _scoped.where((r) => r.keterangan != Keterangan.hadir).length;
   int get totalBarisSetoran =>
@@ -231,7 +242,7 @@ class RecordsProvider extends ChangeNotifier {
   // --- Dataset untuk dropdown+ketik di form (Kelas/Halaqoh/Nama Santri) ---
   // Diturunin dari data yang udah pernah diinput (sudah discope) DAN
   // digabung dengan data master santri di layer UI (lihat record_form_sheet)
-  // supaya musyrif juga bisa pilih santri yang belum pernah dilaporkan.
+  // supaya guru pembimbing juga bisa pilih santri yang belum pernah dilaporkan.
   List<String> get distinctKelas => _scoped
       .map((r) => r.kelas)
       .where((v) => v.trim().isNotEmpty)
@@ -343,10 +354,10 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   int totalTahfizhInMonth(DateTime month) =>
-      recordsInMonth(month).where((r) => r.status == HafalanStatus.tahfizh).length;
+      recordsInMonth(month).where(_hasTahfizhComponent).length;
 
   int totalTahsinInMonth(DateTime month) =>
-      recordsInMonth(month).where((r) => r.status == HafalanStatus.tahsin).length;
+      recordsInMonth(month).where(_hasTahsinComponent).length;
 
   int totalBarisInMonth(DateTime month) =>
       recordsInMonth(month).fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
@@ -379,10 +390,10 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   int totalTahfizhInWeek(DateTime anyDateInWeek) =>
-      recordsInWeek(anyDateInWeek).where((r) => r.status == HafalanStatus.tahfizh).length;
+      recordsInWeek(anyDateInWeek).where(_hasTahfizhComponent).length;
 
   int totalTahsinInWeek(DateTime anyDateInWeek) =>
-      recordsInWeek(anyDateInWeek).where((r) => r.status == HafalanStatus.tahsin).length;
+      recordsInWeek(anyDateInWeek).where(_hasTahsinComponent).length;
 
   int totalBarisInWeek(DateTime anyDateInWeek) =>
       recordsInWeek(anyDateInWeek).fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
@@ -400,4 +411,50 @@ class RecordsProvider extends ChangeNotifier {
   /// Rekap Pekanan buat baris "Senin — 12 laporan", dst.
   Map<DateTime, List<SantriRecord>> weekDailyBreakdown(DateTime anyDateInWeek) =>
       groupByDate(recordsInWeek(anyDateInWeek));
+
+  /// Kelompokkan [records] per pasangan Kelas+Halaqoh — dipakai di Rekap
+  /// Pekanan/Bulanan buat section "per Kelas & Halaqoh" (biar guru
+  /// pembimbing bisa lihat/ekspor rekap kelompoknya sendiri). Terurut
+  /// berdasarkan Kelas lalu Halaqoh; di dalam tiap grup, record terurut
+  /// tanggal terlama dulu (kronologis, enak dibaca sebagai rekap
+  /// pekanan/harian) lalu nama.
+  List<KelasHalaqohGroup> groupByKelasHalaqoh(List<SantriRecord> records) {
+    final map = <String, List<SantriRecord>>{};
+    for (final r in records) {
+      final key = '${r.kelas}|${r.halaqoh}';
+      map.putIfAbsent(key, () => []).add(r);
+    }
+    final groups = map.entries.map((e) {
+      final parts = e.key.split('|');
+      final list = List<SantriRecord>.from(e.value)
+        ..sort((a, b) {
+          final byDate = a.tanggal.compareTo(b.tanggal);
+          if (byDate != 0) return byDate;
+          return a.namaAnak.toLowerCase().compareTo(b.namaAnak.toLowerCase());
+        });
+      return KelasHalaqohGroup(kelas: parts[0], halaqoh: parts[1], records: list);
+    }).toList()
+      ..sort((a, b) {
+        final byKelas = a.kelas.compareTo(b.kelas);
+        if (byKelas != 0) return byKelas;
+        return a.halaqoh.compareTo(b.halaqoh);
+      });
+    return groups;
+  }
+}
+
+/// Satu kelompok laporan milik 1 pasangan Kelas+Halaqoh dalam suatu
+/// periode (dipakai Rekap Pekanan/Bulanan) — lihat
+/// [RecordsProvider.groupByKelasHalaqoh].
+class KelasHalaqohGroup {
+  final String kelas;
+  final String halaqoh;
+  final List<SantriRecord> records;
+  const KelasHalaqohGroup({
+    required this.kelas,
+    required this.halaqoh,
+    required this.records,
+  });
+
+  int get totalBaris => records.fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
 }

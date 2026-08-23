@@ -4,11 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/records_provider.dart';
+import '../../widgets/kelas_halaqoh_group_card.dart';
 import '../../widgets/misc_widgets.dart';
-import '../../widgets/record_card.dart';
 import '../export/export_sheet.dart';
-import '../record_form/record_form_sheet.dart';
 
 /// Rekap PEKANAN — sejajar dengan Rekap Bulanan (tidak menggantikan),
 /// dibuka dari tab Statistik. Nomor pekan pakai [WeekUtils] (ISO-8601,
@@ -42,6 +42,7 @@ class _RekapPekananScreenState extends State<RekapPekananScreen> {
     final records = provider.recordsInWeek(_weekStart);
     final dailyBreakdown = provider.weekDailyBreakdown(_weekStart);
     final dayOrder = List.generate(7, (i) => _weekStart.add(Duration(days: i)));
+    final kelasHalaqohGroups = provider.groupByKelasHalaqoh(records);
 
     final totalTahfizh = provider.totalTahfizhInWeek(_weekStart);
     final totalTahsin = provider.totalTahsinInWeek(_weekStart);
@@ -202,36 +203,22 @@ class _RekapPekananScreenState extends State<RekapPekananScreen> {
                   ),
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              const SliverPadding(
+                padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
                 sliver: SliverToBoxAdapter(
-                  child: SectionLabel('Semua Laporan (${records.length})'),
+                  child: SectionLabel('Rekap per Kelas & Halaqoh'),
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
                 sliver: SliverList.list(
                   children: [
-                    for (final date in dailyBreakdown.keys) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10, top: 6),
-                        child: Text(
-                          DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date),
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
+                    for (final g in kelasHalaqohGroups) ...[
+                      KelasHalaqohGroupCard(
+                        group: g,
+                        onExport: () => _exportGroup(context, g),
                       ),
-                      for (final r in dailyBreakdown[date]!) ...[
-                        RecordCard(
-                          record: r,
-                          onEdit: () => showRecordFormSheet(context, existing: r),
-                          onDelete: () => _confirmDelete(context, r.id),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
+                      const SizedBox(height: 12),
                     ],
                   ],
                 ),
@@ -243,27 +230,33 @@ class _RekapPekananScreenState extends State<RekapPekananScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context, String id) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus laporan?'),
-        content: const Text('Data yang dihapus tidak dapat dikembalikan.'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () {
-              context.read<RecordsProvider>().delete(id);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+  void _exportGroup(BuildContext context, KelasHalaqohGroup g) {
+    final authProvider = context.read<AuthProvider>();
+    String? guru = authProvider.guruPembimbingNameFor(g.kelas, g.halaqoh);
+    if (guru == null) {
+      // Fallback: cari ownerId yang paling sering muncul di kelompok ini
+      // (assignment guru mungkin sudah berubah sejak laporan dibuat).
+      final counts = <String, int>{};
+      for (final r in g.records) {
+        final id = r.ownerId;
+        if (id == null) continue;
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+      if (counts.isNotEmpty) {
+        final topId = counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+        guru = authProvider.displayNameForId(topId);
+      }
+    }
+    showExportSheet(
+      context,
+      records: g.records,
+      judul: 'Kelas ${g.kelas} Halaqoh ${g.halaqoh} - ${WeekUtils.weekLabel(_weekStart)}',
+      periode: '${WeekUtils.weekLabel(_weekStart)} (${WeekUtils.rangeLabel(_weekStart)})',
+      guruPembimbing: guru,
+      includeTanggal: true,
     );
   }
+
 }
 
 class _WeekSwitcher extends StatelessWidget {

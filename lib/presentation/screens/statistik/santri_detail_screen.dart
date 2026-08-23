@@ -95,9 +95,7 @@ class SantriDetailScreen extends StatelessWidget {
                       rows: items
                           .map((r) => RecordSummaryRow(
                                 statusIcon: r.status.icon,
-                                statusColor: r.status == HafalanStatus.tahfizh
-                                    ? AppColors.tahfizhOn(context)
-                                    : AppColors.tahsinOn(context),
+                                statusColor: AppColors.statusOn(context, r.status),
                                 statusLabel: r.status.label,
                                 capaianText: r.capaianText,
                                 keteranganChip:

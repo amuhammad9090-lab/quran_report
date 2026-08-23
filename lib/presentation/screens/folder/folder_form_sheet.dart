@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/access/access_scope.dart';
 import '../../../data/models/folder.dart';
 import '../../../providers/folders_provider.dart';
+import '../../../providers/records_provider.dart';
+import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
 
 /// Bottom sheet buat folder baru, atau rename folder yang sudah ada kalau
@@ -11,6 +14,7 @@ import '../../widgets/misc_widgets.dart';
 Future<void> showFolderFormSheet(BuildContext context, {ReportFolder? existing}) {
   return showModalBottomSheet(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
@@ -27,24 +31,102 @@ class FolderFormSheet extends StatefulWidget {
 }
 
 class _FolderFormSheetState extends State<FolderFormSheet> {
-  late final _namaCtrl = TextEditingController(text: widget.existing?.nama ?? '');
-  String? _error;
+  // Nama folder SEKARANG selalu disusun dari Kelas + Halaqoh yang dipilih
+  // lewat dropdown (nggak ada lagi kolom ketik bebas) — biar penamaan
+  // folder konsisten & selalu nyambung ke data kelas/halaqoh yang beneran
+  // ada, bukan teks sembarangan.
+  String? _kelas;
+  String? _halaqoh;
+  String? _kelasError;
+  String? _halaqohError;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
 
   @override
-  void dispose() {
-    _namaCtrl.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    final existingNama = widget.existing?.nama;
+    if (existingNama != null) {
+      // Folder lama (sebelum perubahan ini) namanya masih teks bebas —
+      // coba tebak Kelas/Halaqoh-nya dari pola "Kelas X - Halaqoh Y" yang
+      // memang jadi format baku sejak awal fitur folder ini ada. Kalau
+      // nggak cocok pola (folder lama dengan nama lain), biarkan dropdown
+      // kosong — user tinggal pilih ulang.
+      final match = RegExp(r'^Kelas\s+(.+?)\s+-\s+Halaqoh\s+(.+)$').firstMatch(existingNama.trim());
+      if (match != null) {
+        _kelas = match.group(1);
+        _halaqoh = match.group(2);
+      }
+    }
+  }
+
+  AccessScope? get _scope => context.read<RecordsProvider>().scope;
+
+  bool get _hasOwnAssignments => (_scope?.user.assignments ?? const []).isNotEmpty;
+
+  /// Sama seperti di form laporan: kalau user (guru pembimbing, atau admin
+  /// yang juga punya assignment sendiri) punya kelas/halaqoh sendiri,
+  /// opsi dibatasi ke situ saja. Admin murni (tanpa assignment sendiri)
+  /// nggak dibatasi — folder memang alat organisasi, admin boleh bikin
+  /// folder untuk kelas manapun.
+  bool get _restrictToOwn => _scope != null && _hasOwnAssignments;
+
+  List<String> _kelasOptions() {
+    final scope = _scope;
+    final dataset = context.read<RecordsProvider>();
+    final accessibleStudents = context.read<StudentsProvider>().accessibleFor(scope);
+    if (_restrictToOwn) {
+      return (scope!.user.assignments.map((a) => a.kelas).toSet().toList()..sort());
+    }
+    return ({...dataset.distinctKelas, ...accessibleStudents.map((s) => s.kelas)}.toList()..sort());
+  }
+
+  List<String> _halaqohOptions() {
+    final scope = _scope;
+    final dataset = context.read<RecordsProvider>();
+    final accessibleStudents = context.read<StudentsProvider>().accessibleFor(scope);
+    if (_restrictToOwn) {
+      final validForKelas = scope!.user.assignments
+          .where((a) => a.kelas == _kelas)
+          .map((a) => a.halaqoh)
+          .toList();
+      return validForKelas.isNotEmpty
+          ? validForKelas
+          : (scope.user.assignments.map((a) => a.halaqoh).toSet().toList()..sort());
+    }
+    return ({...dataset.distinctHalaqoh, ...accessibleStudents.map((s) => s.halaqoh)}.toList()..sort());
+  }
+
+  void _onKelasChanged(String? v) {
+    setState(() {
+      _kelas = v;
+      _kelasError = null;
+    });
+    // Kelas ganti -> halaqoh yang lagi kepilih mungkin udah nggak valid
+    // buat kelas baru ini (khusus mode dibatasi assignment sendiri) ->
+    // reset biar nggak nyangkut pasangan yang salah.
+    final validHalaqoh = _halaqohOptions();
+    if (_halaqoh != null && !validHalaqoh.contains(_halaqoh)) {
+      setState(() => _halaqoh = null);
+    }
+  }
+
+  void _onHalaqohChanged(String? v) {
+    setState(() {
+      _halaqoh = v;
+      _halaqohError = null;
+    });
   }
 
   Future<void> _save() async {
-    final nama = _namaCtrl.text.trim();
-    if (nama.isEmpty) {
-      setState(() => _error = 'Nama folder wajib diisi');
-      return;
-    }
+    setState(() {
+      _kelasError = (_kelas == null || _kelas!.trim().isEmpty) ? 'Wajib dipilih' : null;
+      _halaqohError = (_halaqoh == null || _halaqoh!.trim().isEmpty) ? 'Wajib dipilih' : null;
+    });
+    if (_kelasError != null || _halaqohError != null) return;
+
+    final nama = 'Kelas ${_kelas!.trim()} - Halaqoh ${_halaqoh!.trim()}';
     setState(() => _saving = true);
     final provider = context.read<FoldersProvider>();
     if (_isEdit) {
@@ -58,6 +140,16 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    // context.watch di sini biar build() ini rebuild otomatis tiap
+    // RecordsProvider/StudentsProvider notifyListeners — _kelasOptions()
+    // dkk di atas boleh pakai context.read internal karena widget ini
+    // sudah "berlangganan" lewat watch di bawah.
+    context.watch<RecordsProvider>();
+    context.watch<StudentsProvider>();
+
+    final kelasOptions = _kelasOptions();
+    final halaqohOptions = _halaqohOptions();
+
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
@@ -87,7 +179,7 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
                   SoftIconBox(icon: Icons.folder_rounded, color: cs.secondary),
                   const SizedBox(width: 12),
                   Text(
-                    _isEdit ? 'Ubah Nama Folder' : 'Buat Folder Baru',
+                    _isEdit ? 'Ubah Folder' : 'Buat Folder Baru',
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
@@ -96,18 +188,34 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
                 ],
               ),
               const SizedBox(height: 18),
-              TextField(
-                controller: _namaCtrl,
-                autofocus: true,
-                textCapitalization: TextCapitalization.sentences,
-                onSubmitted: (_) => _save(),
-                decoration: fieldDecoration(
-                  context,
-                  icon: Icons.drive_file_rename_outline_rounded,
-                  label: 'Nama folder',
-                  hint: 'contoh: Kelas 7 - Halaqoh A',
-                  errorText: _error,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: SelectField(
+                      key: ValueKey('kelas_$_kelas'),
+                      value: _kelas,
+                      label: 'Kelas',
+                      icon: Icons.class_outlined,
+                      options: kelasOptions,
+                      errorText: _kelasError,
+                      accent: cs.secondary,
+                      onChanged: _onKelasChanged,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SelectField(
+                      key: ValueKey('halaqoh_$_halaqoh'),
+                      value: _halaqoh,
+                      label: 'Halaqoh',
+                      icon: Icons.groups_outlined,
+                      options: halaqohOptions,
+                      errorText: _halaqohError,
+                      accent: cs.secondary,
+                      onChanged: _onHalaqohChanged,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 18),
               SizedBox(

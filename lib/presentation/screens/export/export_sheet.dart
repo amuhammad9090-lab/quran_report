@@ -13,13 +13,22 @@ Future<void> showExportSheet(
   List<SantriRecord>? records,
   String? judul,
   String? periode,
+  String? guruPembimbing,
+  bool includeTanggal = false,
 }) {
   return showModalBottomSheet(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => ExportSheet(fixedRecords: records, judul: judul, periode: periode),
+    builder: (_) => ExportSheet(
+      fixedRecords: records,
+      judul: judul,
+      periode: periode,
+      guruPembimbing: guruPembimbing,
+      includeTanggal: includeTanggal,
+    ),
   );
 }
 
@@ -32,8 +41,23 @@ class ExportSheet extends StatefulWidget {
   // Baris kecil opsional di bawah kop laporan (mis. nama folder atau
   // bulan rekap) — nggak ditampilkan kalau kosong.
   final String? periode;
+  // Nama guru pembimbing (dicetak sebagai baris tambahan di kop laporan) —
+  // dipakai khusus export rekap per Kelas+Halaqoh (lihat
+  // KelasHalaqohGroupCard). Null = tidak ditampilkan.
+  final String? guruPembimbing;
+  // True kalau laporan yang diekspor bisa mencakup lebih dari 1
+  // hari/tanggal (mis. rekap pekanan per kelompok) -> tabel export
+  // menyertakan kolom Hari & Tanggal per baris.
+  final bool includeTanggal;
 
-  const ExportSheet({super.key, this.fixedRecords, this.judul, this.periode});
+  const ExportSheet({
+    super.key,
+    this.fixedRecords,
+    this.judul,
+    this.periode,
+    this.guruPembimbing,
+    this.includeTanggal = false,
+  });
 
   @override
   State<ExportSheet> createState() => _ExportSheetState();
@@ -80,16 +104,31 @@ class _ExportSheetState extends State<ExportSheet> {
       File file;
       switch (format) {
         case ExportFormat.pdf:
-          file = await ExportService.instance
-              .exportPdf(records, judul: judul, periode: widget.periode);
+          file = await ExportService.instance.exportPdf(
+            records,
+            judul: judul,
+            periode: widget.periode,
+            guruPembimbing: widget.guruPembimbing,
+            includeTanggal: widget.includeTanggal,
+          );
           break;
         case ExportFormat.word:
-          file = await ExportService.instance
-              .exportWord(records, judul: judul, periode: widget.periode);
+          file = await ExportService.instance.exportWord(
+            records,
+            judul: judul,
+            periode: widget.periode,
+            guruPembimbing: widget.guruPembimbing,
+            includeTanggal: widget.includeTanggal,
+          );
           break;
         case ExportFormat.excel:
-          file = await ExportService.instance
-              .exportExcel(records, judul: judul, periode: widget.periode);
+          file = await ExportService.instance.exportExcel(
+            records,
+            judul: judul,
+            periode: widget.periode,
+            guruPembimbing: widget.guruPembimbing,
+            includeTanggal: widget.includeTanggal,
+          );
           break;
       }
 

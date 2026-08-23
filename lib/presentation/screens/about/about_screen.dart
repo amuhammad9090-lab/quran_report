@@ -140,7 +140,7 @@ class AboutScreen extends StatelessWidget {
                         Icon(Icons.favorite_rounded, color: cs.error, size: 22),
                         const SizedBox(height: 10),
                         const Text(
-                          'Dibuat untuk kemudahan para musyrif/ah',
+                          'Dibuat untuk kemudahan para guru pembimbing',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
                         ),

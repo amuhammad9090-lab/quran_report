@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Khusus musyrif & admin yang terdaftar.',
+                    'Khusus guru pembimbing & admin yang terdaftar.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                   ),

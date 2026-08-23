@@ -8,7 +8,7 @@ import '../../data/models/user_account.dart';
 /// (provider/repository), bukan cuma nge-filter tampilan di widget.
 ///
 /// Aturan (sesuai spesifikasi & data sekolah asli): admin = akses global.
-/// Musyrif = hanya data yang kelas+halaqoh-nya cocok PERSIS dengan salah
+/// Guru Pembimbing = hanya data yang kelas+halaqoh-nya cocok PERSIS dengan salah
 /// satu [UserAccount.assignments] miliknya — PASANGAN, bukan cross-
 /// product dua list independen. Lihat dokumentasi di [KelasHalaqoh] untuk
 /// kenapa ini penting: data guru asli membuktikan satu guru bisa
@@ -17,7 +17,7 @@ import '../../data/models/user_account.dart';
 /// halaqohnya.
 ///
 /// Catatan desain: [SantriRecord] existing tidak punya `studentId` (nama/
-/// kelas/halaqoh selama ini teks bebas yang diketik musyrif). Supaya data
+/// kelas/halaqoh selama ini teks bebas yang diketik guru pembimbing). Supaya data
 /// lama (yang jelas tidak punya field itu) tidak jadi tidak-bisa-diakses,
 /// scoping dilakukan lewat kecocokan kelas+halaqoh — bukan lewat
 /// `ownerId`/`studentId`. Field `ownerId` yang ditambahkan ke

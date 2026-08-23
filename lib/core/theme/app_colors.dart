@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/enums.dart';
+
 /// Palet warna — nuansa hijau tosca (identik kegiatan tahfizh) dipadu
 /// amber untuk aksen tahsin, dirancang agar terasa "islami" namun modern.
 ///
@@ -27,6 +29,14 @@ class AppColors {
   static const tahfizhDark = Color(0xFF3ED9AE);
   static const tahsinDark = Color(0xFFE8B84A);
 
+  // --- Status Tahsin+Tahfizh / Muroja'ah-Tasmi' (versi light) ---
+  static const tahsinTahfizh = Color(0xFF2F80B4);
+  static const murojaahTasmi = Color(0xFF6C5CE7);
+
+  // --- Versi dark ---
+  static const tahsinTahfizhDark = Color(0xFF6FB6EA);
+  static const murojaahTasmiDark = Color(0xFFA79BFF);
+
   // --- Keterangan (versi light) ---
   static const hadir = Color(0xFF2E9E5B);
   static const izinSakit = Color(0xFFE0724A);
@@ -52,6 +62,23 @@ class AppColors {
   /// Warna status Tahsin — otomatis pilih versi terang/gelap sesuai tema aktif.
   static Color tahsinOn(BuildContext context) =>
       _isDark(context) ? tahsinDark : tahsin;
+
+  /// Warna status Tahsin+Tahfizh — otomatis pilih versi terang/gelap sesuai tema aktif.
+  static Color tahsinTahfizhOn(BuildContext context) =>
+      _isDark(context) ? tahsinTahfizhDark : tahsinTahfizh;
+
+  /// Warna status Muroja'ah/Tasmi' — otomatis pilih versi terang/gelap sesuai tema aktif.
+  static Color murojaahTasmiOn(BuildContext context) =>
+      _isDark(context) ? murojaahTasmiDark : murojaahTasmi;
+
+  /// Warna generik untuk [HafalanStatus] apa pun — dipakai di badge, form,
+  /// dan kartu rekap kelas/halaqoh biar 1 sumber warna yang konsisten.
+  static Color statusOn(BuildContext context, HafalanStatus status) => switch (status) {
+        HafalanStatus.tahfizh => tahfizhOn(context),
+        HafalanStatus.tahsin => tahsinOn(context),
+        HafalanStatus.tahsinTahfizh => tahsinTahfizhOn(context),
+        HafalanStatus.murojaahTasmi => murojaahTasmiOn(context),
+      };
 
   /// Versi dark-aware dari [keteranganColor] — dipakai di semua tempat UI
   /// (chip, badge, filter). Untuk export dokumen tetap pakai

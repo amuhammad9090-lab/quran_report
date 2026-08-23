@@ -10,4 +10,9 @@ abstract class AuthRepository {
 
   /// Dipakai buat restore session (cari user by id yang tersimpan).
   Future<UserAccount?> findById(String id);
+
+  /// Semua akun terdaftar — dipakai buat mencari nama guru pembimbing
+  /// suatu Kelas+Halaqoh saat export rekap per kelompok (lihat
+  /// AuthProvider.guruPembimbingNameFor).
+  Future<List<UserAccount>> allAccounts();
 }

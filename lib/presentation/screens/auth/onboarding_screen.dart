@@ -22,7 +22,7 @@ const _pages = [
   _OnboardingPage(
     icon: Icons.groups_2_rounded,
     title: 'Fokus ke halaqoh\nmasing-masing',
-    subtitle: 'Setiap musyrif hanya melihat kelas & halaqoh yang menjadi tanggung jawabnya.',
+    subtitle: 'Setiap guru pembimbing hanya melihat kelas & halaqoh yang menjadi tanggung jawabnya.',
   ),
   _OnboardingPage(
     icon: Icons.ios_share_rounded,

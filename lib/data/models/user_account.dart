@@ -1,28 +1,29 @@
 import 'kelas_halaqoh.dart';
 
-/// Role akses user. Admin = akses global, Musyrif = hanya data
+/// Role akses user. Admin = akses global, Guru Pembimbing = hanya data
 /// assignment (kelas+halaqoh) miliknya sendiri.
 enum UserRole {
   admin,
-  musyrif;
+  guruPembimbing;
 
   String get label => switch (this) {
         UserRole.admin => 'Admin',
-        UserRole.musyrif => 'Musyrif',
+        UserRole.guruPembimbing => 'Guru Pembimbing',
       };
 
   static UserRole fromName(String name) {
     final n = name.trim().toLowerCase();
     if (n == 'admin') return UserRole.admin;
-    // 'musyrif' dan 'guru_alquran' (label asli data sekolah) dianggap
-    // sama. Nilai lain yang tidak dikenal juga fallback ke musyrif
-    // (bukan admin) supaya defaultnya selalu yang PALING TERBATAS,
-    // bukan yang paling luas aksesnya.
-    return UserRole.musyrif;
+    // 'guru_pembimbing' (nama resmi terbaru), serta nama lama
+    // 'musyrif'/'guru_alquran' (dari data sekolah versi sebelumnya)
+    // dianggap sama. Nilai lain yang tidak dikenal juga fallback ke
+    // guruPembimbing (bukan admin) supaya defaultnya selalu yang PALING
+    // TERBATAS, bukan yang paling luas aksesnya.
+    return UserRole.guruPembimbing;
   }
 }
 
-/// Akun user (musyrif/admin) — dipakai oleh [AuthRepository].
+/// Akun user (guru pembimbing/admin) — dipakai oleh [AuthRepository].
 ///
 /// `passwordHash` TIDAK PERNAH menyimpan plaintext (lihat
 /// `AuthHashService`). Field ini murni model data, tidak tahu-menahu soal
@@ -121,7 +122,7 @@ class UserAccount {
       username: json['username'] as String,
       displayName: json['displayName'] as String,
       passwordHash: json['passwordHash'] as String,
-      role: UserRole.fromName(json['role'] as String? ?? 'musyrif'),
+      role: UserRole.fromName(json['role'] as String? ?? 'guru_pembimbing'),
       assignments: parsedAssignments,
       // schoolId opsional di data lama — default ke sekolah pertama supaya
       // tidak crash kalau field belum ada (backward compatible).

@@ -16,6 +16,7 @@ class AppPrefsService {
   static const _boxName = 'app_prefs';
   static const _keyOnboardingComplete = 'onboarding_complete';
   static const _keySessionUserId = 'session_user_id';
+  static const _keyRecordDraft = 'record_form_draft';
 
   late Box<String> _box;
 
@@ -37,5 +38,22 @@ class AppPrefsService {
 
   Future<void> clearSession() async {
     await _box.delete(_keySessionUserId);
+  }
+
+  // --- Draft form "Laporan Baru" ---
+  // Cuma dipakai buat laporan BARU (bukan edit) — supaya kalau bottom
+  // sheet-nya ke-tutup nggak sengaja (swipe/tap di luar) sebelum sempat
+  // tekan Simpan, isian yang udah diketik/dipilih nggak hilang begitu
+  // saja. Disimpan sebagai JSON mentah di sini (bukan di-parse) — biar
+  // service ini tetap generik, parsing/model-nya jadi urusan pemanggil
+  // (RecordFormSheet).
+  String? get recordDraftJson => _box.get(_keyRecordDraft);
+
+  Future<void> saveRecordDraft(String json) async {
+    await _box.put(_keyRecordDraft, json);
+  }
+
+  Future<void> clearRecordDraft() async {
+    await _box.delete(_keyRecordDraft);
   }
 }

@@ -32,4 +32,7 @@ class LocalAuthRepository implements AuthRepository {
     }
     return null;
   }
+
+  @override
+  Future<List<UserAccount>> allAccounts() async => List.unmodifiable(_accounts());
 }

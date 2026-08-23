@@ -275,62 +275,78 @@ InputDecorationTheme fieldDecorationTheme(
   );
 }
 
-/// Field gabungan dropdown + ketik bebas (pakai [DropdownMenu]) — dipakai
-/// buat Kelas/Halaqoh/Nama Santri: bisa pilih dari daftar, atau ketik baru.
-/// Diskin biar senada sama [fieldDecoration]: ikon dalam kotak warna,
-/// menu popup rounded matching card, bukan tampilan default Material.
-class DropdownTypeField extends StatelessWidget {
-  final TextEditingController controller;
+/// Field pilih-SAJA (tanpa ketik bebas sama sekali) — dipakai buat
+/// Kelas/Halaqoh/Nama Santri: nilai HARUS salah satu dari [options],
+/// nggak ada cara buat user mengetik teks bebas ke luar daftar itu.
+/// Dipakai [DropdownButtonFormField] (bukan [DropdownMenu]) karena
+/// widget itu memang murni pilih dari [items], nggak punya text-input
+/// sama sekali. Diskin biar senada sama [fieldDecoration]: ikon dalam
+/// kotak warna, rounded-16.
+///
+/// [value] dipakai sebagai `initialValue` — [DropdownButtonFormField]
+/// modern nggak otomatis re-render pas [value] berubah dari luar (mis.
+/// direset programatis karena kelas/halaqoh ganti). Makanya widget ini
+/// SELALU dikasih `key: ValueKey(value)` oleh pemanggil (lihat
+/// `record_form_sheet.dart`) biar widget-nya dibikin ulang & nilainya
+/// ikut ke-refresh tiap kali value berubah dari luar.
+class SelectField extends StatelessWidget {
+  final String? value;
   final String label;
   final String? hint;
   final IconData icon;
   final List<String> options;
   final String? errorText;
   final Color? accent;
+  final bool enabled;
+  final ValueChanged<String?>? onChanged;
 
-  const DropdownTypeField({
+  const SelectField({
     super.key,
-    required this.controller,
+    required this.value,
     required this.label,
     required this.icon,
     required this.options,
+    required this.onChanged,
     this.hint,
     this.errorText,
     this.accent,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final color = accent ?? cs.primary;
-    return DropdownMenu<String>(
-      controller: controller,
-      expandedInsets: EdgeInsets.zero,
-      enableFilter: true,
-      requestFocusOnTap: true,
-      leadingIcon: Padding(
-        padding: const EdgeInsets.all(8),
-        child: FieldIcon(icon: icon, color: color, size: 34),
+    // Kalau value sekarang bukan bagian dari options (mis. kelas/halaqoh
+    // baru dipilih & santri lama nggak termasuk di halaqoh itu lagi),
+    // jangan kirim value asing ke DropdownButtonFormField — bisa assert
+    // error. Tampilkan kosong aja (biarkan hintText yang muncul).
+    final safeValue = (value != null && options.contains(value)) ? value : null;
+    final isUsable = enabled && options.isNotEmpty;
+    return DropdownButtonFormField<String>(
+      initialValue: safeValue,
+      isExpanded: true,
+      borderRadius: BorderRadius.circular(16),
+      icon: Icon(Icons.expand_more_rounded,
+          color: isUsable ? cs.onSurfaceVariant : cs.onSurfaceVariant.withValues(alpha: 0.4)),
+      decoration: fieldDecoration(
+        context,
+        icon: icon,
+        label: label,
+        hint: hint,
+        errorText: errorText,
+        accent: color,
       ),
-      trailingIcon: Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
-      selectedTrailingIcon:
-      Icon(Icons.expand_less_rounded, color: cs.onSurfaceVariant),
-      // Nggak pakai `label:` (itu yang bikin teksnya "terbang" ke atas pas
-      // di-tap) — pakai hintText aja, tetap kelihatan selama kolom kosong.
-      hintText: hint != null ? '$label ($hint)' : label,
-      errorText: errorText,
-      textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5),
-      inputDecorationTheme: fieldDecorationTheme(context, accent: color),
-      menuStyle: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(Theme.of(context).cardTheme.color),
-        elevation: const WidgetStatePropertyAll(6),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      ),
-      dropdownMenuEntries:
-      options.map((o) => DropdownMenuEntry(value: o, label: o)).toList(),
-      onSelected: (_) {},
+      disabledHint: hint != null
+          ? Text(hint!,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13.5),
+              overflow: TextOverflow.ellipsis)
+          : null,
+      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, color: cs.onSurface),
+      items: options
+          .map((o) => DropdownMenuItem(value: o, child: Text(o, overflow: TextOverflow.ellipsis)))
+          .toList(),
+      onChanged: isUsable ? onChanged : null,
     );
   }
 }

@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
 
-/// Status capaian santri: Tahsin (belajar baca) atau Tahfizh (hafalan).
+/// Status capaian santri: Tahsin (belajar baca), Tahfizh (hafalan),
+/// gabungan Tahsin+Tahfizh, atau Muroja'ah/Tasmi' (mengulang hafalan lama).
 enum HafalanStatus {
   tahsin,
-  tahfizh;
+  tahfizh,
+  tahsinTahfizh,
+  murojaahTasmi;
 
   String get label => switch (this) {
         HafalanStatus.tahsin => 'Tahsin',
         HafalanStatus.tahfizh => 'Tahfizh',
+        HafalanStatus.tahsinTahfizh => 'Tahsin+Tahfizh',
+        HafalanStatus.murojaahTasmi => "Muroja'ah/Tasmi'",
       };
 
   IconData get icon => switch (this) {
         HafalanStatus.tahsin => Icons.menu_book_rounded,
         HafalanStatus.tahfizh => Icons.auto_stories_rounded,
+        HafalanStatus.tahsinTahfizh => Icons.library_books_rounded,
+        HafalanStatus.murojaahTasmi => Icons.repeat_rounded,
+      };
+}
+
+/// Sub-mode pengisian untuk status Tahsin (dan bagian Tahsin di dalam
+/// Tahsin+Tahfizh): WAFA (jenjang buku + halaman, seperti semula) atau
+/// Tilawah (surah + rentang ayat, tanpa hitung baris/generate).
+enum TahsinMode {
+  wafa,
+  tilawah;
+
+  String get label => switch (this) {
+        TahsinMode.wafa => 'WAFA',
+        TahsinMode.tilawah => 'Tilawah',
       };
 }
 
