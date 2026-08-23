@@ -29,7 +29,7 @@ class SantriRecord {
   // tampil di section "Laporan" biasa).
   final String? folderId;
 
-  // Id user (musyrif) yang membuat laporan ini. OPSIONAL & backward
+  // Id user (guru pembimbing) yang membuat laporan ini. OPSIONAL & backward
   // compatible — laporan lama (sebelum ada auth) tidak punya ini dan
   // TETAP bisa dibaca/ditampilkan normal (null). Field ini untuk
   // keperluan audit/riwayat ke depan; access control TIDAK mengandalkan

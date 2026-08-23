@@ -5,7 +5,7 @@ import '../data/models/enums.dart';
 import '../data/models/santri_record.dart';
 import '../data/services/storage_service.dart';
 
-/// Dilempar [RecordsProvider.upsert] kalau musyrif mencoba menyimpan
+/// Dilempar [RecordsProvider.upsert] kalau guru pembimbing mencoba menyimpan
 /// laporan untuk kelas/halaqoh di luar assignment-nya. Ini enforcement
 /// SUNGGUHAN di level data (bukan cuma UI) — lihat AccessScope & bagian I
 /// spesifikasi access control.
@@ -53,7 +53,7 @@ class RecordsProvider extends ChangeNotifier {
   HafalanStatus? get filterStatus => _filterStatus;
   Keterangan? get filterKeterangan => _filterKeterangan;
 
-  /// True kalau user yang login adalah musyrif (dibatasi assignment) —
+  /// True kalau user yang login adalah guru pembimbing (dibatasi assignment) —
   /// dipakai UI buat, mis., mengunci pilihan kelas/halaqoh di form.
   bool get isScoped => _scope != null && !_scope!.isAdmin;
   AccessScope? get scope => _scope;
@@ -68,7 +68,7 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   /// Data laporan yang sudah difilter access scope — ini yang dipakai
-  /// SEMUA getter/query di bawah, supaya musyrif tidak pernah kebocoran
+  /// SEMUA getter/query di bawah, supaya guru pembimbing tidak pernah kebocoran
   /// data kelas/halaqoh lain walau lewat jalur statistik/search/export.
   List<SantriRecord> get _scoped => _scope == null ? _all : _scope!.scopeRecords(_all);
 
@@ -132,7 +132,7 @@ class RecordsProvider extends ChangeNotifier {
       _filterStatus != null ||
       _filterKeterangan != null;
 
-  /// Simpan laporan baru/edit. Kalau user musyrif (scope aktif, bukan
+  /// Simpan laporan baru/edit. Kalau user guru pembimbing (scope aktif, bukan
   /// admin) mencoba simpan untuk kelas/halaqoh di luar assignment-nya,
   /// ditolak di sini — INI enforcement access-control yang sesungguhnya,
   /// bukan sekadar UI yang membatasi pilihan.
@@ -147,7 +147,7 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   Future<void> delete(String id) async {
-    // Cari lewat data TER-SCOPE — musyrif nggak bisa hapus record di luar
+    // Cari lewat data TER-SCOPE — guru pembimbing nggak bisa hapus record di luar
     // assignment-nya walau tahu id-nya (mis. dari deep link/cache lama).
     final record = _findById(id);
     if (record == null) return;
@@ -231,7 +231,7 @@ class RecordsProvider extends ChangeNotifier {
   // --- Dataset untuk dropdown+ketik di form (Kelas/Halaqoh/Nama Santri) ---
   // Diturunin dari data yang udah pernah diinput (sudah discope) DAN
   // digabung dengan data master santri di layer UI (lihat record_form_sheet)
-  // supaya musyrif juga bisa pilih santri yang belum pernah dilaporkan.
+  // supaya guru pembimbing juga bisa pilih santri yang belum pernah dilaporkan.
   List<String> get distinctKelas => _scoped
       .map((r) => r.kelas)
       .where((v) => v.trim().isNotEmpty)

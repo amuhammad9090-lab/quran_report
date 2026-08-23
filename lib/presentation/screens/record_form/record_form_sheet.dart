@@ -8,6 +8,7 @@ import '../../../data/models/enums.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../data/services/quran_engine_service.dart';
 import '../../../providers/records_provider.dart';
+import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
 
 /// Menampilkan modal bottom sheet full-height untuk tambah/edit laporan.
@@ -86,8 +87,25 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     _halamanWafaCtrl.text = e?.halamanWafa ?? '';
     _catatanCtrl.text = e?.catatan ?? '';
 
+    // Laporan baru (bukan edit) & user musyrif cuma punya 1 assignment
+    // (kelas+halaqoh) -> pre-fill otomatis biar nggak perlu milih ulang
+    // tiap bikin laporan (musyrif tetap bisa ganti manual kalau memang
+    // punya lebih dari satu assignment).
+    if (e == null) {
+      final scope = context.read<RecordsProvider>().scope;
+      if (scope != null && !scope.isAdmin && scope.user.assignments.length == 1) {
+        final only = scope.user.assignments.first;
+        _kelasCtrl.text = only.kelas;
+        _halaqohCtrl.text = only.halaqoh;
+      }
+    }
+
     _kelasCtrl.addListener(() {
-      if (_kelasError != null) setState(() => _kelasError = null);
+      // Selalu setState (bukan cuma pas ada error) — kelas yang dipilih
+      // menentukan opsi halaqoh yang valid buat musyrif (lihat build()),
+      // jadi harus rebuild tiap kelas berubah, bukan cuma pas ada error
+      // yang perlu dibersihkan.
+      setState(() => _kelasError = null);
     });
     _halaqohCtrl.addListener(() {
       if (_halaqohError != null) setState(() => _halaqohError = null);
@@ -184,7 +202,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     if (picked != null) setState(() => _tanggal = picked);
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     setState(() {
       _kelasError = _kelasCtrl.text.trim().isEmpty ? 'Wajib diisi' : null;
       _halaqohError = _halaqohCtrl.text.trim().isEmpty ? 'Wajib diisi' : null;
@@ -238,15 +256,73 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       folderId: widget.existing?.folderId ?? widget.initialFolderId,
     );
 
-    context.read<RecordsProvider>().upsert(record);
-    Navigator.of(context).pop();
+    // context dipakai lagi setelah await -> WAJIB cek `mounted` dulu tiap
+    // kali, biar lint "don't use BuildContext across async gaps" bersih
+    // (pola .then()/.catchError() sebelumnya nggak kebaca aman oleh
+    // analyzer walau ada context.mounted di dalam closure-nya).
+    final recordsProvider = context.read<RecordsProvider>();
+    try {
+      await recordsProvider.upsert(record);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is ScopeViolationException ? e.message : 'Gagal menyimpan laporan.',
+          ),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final mq = MediaQuery.of(context);
-    final dataset = context.read<RecordsProvider>();
+    final dataset = context.watch<RecordsProvider>();
+    final studentsProvider = context.watch<StudentsProvider>();
+    final scope = dataset.scope;
+    final accessibleStudents = studentsProvider.accessibleFor(scope);
+
+    // Musyrif: kelas/halaqoh dibatasi ke assignment-nya (nggak bisa ketik
+    // bebas ke kelas/halaqoh lain — enforcement sesungguhnya tetap di
+    // RecordsProvider.upsert, ini cuma bikin UI-nya nggak nawarin pilihan
+    // yang bakal ditolak). Admin/belum-login: tetap seperti semula
+    // (gabungan histori laporan + data master santri).
+    //
+    // PENTING: kelas & halaqoh adalah PASANGAN per assignment (lihat
+    // KelasHalaqoh) — makanya opsi halaqoh di sini DIPENGARUHI kelas yang
+    // lagi dipilih (_kelasCtrl.text), bukan gabungan bebas semua halaqoh
+    // yang pernah diampu musyrif ini di kelas manapun.
+    final isMusyrifScoped = scope != null && !scope.isAdmin;
+    final kelasOptions = isMusyrifScoped
+        ? scope.user.distinctKelas
+        : ({...dataset.distinctKelas, ...accessibleStudents.map((s) => s.kelas)}.toList()..sort());
+    final halaqohOptions = isMusyrifScoped
+        ? (() {
+            final selectedKelas = _kelasCtrl.text.trim();
+            final validForKelas = scope.user.assignments
+                .where((a) => a.kelas == selectedKelas)
+                .map((a) => a.halaqoh)
+                .toList();
+            // Kelas belum dipilih (atau belum cocok assignment manapun) ->
+            // tampilkan union semua halaqoh assignment-nya dulu, biar
+            // dropdown nggak kosong; begitu kelas valid dipilih, otomatis
+            // menyempit ke halaqoh yang benar-benar berpasangan.
+            return validForKelas.isNotEmpty
+                ? validForKelas
+                : scope.user.distinctHalaqoh;
+          })()
+        : ({...dataset.distinctHalaqoh, ...accessibleStudents.map((s) => s.halaqoh)}.toList()..sort());
+    // Nama santri: gabungan riwayat laporan (sudah otomatis discope lewat
+    // RecordsProvider) + data master santri assignment ini — supaya
+    // musyrif juga bisa pilih santri yang belum pernah dilaporkan sama
+    // sekali, tanpa pernah nampilin nama santri di luar tanggung jawabnya.
+    final namaOptions = {...dataset.distinctNamaSantri, ...accessibleStudents.map((s) => s.nama)}
+        .toList()
+      ..sort();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.92,
@@ -315,7 +391,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                     controller: _kelasCtrl,
                                     label: 'Kelas',
                                     icon: Icons.class_outlined,
-                                    options: dataset.distinctKelas,
+                                    options: kelasOptions,
                                     errorText: _kelasError,
                                     accent: cs.primary,
                                   ),
@@ -326,7 +402,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                     controller: _halaqohCtrl,
                                     label: 'Halaqoh',
                                     icon: Icons.groups_outlined,
-                                    options: dataset.distinctHalaqoh,
+                                    options: halaqohOptions,
                                     errorText: _halaqohError,
                                     accent: cs.primary,
                                   ),
@@ -338,7 +414,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                               controller: _namaCtrl,
                               label: 'Nama Anak',
                               icon: Icons.person_outline_rounded,
-                              options: dataset.distinctNamaSantri,
+                              options: namaOptions,
                               errorText: _namaError,
                               accent: cs.primary,
                             ),
