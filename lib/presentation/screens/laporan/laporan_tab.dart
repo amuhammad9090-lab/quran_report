@@ -15,10 +15,7 @@ import '../folder/folder_form_sheet.dart';
 import '../folder/move_to_folder_sheet.dart';
 
 /// Tab "Laporan" — pencarian, filter, section Folder, dan daftar kartu
-/// santri (1 kartu = 1 santri, BUKAN 1 kartu per laporan pekanan lagi —
-/// lihat spesifikasi perubahan Laporan & Statistik). Data mingguan tiap
-/// santri diakses lewat kartunya (buka Bottom Sheet laporan pekan yang
-/// relevan) atau lewat Statistik → Rekap Bulanan → Pekan.
+/// santri
 class LaporanTab extends StatefulWidget {
   final ValueChanged<bool>? onSelectionModeChanged;
   final ValueChanged<bool>? onFabVisibilityChanged;
@@ -31,11 +28,7 @@ class LaporanTab extends StatefulWidget {
 class _LaporanTabState extends State<LaporanTab> {
   final _searchCtrl = TextEditingController();
 
-  // Mode pilih-banyak (centang) — pola & implementasi PERSIS sama seperti
-  // [FolderDetailScreen] (dulu dipakai [RecordCard] lama juga), lihat
-  // catatan lengkap di sana. Bedanya di sini aksi bulk-nya "Hapus" &
-  // "Pindahkan ke Folder" (bukan "Keluarkan", karena kartu yang tampil di
-  // sini sudah pasti TIDAK sedang di folder mana pun — lihat _filteredCards).
+  // Mode pilih-banyak (centang)
   bool _selectionMode = false;
   final Set<String> _selected = {};
 
@@ -88,15 +81,7 @@ class _LaporanTabState extends State<LaporanTab> {
   }
 
   /// Jaga-jaga kartu yang lagi kecentang tiba-tiba "hilang" dari daftar ini
-  /// (mis. baru saja di-drag/drop ke [FolderCard] — lihat [_buildFolderSection]
-  /// -> [onDropRecord] — bukan lewat tombol "Pindahkan ke Folder" di
-  /// [SelectionActionBar] yang sudah nutup mode pilih sendiri). Tanpa ini,
-  /// bar pilih nyangkut nongol terus di halaman Laporan walau kartu yang
-  /// dipilih sudah pindah rumah ke sebuah folder. Dipanggil tiap build
-  /// dengan [cards] TERBARU (hasil filter, yang otomatis nggak lagi memuat
-  /// kartu yang sudah masuk folder — lihat _filteredCards). Tutup langsung
-  /// tanpa snackbar tambahan — snackbar "kartu dipindahkan" dari
-  /// [_pindahkanCard]/[_pindahkanSelected] sudah cukup ngasih tau usernya.
+  /// (mis. baru saja di-drag/drop ke [FolderCard]
   void _autoCloseSelectionIfCardsGone(List<SantriCardInfo> cards) {
     if (!_selectionMode || _selected.isEmpty) return;
     final visibleKeys = cards.map((c) => c.identityKey).toSet();
@@ -111,7 +96,7 @@ class _LaporanTabState extends State<LaporanTab> {
   Future<void> _hapusSelected() async {
     final provider = context.read<RecordsProvider>();
     final count = _selected.length;
-    final confirmed = await showDialog<bool>(
+    showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Hapus $count kartu?'),
@@ -119,23 +104,23 @@ class _LaporanTabState extends State<LaporanTab> {
             'Semua laporan pekanan di dalamnya ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              for (final key in _selected.toList()) {
+                final c = provider.cardByIdentityKey(key);
+                if (c != null) await provider.deleteAllForSantri(c.nama, c.identityKey);
+              }
+              if (!context.mounted) return;
+              _exitSelectionMode();
+            },
             child: const Text('Hapus'),
           ),
         ],
       ),
     );
-    if (confirmed != true) return;
-    if (!context.mounted) return;
-    for (final key in _selected.toList()) {
-      final c = provider.cardByIdentityKey(key);
-      if (c != null) await provider.deleteAllForSantri(c.nama, c.identityKey);
-    }
-    if (!context.mounted) return;
-    _exitSelectionMode();
   }
 
   Future<void> _pindahkanSelected() async {
@@ -164,28 +149,20 @@ class _LaporanTabState extends State<LaporanTab> {
   }
 
   /// Kartu santri yang cocok dengan pencarian & filter kelas/halaqoh aktif
-  /// (dipakai bersama dengan Bottom Sheet Filter yang sudah ada). Filter
-  /// Status/Keterangan (yang tadinya per-laporan) sekarang diartikan
-  /// sebagai "santri yang punya minimal satu laporan bulan ini dengan
-  /// status/keterangan tsb" — karena satu kartu di sini mewakili banyak
-  /// laporan pekanan sekaligus, bukan satu laporan tunggal.
+  /// (dipakai bersama dengan Bottom Sheet Filter yang sudah ada).
   List<SantriCardInfo> _filteredCards(RecordsProvider provider) {
     final q = provider.searchQuery.trim().toLowerCase();
     final thisMonth = DateTime(DateTime.now().year, DateTime.now().month);
     return provider.laporanCards.where((c) {
-      // Kartu yang "rumahnya" sekarang sebuah folder TIDAK ditampilkan lagi
-      // di sini — dia cuma tinggal di dalam folder itu (buka lewat
-      // FolderDetailScreen), biar tidak dobel muncul di 2 tempat sekaligus
-      // (section Folder & section Laporan bersamaan).
       if (c.currentFolderId != null) return false;
       if (q.isNotEmpty && !c.nama.toLowerCase().contains(q)) return false;
       if (provider.filterKelas != null && c.kelas != provider.filterKelas) return false;
       if (provider.filterHalaqoh != null && c.halaqoh != provider.filterHalaqoh) return false;
       if (provider.filterStatus != null || provider.filterKeterangan != null) {
         final recs = provider.recordsInMonth(thisMonth).where(
-            (r) => r.namaAnak.trim().toLowerCase() == c.nama.trim().toLowerCase());
+                (r) => r.namaAnak.trim().toLowerCase() == c.nama.trim().toLowerCase());
         final matches = recs.any((r) =>
-            (provider.filterStatus == null || r.status == provider.filterStatus) &&
+        (provider.filterStatus == null || r.status == provider.filterStatus) &&
             (provider.filterKeterangan == null || r.keterangan == provider.filterKeterangan));
         if (!matches) return false;
       }
@@ -194,38 +171,24 @@ class _LaporanTabState extends State<LaporanTab> {
   }
 
   /// Buka form laporan untuk pekan [weekIndex] (dalam bulan berjalan) milik
-  /// santri [card] — dipanggil dari tap kolom pekan di [SantriReportCard].
-  /// Card keseluruhan tidak lagi jadi shortcut tap.
-  ///
-  /// Sengaja TIDAK lagi "menebak" pekan mana yang mau dibuka (itu sumber
-  /// bug lama: kartu di-tap pas pekan berjalan sudah keisi, otomatis
-  /// lompat ke pekan awal bulan yang masih kosong — presetTanggal jadinya
-  /// tanggal 1 padahal user tidak minta pekan itu, jadi kelihatan
-  /// "ngebug"). Sekarang user selalu tau & pilih sendiri pekan mana yang
-  /// mau dibuka lewat tap kolomnya langsung.
+  /// santri [card]
   void _openWeek(BuildContext context, SantriCardInfo card, int weekIndex) {
     final provider = context.read<RecordsProvider>();
     final now = DateTime.now();
-    // Bulan PEMILIK pekan hari ini (bisa beda dari now.month di 1-2 hari
-    // ujung bulan) — lihat WeekUtils.ownerMonth.
-    final thisMonth = WeekUtils.ownerMonth(now);
+    final thisMonth = DateTime(now.year, now.month);
     final currentWeek = WeekUtils.weekOfMonth(now);
 
     final existing = provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
     if (existing != null) {
-      // Pekan ini sudah ada laporannya -> buka mode edit, otomatis
-      // menampilkan capaian yang sudah diisi minggu itu.
+
       showRecordFormSheet(context, existing: existing);
       return;
     }
 
     final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
-    // Pekan yang dibuka = pekan berjalan & hari ini masih dalam rentang
-    // pekan itu -> tanggal default realistis-nya ya HARI INI. Pekan lain
-    // (sudah lewat, lagi disusulkan) -> Senin pertama pekan itu.
     final presetDate = (weekIndex == currentWeek &&
-            !now.isBefore(range.start) &&
-            !now.isAfter(range.end))
+        !now.isBefore(range.start) &&
+        !now.isAfter(range.end))
         ? now
         : range.start;
 
@@ -236,17 +199,11 @@ class _LaporanTabState extends State<LaporanTab> {
       presetNama: card.nama,
       presetTanggal: presetDate,
       lockIdentity: true,
-      // Kartu ini masih kosong TAPI sudah pernah dipindah ke sebuah folder
-      // (drag/tap Pindahkan waktu masih kosong) -> laporan pertamanya
-      // otomatis ikut masuk folder yang sama, bukan nangkring di luar.
       initialFolderId: card.emptyCardFolderId,
     );
   }
 
-  /// Pindahkan kartu [card] ke folder pilihan user — dipanggil dari sheet
-  /// aksi (tap kartu) ATAU drag kartu ke [FolderCard] di
-  /// [SantriReportCard]. Berlaku juga buat kartu yang MASIH KOSONG (belum
-  /// ada laporan sama sekali) — lihat [RecordsProvider.moveIdentityToFolder].
+  /// Pindahkan kartu [card] ke folder pilihan user
   Future<void> _pindahkanCard(BuildContext context, SantriCardInfo card,
       {String? langsungKeFolderId}) async {
     final provider = context.read<RecordsProvider>();
@@ -266,14 +223,10 @@ class _LaporanTabState extends State<LaporanTab> {
     );
   }
 
-  /// Hapus kartu [card] — kartu kosong (belum ada laporan) cuma lepas
-  /// identitasnya, kartu yang sudah ada laporannya ikut menghapus SEMUA
-  /// laporan pekanan di dalamnya. Selalu minta konfirmasi dulu karena
-  /// untuk kartu berisi ini SEKARANG bisa dipicu juga lewat geser-kanan
-  /// (swipe), bukan cuma lewat sheet aksi.
-  Future<void> _hapusCard(BuildContext context, SantriCardInfo card) async {
+  /// Hapus kartu [card] dari daftar kartu di sini.
+  void _hapusCard(BuildContext context, SantriCardInfo card) {
     final hasReports = card.hasAnyReport;
-    final confirmed = await showDialog<bool>(
+    showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
@@ -284,24 +237,23 @@ class _LaporanTabState extends State<LaporanTab> {
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<RecordsProvider>().deleteAllForSantri(card.nama, card.identityKey);
+              showAppSnackbar(
+                context,
+                'Kartu "${card.nama}" dihapus.',
+                icon: Icons.delete_outline_rounded,
+                onFabVisibilityChanged: widget.onFabVisibilityChanged,
+              );
+            },
             child: const Text('Hapus'),
           ),
         ],
       ),
-    );
-    if (confirmed != true) return;
-    if (!context.mounted) return;
-    await context.read<RecordsProvider>().deleteAllForSantri(card.nama, card.identityKey);
-    if (!context.mounted) return;
-    showAppSnackbar(
-      context,
-      'Kartu "${card.nama}" dihapus.',
-      icon: Icons.delete_outline_rounded,
-      onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
 
@@ -343,15 +295,15 @@ class _LaporanTabState extends State<LaporanTab> {
                   actions: cards.isEmpty
                       ? null
                       : [
-                          IconButton(
-                            onPressed: _toggleSelectionMode,
-                            icon: Icon(
-                              _selectionMode ? Icons.close_rounded : Icons.checklist_rounded,
-                            ),
-                            tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa kartu',
-                          ),
-                          const SizedBox(width: 8),
-                        ],
+                    IconButton(
+                      onPressed: _toggleSelectionMode,
+                      icon: Icon(
+                        _selectionMode ? Icons.close_rounded : Icons.checklist_rounded,
+                      ),
+                      tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa kartu',
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   bottom: PreferredSize(
                     preferredSize: const Size.fromHeight(76),
                     child: _buildSearchAndFilter(context, provider),
@@ -496,13 +448,10 @@ class _LaporanTabState extends State<LaporanTab> {
                     ),
                     onRename: () => showFolderFormSheet(context, existing: f),
                     onDelete: () => _confirmDeleteFolder(context, f.id),
-                    // Drop hasil drag SantriReportCard (payload = daftar
-                    // identityKey, lihat SantriReportCard) -> pindahkan tiap
-                    // kartu yang di-drag ke folder ini langsung, tanpa buka
-                    // sheet pilih folder lagi (folder tujuannya kan sudah
-                    // jelas dari mana dia dilepas).
+                    // Drop hasil drag SantriReportCard
                     onDropRecord: (identityKeys) async {
                       for (final key in identityKeys) {
+                        if (!context.mounted) return;
                         final c = provider.cardByIdentityKey(key);
                         if (c != null) await _pindahkanCard(context, c, langsungKeFolderId: f.id);
                       }

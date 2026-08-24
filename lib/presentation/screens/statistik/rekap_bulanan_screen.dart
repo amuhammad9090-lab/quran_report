@@ -51,7 +51,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            PushedPageHeader(
+            const PushedPageHeader(
               title: 'Rekap Bulanan',
               subtitle: 'Semua capaian tahfizh & tahsin dalam sebulan',
             ),

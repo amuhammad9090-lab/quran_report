@@ -14,21 +14,13 @@ import 'folder_form_sheet.dart';
 
 /// Halaman isi satu folder — daftar KARTU SANTRI di dalamnya (satu kartu =
 /// satu santri, sama seperti tab Laporan, BUKAN satu kartu per laporan
-/// pekanan lagi — lihat [SantriReportCard] & [RecordsProvider.cardsInFolder]),
-/// plus tombol tambah kartu yang sudah ada, ubah nama folder, dan mode
-/// pilih-banyak (centang) buat keluarkan/hapus beberapa kartu sekaligus.
+/// pekanan lagi
 class FolderDetailScreen extends StatefulWidget {
   final String folderId;
 
   /// Diteruskan dari [MainShell] lewat [LaporanTab] — dipakai buat
   /// nyembunyiin FAB tab Laporan selama snackbar aksi (keluarkan/hapus) di
-  /// layar ini masih tampil. PENTING: [ScaffoldMessenger] di app ini cuma
-  /// SATU (dari [MaterialApp], nggak ada yang nested per-layar), jadi
-  /// snackbar yang dimunculkan DI SINI tetap "numpang" di messenger yang
-  /// sama begitu user pop kembali ke tab Laporan — kalau FAB-nya nggak ikut
-  /// disembunyikan dari sini juga, snackbar bisa nyangkut nongol NUTUPIN
-  /// FAB waktu balik ke tab Laporan (bukan "membelakangi"/di baliknya
-  /// seperti seharusnya), lihat [showAppSnackbar].
+  /// layar ini masih tampil.
   final ValueChanged<bool>? onFabVisibilityChanged;
 
   const FolderDetailScreen({super.key, required this.folderId, this.onFabVisibilityChanged});
@@ -126,14 +118,10 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     _exitSelectionMode();
   }
 
-  /// Buka form laporan untuk pekan [weekIndex] milik kartu [card] — pola
-  /// persis sama dengan `LaporanTab._openWeek`, lihat catatan lengkap di
-  /// sana kenapa TIDAK menebak-nebak pekan mana yang mau dibuka.
+  /// Buka form laporan untuk pekan [weekIndex] milik kartu [card]
   void _openWeek(BuildContext context, SantriCardInfo card, int weekIndex) {
     final provider = context.read<RecordsProvider>();
     final now = DateTime.now();
-    // Bulan PEMILIK pekan hari ini (bisa beda dari now.month di 1-2 hari
-    // ujung bulan) — lihat WeekUtils.ownerMonth.
     final thisMonth = WeekUtils.ownerMonth(now);
     final currentWeek = WeekUtils.weekOfMonth(now);
 
@@ -200,8 +188,6 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     final foldersProvider = context.watch<FoldersProvider>();
     final folder = foldersProvider.byId(widget.folderId);
 
-    // Folder bisa saja baru saja dihapus dari sheet aksi lain — kalau
-    // sudah tidak ada, tutup halaman ini otomatis.
     if (folder == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (Navigator.of(context).canPop()) Navigator.of(context).pop();
