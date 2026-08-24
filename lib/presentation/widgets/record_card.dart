@@ -52,12 +52,19 @@ class RecordCard extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) => SafeArea(
         child: Container(
+          // Container ini SEKARANG cuma buat `margin` (nggak ada decoration
+          // lagi di sini) — background+rounded corner dipindah ke Material
+          // di dalamnya, biar ListTile "Ubah"/"Pindahkan"/"Hapus" di bawah
+          // punya Material terdekat yang benar, nggak ketutup DecoratedBox
+          // (lihat assertion "ListTile background color or ink splashes
+          // may be invisible"). Margin tetap di sini (di LUAR area
+          // berwarna) supaya tampilan inset-nya persis sama seperti
+          // sebelumnya.
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          decoration: BoxDecoration(
+          child: Material(
             color: Theme.of(ctx).bottomSheetTheme.backgroundColor,
             borderRadius: BorderRadius.circular(22),
-          ),
-          child: Column(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 10),
@@ -128,6 +135,7 @@ class RecordCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
             ],
+          ),
           ),
         ),
       ),

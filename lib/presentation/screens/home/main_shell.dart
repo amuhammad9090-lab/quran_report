@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../record_form/record_form_sheet.dart';
 import '../settings/settings_screen.dart';
 import '../laporan/laporan_tab.dart';
+import '../laporan/buat_laporan_sheet.dart';
 import '../statistik/statistik_tab.dart';
 import '../folder/folder_form_sheet.dart';
 import '../../widgets/speed_dial_fab.dart';
@@ -87,7 +87,7 @@ class _MainShellState extends State<MainShell> {
         floatingActionButton: _index == 1 && !_laporanSelecting && _snackbarHidingFab == 0
             ? SpeedDialFab(
           onBuatFolder: () => showFolderFormSheet(context),
-          onBuatLaporan: () => showRecordFormSheet(context),
+          onBuatLaporan: () => showBuatLaporanSheet(context),
         )
             : null,
         bottomNavigationBar: Container(

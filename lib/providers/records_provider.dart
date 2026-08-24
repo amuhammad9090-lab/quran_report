@@ -3,6 +3,7 @@ import '../core/access/access_scope.dart';
 import '../core/utils/week_utils.dart';
 import '../data/models/enums.dart';
 import '../data/models/santri_record.dart';
+import '../data/services/app_prefs_service.dart';
 import '../data/services/storage_service.dart';
 
 /// Dilempar [RecordsProvider.upsert] kalau guru pembimbing mencoba menyimpan
@@ -24,6 +25,74 @@ class SantriSummary {
   final String halaqoh;
   const SantriSummary({required this.nama, required this.kelas, required this.halaqoh});
 }
+
+/// Ringkasan satu pekan DALAM BULAN (Pekan 1..6) — dipakai di Rekap
+/// Bulanan → daftar Pekan, lihat [RecordsProvider.monthWeekSummaries].
+class MonthWeekSummary {
+  final int weekIndex;
+  final MonthWeekRange range;
+  final int santriCount;
+  final int laporanCount;
+  final int totalBaris;
+  const MonthWeekSummary({
+    required this.weekIndex,
+    required this.range,
+    required this.santriCount,
+    required this.laporanCount,
+    required this.totalBaris,
+  });
+}
+
+/// Data 1 kartu santri di tab Laporan — mewakili SATU santri (bukan satu
+/// laporan/pekan), lihat [RecordsProvider.laporanCards]. Identitas dikunci
+/// oleh [identityKey] = "kelas|halaqoh|nama" (lowercase, trimmed).
+class SantriCardInfo {
+  final String identityKey;
+  final String nama;
+  final String kelas;
+  final String halaqoh;
+
+  /// Nomor pekan (dalam BULAN BERJALAN) yang sudah punya laporan — dipakai
+  /// buat indikator "✓1 ✓2 3 4 5" di kartu.
+  final Set<int> weeksWithReportThisMonth;
+  final int totalWeeksThisMonth;
+
+  /// Laporan terbaru santri ini (semua waktu, null kalau kartu ini baru
+  /// diaktifkan & belum pernah diisi laporan sama sekali).
+  final SantriRecord? latestRecord;
+
+  /// HANYA berarti kalau [latestRecord] null (kartu masih kosong) — folder
+  /// tujuan yang dipilih user waktu kartu kosong ini di-"Pindahkan ke
+  /// Folder" (drag atau lewat sheet aksi). Null = kartu kosong ini belum
+  /// dipindah ke folder mana pun. Lihat [RecordsProvider.moveIdentityToFolder].
+  final String? emptyCardFolderId;
+
+  const SantriCardInfo({
+    required this.identityKey,
+    required this.nama,
+    required this.kelas,
+    required this.halaqoh,
+    required this.weeksWithReportThisMonth,
+    required this.totalWeeksThisMonth,
+    required this.latestRecord,
+    this.emptyCardFolderId,
+  });
+
+  bool get hasAnyReport => latestRecord != null;
+
+  /// Folder "rumah" kartu ini SAAT INI — dari laporan terbaru kalau sudah
+  /// ada laporan, atau dari [emptyCardFolderId] kalau masih kosong. Null =
+  /// tidak di folder mana pun ("Tanpa Folder"). Dipakai buat pengelompokan
+  /// per-folder di Hasil Pencarian & buat menentukan folder isi Folder
+  /// Detail (lihat [RecordsProvider.cardsInFolder]).
+  String? get currentFolderId => hasAnyReport ? latestRecord!.folderId : emptyCardFolderId;
+}
+
+/// Kunci identitas "kelas|halaqoh|nama" yang konsisten dipakai di seluruh
+/// [RecordsProvider] (kartu Laporan & aktivasi identitas) — normalisasi
+/// (trim + lowercase) supaya tidak ganda cuma gara-gara beda kapital/spasi.
+String reportIdentityKey(String kelas, String halaqoh, String nama) =>
+    '${kelas.trim().toLowerCase()}|${halaqoh.trim().toLowerCase()}|${nama.trim().toLowerCase()}';
 
 class RecordsProvider extends ChangeNotifier {
   List<SantriRecord> _all = [];
@@ -72,8 +141,80 @@ class RecordsProvider extends ChangeNotifier {
   /// data kelas/halaqoh lain walau lewat jalur statistik/search/export.
   List<SantriRecord> get _scoped => _scope == null ? _all : _scope!.scopeRecords(_all);
 
+  // Kunci identitas ("kelas|halaqoh|nama") santri yang sudah "diaktifkan"
+  // lewat "Buat Laporan" tapi belum tentu punya SantriRecord sama sekali —
+  // lihat AppPrefsService.activatedIdentityKeys & [laporanCards].
+  Set<String> _activatedKeys = {};
+
+  // Mapping identitas KOSONG (belum ada SantriRecord) -> folder tujuan —
+  // lihat dokumentasi lengkap di AppPrefsService.activatedIdentityFolders
+  // & [SantriCardInfo.emptyCardFolderId].
+  Map<String, String> _activatedFolders = {};
+
   Future<void> load() async {
     _all = StorageService.instance.getAll();
+    _activatedKeys = AppPrefsService.instance.activatedIdentityKeys.toSet();
+    _activatedFolders = AppPrefsService.instance.activatedIdentityFolders;
+    await _cleanupStaleActivatedFolders();
+    notifyListeners();
+  }
+
+  /// Begitu identitas yang tadinya kosong dapat laporan asli (SantriRecord
+  /// pertamanya tersimpan, entah lewat [initialFolderId] otomatis atau
+  /// dibuat manual), mapping folder sementaranya jadi basi (folder
+  /// "beneran"-nya sekarang mengikuti `record.folderId`) — bersihkan biar
+  /// tidak nyangkut jadi sampah di storage.
+  Future<void> _cleanupStaleActivatedFolders() async {
+    if (_activatedFolders.isEmpty) return;
+    final withRecords = _all
+        .map((r) => reportIdentityKey(r.kelas, r.halaqoh, r.namaAnak))
+        .toSet();
+    final stale = _activatedFolders.keys.where(withRecords.contains).toList();
+    for (final key in stale) {
+      _activatedFolders.remove(key);
+      await AppPrefsService.instance.removeActivatedIdentityFolder(key);
+    }
+  }
+
+  /// Aktifkan kartu Laporan untuk santri [kelas]/[halaqoh]/[nama] TANPA
+  /// membuat SantriRecord apapun — dipakai flow "Buat Laporan" (identitas
+  /// saja, capaian diisi belakangan per-pekan lewat kartu). Ditolak kalau
+  /// di luar scope akses user yang login (guru pembimbing hanya boleh
+  /// mengaktifkan identitas di kelas+halaqoh assignment-nya sendiri).
+  /// [folderId] opsional -> kartu identitas yang baru diaktifkan langsung
+  /// "diparkir" ke folder itu (dipakai alur "Buat Laporan" yang dipicu dari
+  /// dalam [FolderDetailScreen], lihat [SantriCardInfo.emptyCardFolderId]) —
+  /// sama seperti kartu kosong yang di-drag/dipindah manual ke folder.
+  Future<void> activateIdentity({
+    required String kelas,
+    required String halaqoh,
+    required String nama,
+    String? folderId,
+  }) async {
+    if (_scope != null && !_scope!.canAccessKelasHalaqoh(kelas, halaqoh)) {
+      throw ScopeViolationException(
+        'Anda tidak punya akses untuk kelas $kelas / $halaqoh.',
+      );
+    }
+    final key = reportIdentityKey(kelas, halaqoh, nama);
+    _rememberActivatedDisplay(kelas, halaqoh, nama);
+    await AppPrefsService.instance.addActivatedIdentity(key);
+    _activatedKeys.add(key);
+    if (folderId != null) {
+      _activatedFolders[key] = folderId;
+      await AppPrefsService.instance.setActivatedIdentityFolder(key, folderId);
+    }
+    notifyListeners();
+  }
+
+  /// Batalkan kartu Laporan sebuah identitas — cuma relevan/dipanggil UI
+  /// untuk kartu yang BELUM punya laporan sama sekali (lihat
+  /// [SantriCardInfo.hasAnyReport]), supaya tidak pernah "menghapus"
+  /// laporan yang sudah diisi (itu tetap lewat [delete] per-record biasa).
+  Future<void> deactivateIdentity(String identityKey) async {
+    await AppPrefsService.instance.removeActivatedIdentity(identityKey);
+    _activatedKeys.remove(identityKey);
+    _activatedFolders.remove(identityKey);
     notifyListeners();
   }
 
@@ -197,6 +338,57 @@ class RecordsProvider extends ChangeNotifier {
       );
     }
     await load();
+  }
+
+  /// Pindahkan SEMUA laporan (semua pekan) milik santri [namaAnak] sekaligus
+  /// ke folder [folderId] (null = keluarkan dari folder) — dipakai kartu
+  /// santri di tab Laporan ([SantriReportCard]) waktu user pilih "Pindahkan
+  /// ke Folder" buat kartu itu (beda dari [moveToFolder]/[moveManyToFolder]
+  /// biasa yang per-laporan/id).
+  Future<void> moveAllForSantriToFolder(String namaAnak, String? folderId) async {
+    final ids = recordsForSantri(namaAnak).map((r) => r.id).toList();
+    await moveManyToFolder(ids, folderId);
+  }
+
+  /// Hapus SEMUA laporan (semua pekan) milik santri [namaAnak] sekaligus,
+  /// plus lepas [identityKey]-nya dari daftar identitas aktif kalau ada
+  /// (jaga-jaga kartu itu juga "diaktifkan" lewat Buat Laporan) — dipakai
+  /// kartu santri di tab Laporan waktu user pilih "Hapus" buat kartu itu
+  /// (gabungan [delete] per-record lama + [deactivateIdentity] lama, jadi
+  /// satu aksi yang aman dipanggil baik untuk kartu kosong maupun kartu
+  /// yang sudah punya laporan).
+  Future<void> deleteAllForSantri(String namaAnak, String identityKey) async {
+    final ids = recordsForSantri(namaAnak).map((r) => r.id).toList();
+    for (final id in ids) {
+      await StorageService.instance.delete(id);
+    }
+    await AppPrefsService.instance.removeActivatedIdentity(identityKey);
+    _activatedKeys.remove(identityKey);
+    _activatedFolders.remove(identityKey);
+    await load();
+  }
+
+  /// Pindahkan kartu [card] ke folder [folderId] (null = keluarkan dari
+  /// folder) — dipakai [SantriReportCard] (drag atau sheet aksi "Pindahkan
+  /// ke Folder"/"Keluarkan dari Folder"), berlaku buat kartu yang SUDAH
+  /// punya laporan (pindah semua laporannya lewat [moveAllForSantriToFolder])
+  /// MAUPUN kartu yang MASIH KOSONG — kartu kosong tidak punya SantriRecord
+  /// yang bisa dikasih folderId, jadi disimpan sebagai mapping identitas
+  /// sementara (lihat [SantriCardInfo.emptyCardFolderId]) yang otomatis
+  /// basi begitu laporan pertamanya dibuat.
+  Future<void> moveIdentityToFolder(SantriCardInfo card, String? folderId) async {
+    if (card.hasAnyReport) {
+      await moveAllForSantriToFolder(card.nama, folderId);
+      return;
+    }
+    if (folderId == null) {
+      _activatedFolders.remove(card.identityKey);
+      await AppPrefsService.instance.removeActivatedIdentityFolder(card.identityKey);
+    } else {
+      _activatedFolders[card.identityKey] = folderId;
+      await AppPrefsService.instance.setActivatedIdentityFolder(card.identityKey, folderId);
+    }
+    notifyListeners();
   }
 
   Future<void> clearAllData() async {
@@ -333,17 +525,6 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   // --- Rekap bulanan (EXISTING — dipertahankan apa adanya) ---
-  /// Daftar bulan (tanggal 1 tiap bulan) yang punya minimal 1 laporan,
-  /// terbaru duluan. Dipakai buat batasi navigasi bulan di Rekap Bulanan
-  /// biar user gak bisa maju/mundur ke bulan yang datanya kosong.
-  List<DateTime> get availableMonths {
-    final set = <DateTime>{};
-    for (final r in _scoped) {
-      set.add(DateTime(r.tanggal.year, r.tanggal.month));
-    }
-    final list = set.toList()..sort((a, b) => b.compareTo(a));
-    return list;
-  }
 
   List<SantriRecord> recordsInMonth(DateTime month) {
     final list = _scoped
@@ -362,62 +543,179 @@ class RecordsProvider extends ChangeNotifier {
   int totalBarisInMonth(DateTime month) =>
       recordsInMonth(month).fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
 
-  // --- Rekap PEKANAN (BARU) ---
-  // Definisi pekan konsisten lewat WeekUtils (Senin-Minggu, ISO week
-  // number) — dipakai di sini & di Profile biar "Pekan ke-N" selalu sama
-  // angkanya di mana pun ditampilkan.
+  // --- Pekan DALAM BULAN (BARU) — dipakai alur Statistik → Rekap Bulanan
+  // → Pekan 1..6, dan indikator pekan di kartu santri tab Laporan. Lihat
+  // catatan desain di WeekUtils. (Rekap Pekanan ISO Senin-Minggu yang dulu
+  // ada di sini SUDAH DIHAPUS — diganti total oleh Rekap Bulanan → Pekan.)
 
-  /// Daftar tanggal Senin (awal pekan) yang punya minimal 1 laporan,
-  /// terbaru duluan — buat batasi navigasi di Rekap Pekanan.
-  List<DateTime> get availableWeeks {
-    final set = <DateTime>{};
-    for (final r in _scoped) {
-      set.add(WeekUtils.startOfWeek(r.tanggal));
-    }
-    final list = set.toList()..sort((a, b) => b.compareTo(a));
-    return list;
-  }
-
-  /// Semua laporan dalam pekan yang memuat [anyDateInWeek], terbaru duluan.
-  List<SantriRecord> recordsInWeek(DateTime anyDateInWeek) {
-    final start = WeekUtils.startOfWeek(anyDateInWeek);
-    final end = start.add(const Duration(days: 7));
-    final list = _scoped
-        .where((r) => !r.tanggal.isBefore(start) && r.tanggal.isBefore(end))
-        .toList()
+  List<SantriRecord> recordsInMonthWeek(DateTime month, int weekIndex) {
+    // Dipakai langsung dari rentang tanggal pekan (BUKAN dari
+    // recordsInMonth(month) + WeekUtils.weekOfMonth lagi) — soalnya pekan
+    // sekarang boleh lintas bulan (lihat WeekUtils), jadi laporan di 1-2
+    // hari ujung bulan yang "dimiliki" pekan bulan tetangga (mis. laporan
+    // tanggal 1 Agustus yang masuk Pekan 5 Juli) tetap ketemu di sini,
+    // walau tanggalnya sendiri bukan bulan [month].
+    final range = WeekUtils.monthWeekRange(month, weekIndex);
+    final list = _scoped.where((r) {
+      final d = DateTime(r.tanggal.year, r.tanggal.month, r.tanggal.day);
+      return !d.isBefore(range.start) && !d.isAfter(range.end);
+    }).toList()
       ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
     return list;
   }
 
-  int totalTahfizhInWeek(DateTime anyDateInWeek) =>
-      recordsInWeek(anyDateInWeek).where(_hasTahfizhComponent).length;
+  /// Ringkasan tiap Pekan (1..N sesuai jumlah hari bulan itu) dalam
+  /// [month] — dipakai daftar "Pekan 1 / Pekan 2 / ..." di Rekap Bulanan.
+  List<MonthWeekSummary> monthWeekSummaries(DateTime month) {
+    final total = WeekUtils.weeksInMonth(month);
+    return List.generate(total, (i) {
+      final weekIndex = i + 1;
+      final recs = recordsInMonthWeek(month, weekIndex);
+      return MonthWeekSummary(
+        weekIndex: weekIndex,
+        range: WeekUtils.monthWeekRange(month, weekIndex),
+        santriCount: recs.map((r) => r.namaAnak.trim().toLowerCase()).toSet().length,
+        laporanCount: recs.length,
+        totalBaris: recs.fold(0, (sum, r) => sum + (r.totalBaris ?? 0)),
+      );
+    });
+  }
 
-  int totalTahsinInWeek(DateTime anyDateInWeek) =>
-      recordsInWeek(anyDateInWeek).where(_hasTahsinComponent).length;
+  /// Nomor-nomor pekan dalam [month] yang sudah punya laporan untuk
+  /// santri [namaAnak] (match nama, case-insensitive) — dipakai indikator
+  /// "✓1 ✓2 3 4 5" di kartu santri.
+  Set<int> weeksWithReportForSantriInMonth(String namaAnak, DateTime month) {
+    final key = namaAnak.trim().toLowerCase();
+    final total = WeekUtils.weeksInMonth(month);
+    final result = <int>{};
+    for (var weekIndex = 1; weekIndex <= total; weekIndex++) {
+      final hasReport = recordsInMonthWeek(month, weekIndex)
+          .any((r) => r.namaAnak.trim().toLowerCase() == key);
+      if (hasReport) result.add(weekIndex);
+    }
+    return result;
+  }
 
-  int totalBarisInWeek(DateTime anyDateInWeek) =>
-      recordsInWeek(anyDateInWeek).fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
+  /// Laporan (kalau ada) milik santri [namaAnak] pada Pekan [weekIndex]
+  /// bulan [month] — dipakai supaya membuka kartu di pekan yang sudah ada
+  /// isinya langsung masuk mode EDIT, bukan bikin laporan duplikat (lihat
+  /// spek bagian 7). Kalau lebih dari satu (semestinya tidak terjadi lewat
+  /// alur normal aplikasi), diambil yang terbaru.
+  SantriRecord? recordForSantriInWeek(String namaAnak, DateTime month, int weekIndex) {
+    final key = namaAnak.trim().toLowerCase();
+    final list = recordsInMonthWeek(month, weekIndex)
+        .where((r) => r.namaAnak.trim().toLowerCase() == key)
+        .toList()
+      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+    return list.isEmpty ? null : list.first;
+  }
 
-  int totalHadirInWeek(DateTime anyDateInWeek) =>
-      recordsInWeek(anyDateInWeek).where((r) => r.keterangan == Keterangan.hadir).length;
+  /// Kartu santri untuk tab Laporan — SATU kartu per santri (bukan per
+  /// laporan/pekan), gabungan dari (a) santri yang sudah punya minimal 1
+  /// laporan ([santriList], data asli) dan (b) identitas yang baru
+  /// "diaktifkan" lewat "Buat Laporan" tapi belum ada laporannya sama
+  /// sekali ([_activatedKeys]). Terurut nama.
+  List<SantriCardInfo> get laporanCards {
+    final now = DateTime.now();
+    // Bulan PEMILIK pekan hari ini (bisa beda dari now.month di 1-2 hari
+    // ujung bulan) — lihat WeekUtils.ownerMonth — biar konsisten sama
+    // _buildCard di santri_report_card.dart yang makan data ini.
+    final thisMonth = WeekUtils.ownerMonth(now);
+    final totalWeeksThisMonth = WeekUtils.weeksInMonth(thisMonth);
 
-  int totalIzinAlpaInWeek(DateTime anyDateInWeek) =>
-      recordsInWeek(anyDateInWeek).where((r) => r.keterangan != Keterangan.hadir).length;
+    final byKey = <String, SantriCardInfo>{};
 
-  int santriAktifInWeek(DateTime anyDateInWeek) =>
-      recordsInWeek(anyDateInWeek).map((r) => r.namaAnak.trim().toLowerCase()).toSet().length;
+    for (final s in santriList) {
+      final key = reportIdentityKey(s.kelas, s.halaqoh, s.nama);
+      final santriRecords = recordsForSantri(s.nama);
+      final latest = santriRecords.isEmpty ? null : santriRecords.first;
+      byKey[key] = SantriCardInfo(
+        identityKey: key,
+        nama: s.nama,
+        kelas: s.kelas,
+        halaqoh: s.halaqoh,
+        weeksWithReportThisMonth: weeksWithReportForSantriInMonth(s.nama, thisMonth),
+        totalWeeksThisMonth: totalWeeksThisMonth,
+        latestRecord: latest,
+      );
+    }
 
-  /// Breakdown per-hari dalam satu pekan (Senin..Minggu) — dipakai di
-  /// Rekap Pekanan buat baris "Senin — 12 laporan", dst.
-  Map<DateTime, List<SantriRecord>> weekDailyBreakdown(DateTime anyDateInWeek) =>
-      groupByDate(recordsInWeek(anyDateInWeek));
+    // Identitas yang diaktifkan tapi BELUM punya laporan apapun -> tambah
+    // sebagai kartu kosong. Kalau ternyata sudah punya laporan (sudah
+    // masuk lewat santriList di atas), tidak perlu ditimpa.
+    for (final key in _activatedKeys) {
+      if (byKey.containsKey(key)) continue;
+      final parts = key.split('|');
+      if (parts.length != 3) continue;
+      // _activatedKeys disimpan lowercase+trim (lihat reportIdentityKey) —
+      // tampilan kartu masih butuh kapitalisasi asli, tapi karena identitas
+      // ini memang belum pernah diisi form manapun, tidak ada sumber lain
+      // untuk kapitalisasi aslinya selain apa yang dipilih user saat
+      // aktivasi (disimpan apa adanya lewat [activateIdentity] via
+      // [_lastActivatedDisplay]).
+      final display = _lastActivatedDisplay[key];
+      byKey[key] = SantriCardInfo(
+        identityKey: key,
+        nama: display?.nama ?? parts[2],
+        kelas: display?.kelas ?? parts[0],
+        halaqoh: display?.halaqoh ?? parts[1],
+        weeksWithReportThisMonth: const {},
+        totalWeeksThisMonth: totalWeeksThisMonth,
+        latestRecord: null,
+        emptyCardFolderId: _activatedFolders[key],
+      );
+    }
+
+    final list = byKey.values.toList()
+      ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+    // Guru pembimbing (bukan admin) hanya boleh lihat kartu di
+    // kelas+halaqoh assignment-nya sendiri — termasuk kartu identitas
+    // kosong (belum ada SantriRecord yang bisa discope lewat _scoped).
+    if (_scope == null || _scope!.isAdmin) return list;
+    return list.where((c) => _scope!.canAccessKelasHalaqoh(c.kelas, c.halaqoh)).toList();
+  }
+
+  /// Kartu [SantriCardInfo] yang identityKey-nya [key] — dipakai buat
+  /// nemu kartu lengkap dari payload drag (yang cuma bawa identityKey,
+  /// lihat [SantriReportCard]).
+  SantriCardInfo? cardByIdentityKey(String key) {
+    for (final c in laporanCards) {
+      if (c.identityKey == key) return c;
+    }
+    return null;
+  }
+
+  /// Semua kartu santri yang "rumahnya" folder [folderId] saat ini — lihat
+  /// [SantriCardInfo.currentFolderId]. Dipakai [FolderDetailScreen] (isi
+  /// satu folder, sekarang per-santri bukan per-laporan lagi).
+  List<SantriCardInfo> cardsInFolder(String folderId) =>
+      laporanCards.where((c) => c.currentFolderId == folderId).toList();
+
+  // Simpan kapitalisasi asli identitas yang baru diaktifkan pada sesi ini
+  // (in-memory saja) — supaya kartu kosong yang baru dibuat langsung
+  // tampil dengan huruf besar/kecil yang benar tanpa perlu reload app.
+  // Begitu identitas itu punya laporan asli, sumber tampilan otomatis
+  // pindah ke SantriRecord.namaAnak/kelas/halaqoh (lihat loop di atas),
+  // jadi map ini tidak perlu dipersist.
+  final Map<String, ({String nama, String kelas, String halaqoh})> _lastActivatedDisplay = {};
+
+  void _rememberActivatedDisplay(String kelas, String halaqoh, String nama) {
+    final key = reportIdentityKey(kelas, halaqoh, nama);
+    _lastActivatedDisplay[key] = (nama: nama, kelas: kelas, halaqoh: halaqoh);
+  }
+
+  // --- Rekap PEKANAN (ISO) — DIHAPUS ---
+  // Section ini dulu berisi availableWeeks/recordsInWeek/totalTahfizhInWeek/
+  // santriAktifInWeek/weekDailyBreakdown/dkk, cuma dipakai satu-satunya
+  // oleh Rekap Pekanan yang sekarang sudah dihapus total (diganti Rekap
+  // Bulanan → Pekan, lihat monthWeekSummaries di atas). Dihapus semua
+  // biar nggak jadi kode mati.
 
   /// Kelompokkan [records] per pasangan Kelas+Halaqoh — dipakai di Rekap
-  /// Pekanan/Bulanan buat section "per Kelas & Halaqoh" (biar guru
-  /// pembimbing bisa lihat/ekspor rekap kelompoknya sendiri). Terurut
-  /// berdasarkan Kelas lalu Halaqoh; di dalam tiap grup, record terurut
-  /// tanggal terlama dulu (kronologis, enak dibaca sebagai rekap
-  /// pekanan/harian) lalu nama.
+  /// Bulanan buat section "per Kelas & Halaqoh" (biar guru pembimbing bisa
+  /// lihat/ekspor rekap kelompoknya sendiri). Terurut berdasarkan Kelas
+  /// lalu Halaqoh; di dalam tiap grup, record terurut tanggal terlama dulu
+  /// (kronologis, enak dibaca) lalu nama.
   List<KelasHalaqohGroup> groupByKelasHalaqoh(List<SantriRecord> records) {
     final map = <String, List<SantriRecord>>{};
     for (final r in records) {
@@ -444,8 +742,7 @@ class RecordsProvider extends ChangeNotifier {
 }
 
 /// Satu kelompok laporan milik 1 pasangan Kelas+Halaqoh dalam suatu
-/// periode (dipakai Rekap Pekanan/Bulanan) — lihat
-/// [RecordsProvider.groupByKelasHalaqoh].
+/// periode (dipakai Rekap Bulanan) — lihat [RecordsProvider.groupByKelasHalaqoh].
 class KelasHalaqohGroup {
   final String kelas;
   final String halaqoh;

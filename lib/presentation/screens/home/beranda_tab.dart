@@ -8,7 +8,7 @@ import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/filter_sheet.dart';
 import '../profile/profile_screen.dart';
-import '../record_form/record_form_sheet.dart';
+import '../laporan/buat_laporan_sheet.dart';
 import '../export/export_sheet.dart';
 
 /// Tab "Home" — dashboard ringkasan. Daftar laporan penuh ada di tab
@@ -60,7 +60,7 @@ class BerandaTab extends StatelessWidget {
                       child: HeroActionItem(
                         label: 'Tambah\nLaporan',
                         icon: Icons.add_rounded,
-                        onTap: () => showRecordFormSheet(context),
+                        onTap: () => showBuatLaporanSheet(context),
                       ),
                     ),
                     const SizedBox(width: 12),

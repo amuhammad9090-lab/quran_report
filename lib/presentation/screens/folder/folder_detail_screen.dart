@@ -1,24 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/utils/week_utils.dart';
 import '../../../data/models/folder.dart';
-import '../../../data/models/santri_record.dart';
 import '../../../providers/folders_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
-import '../../widgets/record_card.dart';
-import '../export/export_sheet.dart';
+import '../../widgets/santri_report_card.dart';
 import '../record_form/record_form_sheet.dart';
+import '../laporan/buat_laporan_sheet.dart';
 import 'add_recent_records_sheet.dart';
 import 'folder_form_sheet.dart';
 
-/// Halaman isi satu folder — daftar laporan di dalamnya (bisa diedit/dihapus
-/// seperti biasa), plus tombol buat laporan baru langsung dalam folder ini,
-/// tambah laporan yang sudah ada, ubah nama, ekspor, dan mode pilih-banyak
-/// (centang) buat keluarkan/hapus beberapa laporan sekaligus.
+/// Halaman isi satu folder — daftar KARTU SANTRI di dalamnya (satu kartu =
+/// satu santri, sama seperti tab Laporan, BUKAN satu kartu per laporan
+/// pekanan lagi — lihat [SantriReportCard] & [RecordsProvider.cardsInFolder]),
+/// plus tombol tambah kartu yang sudah ada, ubah nama folder, dan mode
+/// pilih-banyak (centang) buat keluarkan/hapus beberapa kartu sekaligus.
 class FolderDetailScreen extends StatefulWidget {
   final String folderId;
-  const FolderDetailScreen({super.key, required this.folderId});
+
+  /// Diteruskan dari [MainShell] lewat [LaporanTab] — dipakai buat
+  /// nyembunyiin FAB tab Laporan selama snackbar aksi (keluarkan/hapus) di
+  /// layar ini masih tampil. PENTING: [ScaffoldMessenger] di app ini cuma
+  /// SATU (dari [MaterialApp], nggak ada yang nested per-layar), jadi
+  /// snackbar yang dimunculkan DI SINI tetap "numpang" di messenger yang
+  /// sama begitu user pop kembali ke tab Laporan — kalau FAB-nya nggak ikut
+  /// disembunyikan dari sini juga, snackbar bisa nyangkut nongol NUTUPIN
+  /// FAB waktu balik ke tab Laporan (bukan "membelakangi"/di baliknya
+  /// seperti seharusnya), lihat [showAppSnackbar].
+  final ValueChanged<bool>? onFabVisibilityChanged;
+
+  const FolderDetailScreen({super.key, required this.folderId, this.onFabVisibilityChanged});
 
   @override
   State<FolderDetailScreen> createState() => _FolderDetailScreenState();
@@ -35,25 +48,25 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     });
   }
 
-  void _startSelectingWith(String recordId) {
+  void _startSelectingWith(String identityKey) {
     setState(() {
       _selectionMode = true;
-      _selected.add(recordId);
+      _selected.add(identityKey);
     });
   }
 
-  void _toggleSelect(String id) {
+  void _toggleSelect(String identityKey) {
     setState(() {
-      _selected.contains(id) ? _selected.remove(id) : _selected.add(id);
+      _selected.contains(identityKey) ? _selected.remove(identityKey) : _selected.add(identityKey);
     });
   }
 
-  void _setSelectAll(bool select, List<SantriRecord> records) {
+  void _setSelectAll(bool select, List<SantriCardInfo> cards) {
     setState(() {
       if (select) {
         _selected
           ..clear()
-          ..addAll(records.map((r) => r.id));
+          ..addAll(cards.map((c) => c.identityKey));
       } else {
         _selected.clear();
       }
@@ -68,42 +81,117 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
   }
 
   Future<void> _keluarkanSelected() async {
+    final provider = context.read<RecordsProvider>();
     final count = _selected.length;
-    await context.read<RecordsProvider>().moveManyToFolder(_selected, null);
-    if (!mounted) return;
+    for (final key in _selected.toList()) {
+      final c = provider.cardByIdentityKey(key);
+      if (c != null) await provider.moveIdentityToFolder(c, null);
+    }
+    if (!context.mounted) return;
     _exitSelectionMode();
     showAppSnackbar(
       context,
-      '$count laporan dikeluarkan dari folder',
+      '$count kartu dikeluarkan dari folder',
       icon: Icons.folder_off_outlined,
+      onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
 
-  void _confirmDeleteSelected() {
+  Future<void> _confirmDeleteSelected() async {
+    final provider = context.read<RecordsProvider>();
     final count = _selected.length;
-    showDialog(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Hapus $count laporan?'),
-        content: const Text('Data yang dihapus tidak dapat dikembalikan.'),
+        title: Text('Hapus $count kartu?'),
+        content: const Text('Semua laporan pekanan di dalamnya ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final provider = context.read<RecordsProvider>();
-              for (final id in _selected.toList()) {
-                await provider.delete(id);
-              }
-              if (!mounted) return;
-              _exitSelectionMode();
-            },
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus'),
           ),
         ],
       ),
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+    for (final key in _selected.toList()) {
+      final c = provider.cardByIdentityKey(key);
+      if (c != null) await provider.deleteAllForSantri(c.nama, c.identityKey);
+    }
+    if (!context.mounted) return;
+    _exitSelectionMode();
+  }
+
+  /// Buka form laporan untuk pekan [weekIndex] milik kartu [card] — pola
+  /// persis sama dengan `LaporanTab._openWeek`, lihat catatan lengkap di
+  /// sana kenapa TIDAK menebak-nebak pekan mana yang mau dibuka.
+  void _openWeek(BuildContext context, SantriCardInfo card, int weekIndex) {
+    final provider = context.read<RecordsProvider>();
+    final now = DateTime.now();
+    // Bulan PEMILIK pekan hari ini (bisa beda dari now.month di 1-2 hari
+    // ujung bulan) — lihat WeekUtils.ownerMonth.
+    final thisMonth = WeekUtils.ownerMonth(now);
+    final currentWeek = WeekUtils.weekOfMonth(now);
+
+    final existing = provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
+    if (existing != null) {
+      showRecordFormSheet(context, existing: existing);
+      return;
+    }
+
+    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
+    final presetDate = (weekIndex == currentWeek &&
+            !now.isBefore(range.start) &&
+            !now.isAfter(range.end))
+        ? now
+        : range.start;
+
+    showRecordFormSheet(
+      context,
+      presetKelas: card.kelas,
+      presetHalaqoh: card.halaqoh,
+      presetNama: card.nama,
+      presetTanggal: presetDate,
+      lockIdentity: true,
+      initialFolderId: widget.folderId,
+    );
+  }
+
+  Future<void> _hapusCard(BuildContext context, SantriCardInfo card) async {
+    final hasReports = card.hasAnyReport;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
+        content: Text(
+          hasReports
+              ? 'Semua laporan pekanan santri ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
+              : 'Belum ada laporan yang tersimpan untuk santri ini.',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+    await context.read<RecordsProvider>().deleteAllForSantri(card.nama, card.identityKey);
+    if (!context.mounted) return;
+    showAppSnackbar(
+      context,
+      'Kartu "${card.nama}" dihapus.',
+      icon: Icons.delete_outline_rounded,
+      onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
 
@@ -122,7 +210,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     }
 
     final recordsProvider = context.watch<RecordsProvider>();
-    final records = recordsProvider.recordsInFolder(widget.folderId);
+    final cards = recordsProvider.cardsInFolder(widget.folderId);
 
     return Scaffold(
       body: SafeArea(
@@ -133,52 +221,51 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
               slivers: [
                 PushedPageHeader(
                   title: folder.nama,
-                  subtitle: '${records.length} laporan',
-                  trailing: records.isEmpty
+                  subtitle: '${cards.length} kartu santri',
+                  trailing: cards.isEmpty
                       ? null
                       : IconButton(
                     onPressed: _toggleSelectionMode,
                     icon: Icon(
                       _selectionMode ? Icons.close_rounded : Icons.checklist_rounded,
                     ),
-                    tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa laporan',
+                    tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa kartu',
                   ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                   sliver: SliverToBoxAdapter(
-                    child: _ActionButtonsRow(folder: folder, records: records),
+                    child: _ActionButtonsRow(folder: folder),
                   ),
                 ),
-                if (records.isEmpty)
+                if (cards.isEmpty)
                   const SliverFillRemaining(
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: Icons.folder_open_rounded,
                       title: 'Folder ini masih kosong',
-                      subtitle: 'Buat laporan baru atau tambahkan laporan yang sudah ada.',
+                      subtitle: 'Buat laporan baru atau tambahkan kartu yang sudah ada.',
                     ),
                   )
                 else
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(20, 4, 20, _selectionMode ? 110 : 24),
                     sliver: SliverList.separated(
-                      itemCount: records.length,
+                      itemCount: cards.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, i) {
-                        final r = records[i];
-                        return RecordCard(
-                          record: r,
-                          onEdit: () => showRecordFormSheet(context, existing: r),
-                          onDelete: () => _confirmDelete(context, r.id),
-                          onPindahkanKeFolder: () => recordsProvider.moveToFolder(r.id, null),
-                          pindahkanLabel: 'Keluarkan dari Folder',
-                          pindahkanIcon: Icons.folder_off_outlined,
+                        final c = cards[i];
+                        return SantriReportCard(
+                          info: c,
+                          onTapWeek: (weekIndex) => _openWeek(context, c, weekIndex),
+                          onPindahkanKeFolder: () => recordsProvider.moveIdentityToFolder(c, null),
+                          isInsideFolder: true,
+                          onHapus: () => _hapusCard(context, c),
                           selectionMode: _selectionMode,
-                          selected: _selected.contains(r.id),
-                          onSelectToggle: () => _toggleSelect(r.id),
+                          selected: _selected.contains(c.identityKey),
+                          onSelectToggle: () => _toggleSelect(c.identityKey),
                           selectedIds: _selected.toList(),
-                          onLongPressStartSelect: () => _startSelectingWith(r.id),
+                          onLongPressStartSelect: () => _startSelectingWith(c.identityKey),
                         );
                       },
                     ),
@@ -192,8 +279,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                 bottom: 16,
                 child: SelectionActionBar(
                   selectedCount: _selected.length,
-                  totalCount: records.length,
-                  onSelectAllChanged: (v) => _setSelectAll(v, records),
+                  totalCount: cards.length,
+                  onSelectAllChanged: (v) => _setSelectAll(v, cards),
                   onCancel: _toggleSelectionMode,
                   actions: [
                     SelectionAction(
@@ -216,34 +303,11 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
       ),
     );
   }
-
-  void _confirmDelete(BuildContext context, String id) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus laporan?'),
-        content: const Text('Data yang dihapus tidak dapat dikembalikan.'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () {
-              context.read<RecordsProvider>().delete(id);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ActionButtonsRow extends StatelessWidget {
   final ReportFolder folder;
-  final List<SantriRecord> records;
-  const _ActionButtonsRow({required this.folder, required this.records});
+  const _ActionButtonsRow({required this.folder});
 
   @override
   Widget build(BuildContext context) {
@@ -252,9 +316,9 @@ class _ActionButtonsRow extends StatelessWidget {
       child: Row(
         children: [
           _ActionChip(
-            icon: Icons.note_add_rounded,
+            icon: Icons.note_add_outlined,
             label: 'Buat Laporan',
-            onTap: () => showRecordFormSheet(context, initialFolderId: folder.id),
+            onTap: () => showBuatLaporanSheet(context, folderId: folder.id),
           ),
           const SizedBox(width: 8),
           _ActionChip(
@@ -267,17 +331,6 @@ class _ActionButtonsRow extends StatelessWidget {
             icon: Icons.drive_file_rename_outline_rounded,
             label: 'Ubah Nama',
             onTap: () => showFolderFormSheet(context, existing: folder),
-          ),
-          const SizedBox(width: 8),
-          _ActionChip(
-            icon: Icons.ios_share_rounded,
-            label: 'Ekspor',
-            onTap: () => showExportSheet(
-              context,
-              records: records,
-              judul: folder.nama,
-              periode: 'Folder: ${folder.nama}',
-            ),
           ),
         ],
       ),

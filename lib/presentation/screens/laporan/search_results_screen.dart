@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../data/models/santri_record.dart';
+import '../../../core/utils/week_utils.dart';
 import '../../../providers/folders_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/filter_sheet.dart';
 import '../../widgets/misc_widgets.dart';
-import '../../widgets/record_card.dart';
+import '../../widgets/santri_report_card.dart';
 import '../folder/move_to_folder_sheet.dart';
 import '../record_form/record_form_sheet.dart';
 
 /// Halaman "Hasil Pencarian" — beda dari list utama di tab Laporan yang
-/// cuma nyari laporan yang BELUM masuk folder mana pun, halaman ini nyari
-/// ke SEMUA laporan (termasuk yang sudah ada di dalam folder), dikelompokkan
-/// per folder biar user tetap tahu asalnya.
+/// cuma nyari kartu santri yang BELUM masuk folder mana pun, halaman ini
+/// nyari ke SEMUA kartu santri (termasuk yang sudah ada di dalam folder),
+/// dikelompokkan per folder biar user tetap tahu asalnya. Satu kartu =
+/// satu santri (sama seperti tab Laporan), lihat [SantriReportCard] &
+/// [SantriCardInfo.currentFolderId].
 ///
 /// Search query & filter di-share langsung dari [RecordsProvider] yang
 /// sama dengan tab Laporan — jadi begitu dibuka langsung nunjukin hasil
@@ -36,27 +38,86 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     super.dispose();
   }
 
-  Future<void> _moveSingle(BuildContext context, SantriRecord r) async {
-    final provider = context.read<RecordsProvider>();
-    final result = await showFolderPickerSheet(context, currentFolderId: r.folderId);
-    if (result == null || !context.mounted) return;
-    await provider.moveToFolder(r.id, result.isEmpty ? null : result);
+  /// Kartu yang cocok dengan pencarian & filter kelas/halaqoh aktif — sama
+  /// persis pola filternya dengan `LaporanTab._filteredCards`, cuma di sini
+  /// TIDAK dibatasi ke kartu tanpa folder saja (lihat dok kelas di atas).
+  List<SantriCardInfo> _filteredCards(RecordsProvider provider) {
+    final q = provider.searchQuery.trim().toLowerCase();
+    final thisMonth = DateTime(DateTime.now().year, DateTime.now().month);
+    return provider.laporanCards.where((c) {
+      if (q.isNotEmpty && !c.nama.toLowerCase().contains(q)) return false;
+      if (provider.filterKelas != null && c.kelas != provider.filterKelas) return false;
+      if (provider.filterHalaqoh != null && c.halaqoh != provider.filterHalaqoh) return false;
+      if (provider.filterStatus != null || provider.filterKeterangan != null) {
+        final recs = provider.recordsInMonth(thisMonth).where(
+            (r) => r.namaAnak.trim().toLowerCase() == c.nama.trim().toLowerCase());
+        final matches = recs.any((r) =>
+            (provider.filterStatus == null || r.status == provider.filterStatus) &&
+            (provider.filterKeterangan == null || r.keterangan == provider.filterKeterangan));
+        if (!matches) return false;
+      }
+      return true;
+    }).toList();
   }
 
-  void _confirmDelete(BuildContext context, String id) {
+  void _openWeek(BuildContext context, SantriCardInfo card, int weekIndex) {
+    final provider = context.read<RecordsProvider>();
+    final now = DateTime.now();
+    // Bulan PEMILIK pekan hari ini (bisa beda dari now.month di 1-2 hari
+    // ujung bulan) — lihat WeekUtils.ownerMonth.
+    final thisMonth = WeekUtils.ownerMonth(now);
+    final currentWeek = WeekUtils.weekOfMonth(now);
+
+    final existing = provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
+    if (existing != null) {
+      showRecordFormSheet(context, existing: existing);
+      return;
+    }
+
+    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
+    final presetDate = (weekIndex == currentWeek &&
+            !now.isBefore(range.start) &&
+            !now.isAfter(range.end))
+        ? now
+        : range.start;
+
+    showRecordFormSheet(
+      context,
+      presetKelas: card.kelas,
+      presetHalaqoh: card.halaqoh,
+      presetNama: card.nama,
+      presetTanggal: presetDate,
+      lockIdentity: true,
+      initialFolderId: card.emptyCardFolderId,
+    );
+  }
+
+  Future<void> _pindahkanCard(BuildContext context, SantriCardInfo card) async {
+    final provider = context.read<RecordsProvider>();
+    final result = await showFolderPickerSheet(context, currentFolderId: card.currentFolderId);
+    if (result == null || !context.mounted) return;
+    await provider.moveIdentityToFolder(card, result.isEmpty ? null : result);
+  }
+
+  void _hapusCard(BuildContext context, SantriCardInfo card) {
+    final hasReports = card.hasAnyReport;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus laporan?'),
-        content: const Text('Data yang dihapus tidak dapat dikembalikan.'),
+        title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
+        content: Text(
+          hasReports
+              ? 'Semua laporan pekanan santri ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
+              : 'Belum ada laporan yang tersimpan untuk santri ini.',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () {
-              context.read<RecordsProvider>().delete(id);
               Navigator.pop(ctx);
+              context.read<RecordsProvider>().deleteAllForSantri(card.nama, card.identityKey);
             },
             child: const Text('Hapus'),
           ),
@@ -65,13 +126,12 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     );
   }
 
-  Widget _buildRecordCard(BuildContext context, SantriRecord r) {
-    return RecordCard(
-      record: r,
-      onEdit: () => showRecordFormSheet(context, existing: r),
-      onDelete: () => _confirmDelete(context, r.id),
-      onPindahkanKeFolder: () => _moveSingle(context, r),
-      pindahkanLabel: r.folderId == null ? 'Pindahkan ke Folder' : 'Pindahkan ke Folder Lain',
+  Widget _buildCard(BuildContext context, SantriCardInfo c) {
+    return SantriReportCard(
+      info: c,
+      onTapWeek: (weekIndex) => _openWeek(context, c, weekIndex),
+      onPindahkanKeFolder: () => _pindahkanCard(context, c),
+      onHapus: () => _hapusCard(context, c),
     );
   }
 
@@ -147,15 +207,15 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
       );
     }
 
-    final results = List<SantriRecord>.from(provider.filtered)
-      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+    final results = _filteredCards(provider)
+      ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
 
     // Kelompokkan per folder (null = tanpa folder / langsung di tab
     // Laporan), diurut nama folder biar rapi, "Tanpa Folder" ditaruh
     // paling akhir.
-    final Map<String?, List<SantriRecord>> grouped = {};
-    for (final r in results) {
-      grouped.putIfAbsent(r.folderId, () => []).add(r);
+    final Map<String?, List<SantriCardInfo>> grouped = {};
+    for (final c in results) {
+      grouped.putIfAbsent(c.currentFolderId, () => []).add(c);
     }
     final folderIds = grouped.keys.whereType<String>().toList()
       ..sort((a, b) {
@@ -172,7 +232,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
           slivers: [
             PushedPageHeader(
               title: 'Hasil Pencarian',
-              subtitle: '${results.length} laporan ditemukan • semua folder',
+              subtitle: '${results.length} kartu santri ditemukan • semua folder',
             ),
             SliverToBoxAdapter(child: _buildSearchAndFilter(context, provider)),
             if (results.isEmpty)
@@ -201,7 +261,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                   sliver: SliverList.separated(
                     itemCount: grouped[fid]!.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) => _buildRecordCard(context, grouped[fid]![i]),
+                    itemBuilder: (context, i) => _buildCard(context, grouped[fid]![i]),
                   ),
                 ),
               ],
@@ -217,7 +277,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                   sliver: SliverList.separated(
                     itemCount: tanpaFolder.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) => _buildRecordCard(context, tanpaFolder[i]),
+                    itemBuilder: (context, i) => _buildCard(context, tanpaFolder[i]),
                   ),
                 ),
               ],

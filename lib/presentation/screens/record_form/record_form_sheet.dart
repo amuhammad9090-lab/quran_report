@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/access/access_scope.dart';
+import '../../../core/utils/week_utils.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../data/services/app_prefs_service.dart';
@@ -17,15 +18,38 @@ import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
 
 /// Menampilkan modal bottom sheet full-height untuk tambah/edit laporan.
-Future<void> showRecordFormSheet(BuildContext context,
-    {SantriRecord? existing, String? initialFolderId}) {
+///
+/// [presetKelas]/[presetHalaqoh]/[presetNama]/[presetTanggal]: dipakai saat
+/// dibuka dari kartu santri di tab Laporan (lihat spek "1 santri = 1 card
+/// laporan utama") untuk pekan yang BELUM ada laporannya — identitas
+/// santri sudah pasti (dari kartunya), jadi field Kelas/Halaqoh/Nama
+/// dikunci ([lockIdentity]) supaya guru nggak bisa "salah pindah" ke
+/// santri lain di tengah pengisian laporan pekanan ini.
+Future<void> showRecordFormSheet(
+  BuildContext context, {
+  SantriRecord? existing,
+  String? initialFolderId,
+  String? presetKelas,
+  String? presetHalaqoh,
+  String? presetNama,
+  DateTime? presetTanggal,
+  bool lockIdentity = false,
+}) {
   return showModalBottomSheet(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => RecordFormSheet(existing: existing, initialFolderId: initialFolderId),
+    builder: (_) => RecordFormSheet(
+      existing: existing,
+      initialFolderId: initialFolderId,
+      presetKelas: presetKelas,
+      presetHalaqoh: presetHalaqoh,
+      presetNama: presetNama,
+      presetTanggal: presetTanggal,
+      lockIdentity: lockIdentity,
+    ),
   );
 }
 
@@ -34,7 +58,21 @@ class RecordFormSheet extends StatefulWidget {
   // Kalau laporan ini dibuat langsung dari dalam halaman folder, laporan
   // baru otomatis masuk ke folder tersebut.
   final String? initialFolderId;
-  const RecordFormSheet({super.key, this.existing, this.initialFolderId});
+  final String? presetKelas;
+  final String? presetHalaqoh;
+  final String? presetNama;
+  final DateTime? presetTanggal;
+  final bool lockIdentity;
+  const RecordFormSheet({
+    super.key,
+    this.existing,
+    this.initialFolderId,
+    this.presetKelas,
+    this.presetHalaqoh,
+    this.presetNama,
+    this.presetTanggal,
+    this.lockIdentity = false,
+  });
 
   @override
   State<RecordFormSheet> createState() => _RecordFormSheetState();
@@ -124,10 +162,10 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
   void initState() {
     super.initState();
     final e = widget.existing;
-    _tanggal = e?.tanggal ?? DateTime.now();
-    _kelas = e?.kelas;
-    _halaqoh = e?.halaqoh;
-    _nama = e?.namaAnak;
+    _tanggal = e?.tanggal ?? widget.presetTanggal ?? DateTime.now();
+    _kelas = e?.kelas ?? widget.presetKelas;
+    _halaqoh = e?.halaqoh ?? widget.presetHalaqoh;
+    _nama = e?.namaAnak ?? widget.presetNama;
     _status = e?.status ?? HafalanStatus.tahfizh;
     _keterangan = e?.keterangan ?? Keterangan.hadir;
     _surahNumber = e?.surahNumber;
@@ -146,34 +184,42 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       // (kelas+halaqoh) -> pre-fill otomatis biar nggak perlu milih ulang
       // tiap bikin laporan (tetap bisa ganti manual kalau memang punya
       // lebih dari satu assignment, atau admin yang aktifkan mode lihat
-      // semua kelas).
-      final scope = _scope;
-      if (scope != null && scope.user.assignments.length == 1) {
-        final only = scope.user.assignments.first;
-        _kelas = only.kelas;
-        _halaqoh = only.halaqoh;
+      // semua kelas). Dilewati kalau identitas sudah dikunci dari kartu
+      // santri (widget.lockIdentity) — presetKelas/Halaqoh di atas sudah
+      // pasti benar, jangan ditimpa.
+      if (!widget.lockIdentity) {
+        final scope = _scope;
+        if (scope != null && scope.user.assignments.length == 1) {
+          final only = scope.user.assignments.first;
+          _kelas = only.kelas;
+          _halaqoh = only.halaqoh;
+        }
       }
 
       // Cek apakah ada draf laporan yang belum sempat disimpan dari sesi
       // sebelumnya (mis. bottom sheet ini ke-tutup nggak sengaja). Kalau
       // ada & isinya nggak kosong, tawarkan buat dilanjutkan lewat
       // banner di atas form — jangan langsung timpa isian pre-fill di
-      // atas tanpa persetujuan user.
-      final raw = AppPrefsService.instance.recordDraftJson;
-      if (raw != null && raw.trim().isNotEmpty) {
-        try {
-          final map = jsonDecode(raw) as Map<String, dynamic>;
-          final looksNonEmpty = ((map['kelas'] as String?) ?? '').isNotEmpty ||
-              ((map['halaqoh'] as String?) ?? '').isNotEmpty ||
-              ((map['nama'] as String?) ?? '').isNotEmpty ||
-              ((map['catatan'] as String?) ?? '').isNotEmpty;
-          if (looksNonEmpty) {
-            _restorableDraft = map;
-            _draftBannerVisible = true;
+      // atas tanpa persetujuan user. Dilewati kalau identitas dikunci
+      // (draf lama bisa saja punya kelas/halaqoh/nama santri LAIN, yang
+      // kalau di-restore malah bertentangan sama kartu yang lagi dibuka).
+      if (!widget.lockIdentity) {
+        final raw = AppPrefsService.instance.recordDraftJson;
+        if (raw != null && raw.trim().isNotEmpty) {
+          try {
+            final map = jsonDecode(raw) as Map<String, dynamic>;
+            final looksNonEmpty = ((map['kelas'] as String?) ?? '').isNotEmpty ||
+                ((map['halaqoh'] as String?) ?? '').isNotEmpty ||
+                ((map['nama'] as String?) ?? '').isNotEmpty ||
+                ((map['catatan'] as String?) ?? '').isNotEmpty;
+            if (looksNonEmpty) {
+              _restorableDraft = map;
+              _draftBannerVisible = true;
+            }
+          } catch (_) {
+            // Draf korup/format lama — abaikan aja, jangan sampai bikin
+            // form ini crash cuma gara-gara draf lama yang nggak valid.
           }
-        } catch (_) {
-          // Draf korup/format lama — abaikan aja, jangan sampai bikin
-          // form ini crash cuma gara-gara draf lama yang nggak valid.
         }
       }
     }
@@ -716,12 +762,49 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 14, 12, 4),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Text(
-                            _isEdit ? 'Edit Laporan' : 'Laporan Baru',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w800, fontSize: 18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _isEdit ? 'Edit Laporan' : 'Laporan Baru',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800, fontSize: 18),
+                              ),
+                              if (_nama != null && _nama!.trim().isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  _nama!,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13.5,
+                                    color: cs.primary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if ((_kelas ?? '').isNotEmpty || (_halaqoh ?? '').isNotEmpty)
+                                  Text(
+                                    '${_kelas ?? '-'} • Halaqoh ${_halaqoh ?? '-'}',
+                                    style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                Text(
+                                  '${WeekUtils.monthWeekLabel(WeekUtils.weekOfMonth(_tanggal))} • '
+                                  // Bulan yang ditampilkan = bulan PEMILIK pekan tanggal
+                                  // ini (bisa beda dari bulan kalender _tanggal sendiri di
+                                  // 1-2 hari ujung bulan) — lihat WeekUtils.ownerMonth,
+                                  // biar label pekan & nama bulannya selalu konsisten.
+                                  '${DateFormat('MMMM yyyy', 'id_ID').format(WeekUtils.ownerMonth(_tanggal))}',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                         IconButton(
@@ -748,62 +831,73 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                             icon: Icons.event_rounded,
                             child: _buildDateField(cs),
                           ),
-                          const SizedBox(height: 16),
-                          FormSectionCard(
-                            title: 'Identitas Santri',
-                            icon: Icons.badge_outlined,
-                            child: Column(
-                              children: [
-                                if (_showAdminBrowseToggle) ...[
-                                  _buildAdminBrowseToggle(cs),
-                                  const SizedBox(height: 12),
-                                ],
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: SelectField(
-                                        key: ValueKey('kelas_$_kelas'),
-                                        value: _kelas,
-                                        label: 'Kelas',
-                                        icon: Icons.class_outlined,
-                                        options: kelasOptions,
-                                        errorText: _kelasError,
-                                        accent: cs.primary,
-                                        onChanged: _onKelasChanged,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: SelectField(
-                                        key: ValueKey('halaqoh_$_halaqoh'),
-                                        value: _halaqoh,
-                                        label: 'Halaqoh',
-                                        icon: Icons.groups_outlined,
-                                        options: halaqohOptions,
-                                        errorText: _halaqohError,
-                                        accent: cs.primary,
-                                        onChanged: _onHalaqohChanged,
-                                      ),
-                                    ),
+                          // Identitas santri (Kelas/Halaqoh/Nama) SENGAJA
+                          // disembunyikan total (bukan cuma di-disable) saat
+                          // dibuka dari kartu santri di tab Laporan
+                          // (lockIdentity) — identitasnya sudah jelas dari
+                          // konteks kartu itu, jadi form di sini cukup
+                          // tanggal + status capaian + keterangan + catatan.
+                          if (!widget.lockIdentity) ...[
+                            const SizedBox(height: 16),
+                            FormSectionCard(
+                              title: 'Identitas Santri',
+                              icon: Icons.badge_outlined,
+                              child: Column(
+                                children: [
+                                  if (_showAdminBrowseToggle) ...[
+                                    _buildAdminBrowseToggle(cs),
+                                    const SizedBox(height: 12),
                                   ],
-                                ),
-                                const SizedBox(height: 12),
-                                SelectField(
-                                  key: ValueKey('nama_$_nama'),
-                                  value: _nama,
-                                  label: 'Nama Anak',
-                                  hint: comboBelumLengkap
-                                      ? 'Pilih kelas & halaqoh dulu'
-                                      : null,
-                                  icon: Icons.person_outline_rounded,
-                                  options: namaOptions,
-                                  errorText: _namaError,
-                                  accent: cs.primary,
-                                  onChanged: _onNamaChanged,
-                                ),
-                              ],
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: SelectField(
+                                          key: ValueKey('kelas_$_kelas'),
+                                          value: _kelas,
+                                          label: 'Kelas',
+                                          icon: Icons.class_outlined,
+                                          options: kelasOptions,
+                                          errorText: _kelasError,
+                                          accent: cs.primary,
+                                          enabled: !widget.lockIdentity,
+                                          onChanged: _onKelasChanged,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: SelectField(
+                                          key: ValueKey('halaqoh_$_halaqoh'),
+                                          value: _halaqoh,
+                                          label: 'Halaqoh',
+                                          icon: Icons.groups_outlined,
+                                          options: halaqohOptions,
+                                          errorText: _halaqohError,
+                                          accent: cs.primary,
+                                          enabled: !widget.lockIdentity,
+                                          onChanged: _onHalaqohChanged,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SelectField(
+                                    key: ValueKey('nama_$_nama'),
+                                    value: _nama,
+                                    label: 'Nama Anak',
+                                    hint: comboBelumLengkap
+                                        ? 'Pilih kelas & halaqoh dulu'
+                                        : null,
+                                    icon: Icons.person_outline_rounded,
+                                    options: namaOptions,
+                                    errorText: _namaError,
+                                    accent: cs.primary,
+                                    enabled: !widget.lockIdentity,
+                                    onChanged: _onNamaChanged,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
+                          ],
                           const SizedBox(height: 16),
                           FormSectionCard(
                             title: 'Status Capaian',
@@ -1186,11 +1280,16 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         ],
         if (_generated != null && _generated!.available) ...[
           const SizedBox(height: 14),
-          Container(
-            decoration: BoxDecoration(
-              color: cs.primaryContainer.withValues(alpha: 0.35),
+          Material(
+            // Sebelumnya Container(decoration: BoxDecoration(color, border,
+            // borderRadius)) — diganti Material(shape: RoundedRectangleBorder)
+            // biar background+border tetap identik TAPI ListTile "Hal. X —
+            // Baris Y" di dalamnya (lihat ListView di bawah) punya Material
+            // terdekat yang benar, nggak ketutup DecoratedBox lagi.
+            color: cs.primaryContainer.withValues(alpha: 0.35),
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cs.primary.withValues(alpha: 0.25)),
+              side: BorderSide(color: cs.primary.withValues(alpha: 0.25)),
             ),
             child: Column(
               children: [

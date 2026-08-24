@@ -17,8 +17,6 @@ void main() async {
 
   await initializeDateFormatting('id_ID', null);
   await StorageService.instance.init();
-  // AppPrefsService pakai Hive yang sama — init setelah StorageService
-  // supaya Hive.initFlutter() cuma dipanggil sekali (di StorageService).
   await AppPrefsService.instance.init();
   await QuranEngineService.instance.load();
 
@@ -26,15 +24,11 @@ void main() async {
   await themeProvider.load();
 
   final authProvider = AuthProvider();
-  // Coba pulihkan session yang tersimpan, biar user yang sebelumnya udah
-  // login nggak perlu login ulang tiap buka app.
   await authProvider.restoreSession();
 
   final recordsProvider = RecordsProvider();
   await recordsProvider.load();
-  // Kalau session berhasil dipulihkan, langsung terapkan scope-nya dari
-  // awal (sebelum widget pertama render) — biar nggak ada "kedipan"
-  // data yang belum ke-scope pas app baru dibuka.
+
   recordsProvider.updateScope(authProvider.scope);
 
   final foldersProvider = FoldersProvider();

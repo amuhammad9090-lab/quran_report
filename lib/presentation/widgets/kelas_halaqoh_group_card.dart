@@ -4,11 +4,12 @@ import '../../providers/records_provider.dart';
 import 'status_badge.dart';
 
 /// Kartu rekap 1 kelompok Kelas+Halaqoh dalam suatu periode (pekan/bulan) —
-/// dipakai di Rekap Pekanan & Rekap Bulanan, section "Rekap per Kelas &
-/// Halaqoh". Header nampilin "Kelas X — Halaqoh Y" + tombol ekspor khusus
-/// kelompok ini (biar guru pembimbing bisa ekspor rekap kelasnya sendiri),
-/// di bawahnya daftar santri dengan cuma label status (Tahfizh/Tahsin/dst)
-/// & jumlah baris — detail lengkap tetap ada di section "Semua Laporan".
+/// dipakai di Rekap Bulanan (termasuk drill-down per Pekan), section "Rekap
+/// per Kelas & Halaqoh". Header nampilin "Kelas X — Halaqoh Y" + tombol
+/// ekspor khusus kelompok ini (biar guru pembimbing bisa ekspor rekap
+/// kelasnya sendiri), di bawahnya daftar santri dengan cuma label status
+/// (Tahfizh/Tahsin/dst) & jumlah baris — detail lengkap tetap ada di
+/// section "Semua Laporan".
 class KelasHalaqohGroupCard extends StatelessWidget {
   final KelasHalaqohGroup group;
   final VoidCallback onExport;

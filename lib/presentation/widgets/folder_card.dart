@@ -5,8 +5,9 @@ import '../../data/models/folder.dart';
 /// Kartu folder di section "Folder" pada tab Laporan.
 /// - Tap → buka halaman isi folder.
 /// - Tekan lama (hold) → menu Ubah Nama / Hapus.
-/// - Jadi [DragTarget] — kalau ada RecordCard yang di-drag (id laporan)
-///   dilepas di atas kartu ini, laporan itu dipindah ke folder ini.
+/// - Jadi [DragTarget] — kalau ada SantriReportCard yang di-drag
+///   (identityKey santri) dilepas di atas kartu ini, kartu itu dipindah
+///   ke folder ini.
 class FolderCard extends StatelessWidget {
   final ReportFolder folder;
   final int recordCount;
@@ -33,59 +34,64 @@ class FolderCard extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) => SafeArea(
         child: Container(
+          // Container ini SEKARANG cuma buat `margin` — background+rounded
+          // corner dipindah ke Material di dalamnya, biar ListTile "Ubah
+          // Nama"/"Hapus Folder" di bawah punya Material terdekat yang
+          // benar, nggak ketutup DecoratedBox (lihat assertion "ListTile
+          // background color or ink splashes may be invisible").
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          decoration: BoxDecoration(
+          child: Material(
             color: Theme.of(ctx).bottomSheetTheme.backgroundColor,
             borderRadius: BorderRadius.circular(22),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
-                child: Row(
-                  children: [
-                    Icon(Icons.folder_rounded, color: cs.secondary),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        folder.nama,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
-                        overflow: TextOverflow.ellipsis,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.folder_rounded, color: cs.secondary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          folder.nama,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(height: 18, indent: 18, endIndent: 18),
-              ListTile(
-                leading: Icon(Icons.drive_file_rename_outline_rounded, color: cs.primary),
-                title: const Text('Ubah Nama', style: TextStyle(fontWeight: FontWeight.w600)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onRename();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.delete_outline_rounded, color: cs.error),
-                title: Text('Hapus Folder',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: cs.error)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onDelete();
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
+                const Divider(height: 18, indent: 18, endIndent: 18),
+                ListTile(
+                  leading: Icon(Icons.drive_file_rename_outline_rounded, color: cs.primary),
+                  title: const Text('Ubah Nama', style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    onRename();
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.delete_outline_rounded, color: cs.error),
+                  title: Text('Hapus Folder',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: cs.error)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    onDelete();
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         ),
       ),

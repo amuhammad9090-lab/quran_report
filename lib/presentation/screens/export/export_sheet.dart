@@ -226,34 +226,38 @@ class _ExportSheetState extends State<ExportSheet> {
               ),
               const SizedBox(height: 16),
               if (!_isFixed)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    children: [
-                      RadioListTile<bool>(
-                        value: true,
-                        // ignore: deprecated_member_use
-                        groupValue: _useFilteredOnly,
-                        // ignore: deprecated_member_use
-                        onChanged: (v) => setState(() => _useFilteredOnly = v ?? true),
-                        title: const Text('Sesuai filter/pencarian aktif',
-                            style: TextStyle(fontSize: 13.5)),
-                        dense: true,
-                      ),
-                      RadioListTile<bool>(
-                        value: false,
-                        // ignore: deprecated_member_use
-                        groupValue: _useFilteredOnly,
-                        // ignore: deprecated_member_use
-                        onChanged: (v) => setState(() => _useFilteredOnly = v ?? false),
-                        title: const Text('Semua data', style: TextStyle(fontSize: 13.5)),
-                        dense: true,
-                      ),
-                    ],
+                Material(
+                  // Sebelumnya Container(decoration: BoxDecoration(color,
+                  // borderRadius)) — diganti Material supaya RadioListTile
+                  // di dalamnya (2 baris di bawah) punya Material terdekat
+                  // yang benar, nggak ketutup DecoratedBox lagi.
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      children: [
+                        RadioListTile<bool>(
+                          value: true,
+                          // ignore: deprecated_member_use
+                          groupValue: _useFilteredOnly,
+                          // ignore: deprecated_member_use
+                          onChanged: (v) => setState(() => _useFilteredOnly = v ?? true),
+                          title: const Text('Sesuai filter/pencarian aktif',
+                              style: TextStyle(fontSize: 13.5)),
+                          dense: true,
+                        ),
+                        RadioListTile<bool>(
+                          value: false,
+                          // ignore: deprecated_member_use
+                          groupValue: _useFilteredOnly,
+                          // ignore: deprecated_member_use
+                          onChanged: (v) => setState(() => _useFilteredOnly = v ?? false),
+                          title: const Text('Semua data', style: TextStyle(fontSize: 13.5)),
+                          dense: true,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               SizedBox(height: _isFixed ? 4 : 20),

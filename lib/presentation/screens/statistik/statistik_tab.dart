@@ -3,13 +3,11 @@ import '../../../core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/utils/week_utils.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import 'santri_list_screen.dart';
 import 'kehadiran_screen.dart';
 import 'rekap_bulanan_screen.dart';
-import 'rekap_pekanan_screen.dart';
 
 /// Tab "Statistik" — angka ringkas + pintu masuk ke 3 halaman detail:
 /// Daftar Santri, Kehadiran, dan Rekap Bulanan.
@@ -28,13 +26,6 @@ class StatistikTab extends StatelessWidget {
     final totalCapaian = totalTahfizhBulanIni + totalTahsinBulanIni;
     final tahfizhRatio = totalCapaian == 0 ? 0.0 : totalTahfizhBulanIni / totalCapaian;
     final tahsinRatio = totalCapaian == 0 ? 0.0 : totalTahsinBulanIni / totalCapaian;
-
-    final thisWeek = WeekUtils.startOfWeek(now);
-    final totalTahfizhPekanIni = provider.totalTahfizhInWeek(thisWeek);
-    final totalTahsinPekanIni = provider.totalTahsinInWeek(thisWeek);
-    final totalCapaianPekan = totalTahfizhPekanIni + totalTahsinPekanIni;
-    final tahfizhRatioPekan = totalCapaianPekan == 0 ? 0.0 : totalTahfizhPekanIni / totalCapaianPekan;
-    final tahsinRatioPekan = totalCapaianPekan == 0 ? 0.0 : totalTahsinPekanIni / totalCapaianPekan;
 
     return SafeArea(
       child: RefreshIndicator(
@@ -141,58 +132,6 @@ class StatistikTab extends StatelessWidget {
                                   Expanded(
                                     child: Text(
                                       'Ketuk untuk lihat rekap bulanan lengkap',
-                                      style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
-                                    ),
-                                  ),
-                                  Icon(Icons.chevron_right_rounded, size: 18, color: cs.onSurfaceVariant),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SectionLabel(
-                    'Rekap Pekanan • ${WeekUtils.weekLabel(thisWeek)}',
-                  ),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => RekapPekananScreen(initialDate: now),
-                        ),
-                      ),
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            children: [
-                              _DistribusiRow(
-                                label: 'Tahfizh',
-                                count: totalTahfizhPekanIni,
-                                ratio: tahfizhRatioPekan,
-                                color: AppColors.tahfizhOn(context),
-                              ),
-                              const SizedBox(height: 18),
-                              _DistribusiRow(
-                                label: 'Tahsin',
-                                count: totalTahsinPekanIni,
-                                ratio: tahsinRatioPekan,
-                                color: AppColors.tahsinOn(context),
-                              ),
-                              const SizedBox(height: 14),
-                              Row(
-                                children: [
-                                  Icon(Icons.calendar_view_week_rounded,
-                                      size: 14, color: cs.onSurfaceVariant),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      'Ketuk untuk lihat rekap pekanan lengkap',
                                       style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
                                     ),
                                   ),

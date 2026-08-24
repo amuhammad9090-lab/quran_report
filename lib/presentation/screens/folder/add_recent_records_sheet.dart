@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/records_provider.dart';
+import '../../widgets/status_badge.dart';
 
 /// Bottom sheet "Tambah Laporan (Recent)" di halaman folder — pilih dari
-/// laporan yang sudah ada (belum ada di folder ini) buat dimasukkan ke
-/// folder ini, tanpa perlu bikin laporan baru.
+/// kartu santri yang sudah ada (belum ada di folder ini) buat dimasukkan
+/// ke folder ini, tanpa perlu bikin laporan baru. Satu pilihan = satu
+/// kartu santri (SEMUA laporannya ikut pindah kalau sudah ada, atau
+/// identitasnya "diparkir" ke folder ini kalau masih kosong) — konsisten
+/// dengan [RecordsProvider.moveIdentityToFolder] yang dipakai di seluruh
+/// alur pindah-folder lainnya sekarang.
 Future<void> showAddRecentRecordsSheet(BuildContext context, {required String folderId}) {
   return showModalBottomSheet(
     context: context,
@@ -41,9 +45,9 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
     final cs = Theme.of(context).colorScheme;
     final provider = context.watch<RecordsProvider>();
 
-    final candidates = provider.allSortedByDateDesc
-        .where((r) => r.folderId != widget.folderId)
-        .where((r) => r.namaAnak.toLowerCase().contains(_searchCtrl.text.trim().toLowerCase()))
+    final candidates = provider.laporanCards
+        .where((c) => c.currentFolderId != widget.folderId)
+        .where((c) => c.nama.toLowerCase().contains(_searchCtrl.text.trim().toLowerCase()))
         .toList();
 
     return Padding(
@@ -55,13 +59,19 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
         child: Container(
+          // Container ini SEKARANG cuma buat `constraints` (nggak ada
+          // decoration lagi di sini) — background+rounded corner dipindah
+          // ke Material di dalamnya, biar CheckboxListTile di list bawah
+          // punya Material terdekat yang benar (nggak ketutup DecoratedBox
+          // — lihat assertion "ListTile background color or ink splashes
+          // may be invisible").
           constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-          decoration: BoxDecoration(
+          child: Material(
             color: Theme.of(context).bottomSheetTheme.backgroundColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-          child: Column(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -79,7 +89,7 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
               Text('Tambah Laporan',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              Text('Pilih dari laporan yang sudah ada ke folder ini',
+              Text('Pilih dari kartu santri yang sudah ada ke folder ini',
                   style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
               const SizedBox(height: 12),
               TextField(
@@ -95,7 +105,7 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
                 child: candidates.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: 18),
-                        child: Text('Tidak ada laporan yang bisa ditambahkan.',
+                        child: Text('Tidak ada kartu santri yang bisa ditambahkan.',
                             style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
                       )
                     : ListView.separated(
@@ -103,20 +113,23 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
                         itemCount: candidates.length,
                         separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (context, i) {
-                          final r = candidates[i];
-                          final checked = _picked.contains(r.id);
+                          final c = candidates[i];
+                          final checked = _picked.contains(c.identityKey);
                           return CheckboxListTile(
                             value: checked,
                             onChanged: (_) => setState(() {
-                              checked ? _picked.remove(r.id) : _picked.add(r.id);
+                              checked ? _picked.remove(c.identityKey) : _picked.add(c.identityKey);
                             }),
                             controlAffinity: ListTileControlAffinity.leading,
-                            title: Text(r.namaAnak, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            title: Text(c.nama, style: const TextStyle(fontWeight: FontWeight.w600)),
                             subtitle: Text(
-                              '${DateFormat('d MMM yyyy', 'id_ID').format(r.tanggal)} • ${r.capaianText}',
+                              c.hasAnyReport
+                                  ? '${c.weeksWithReportThisMonth.length}/${c.totalWeeksThisMonth} pekan bulan ini • ${c.latestRecord!.capaianText}'
+                                  : 'Belum ada laporan',
                               style: const TextStyle(fontSize: 12),
                               overflow: TextOverflow.ellipsis,
                             ),
+                            secondary: c.hasAnyReport ? StatusBadge(status: c.latestRecord!.status) : null,
                           );
                         },
                       ),
@@ -128,16 +141,24 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
                   onPressed: _picked.isEmpty
                       ? null
                       : () async {
-                          await context.read<RecordsProvider>().moveManyToFolder(_picked, widget.folderId);
+                          final provider = context.read<RecordsProvider>();
+                          for (final key in _picked) {
+                            final c = provider.cardByIdentityKey(key);
+                            if (c != null) {
+                              await provider.moveIdentityToFolder(c, widget.folderId);
+                            }
+                          }
                           if (context.mounted) Navigator.pop(context);
                         },
-                  child: Text(_picked.isEmpty ? 'Pilih laporan dulu' : 'Tambahkan ${_picked.length} Laporan'),
+                  child: Text(_picked.isEmpty ? 'Pilih kartu dulu' : 'Tambahkan ${_picked.length} Kartu'),
                 ),
               ),
             ],
           ),
+              ),
+            ),
+          ),
         ),
-      ),
     );
   }
 }
