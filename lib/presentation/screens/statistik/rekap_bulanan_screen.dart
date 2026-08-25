@@ -158,14 +158,14 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                       padding: const EdgeInsets.all(18),
                       child: Column(
                         children: [
-                          _DistribusiRow(
+                          DistribusiRow(
                             label: 'Tahfizh',
                             count: totalTahfizh,
                             ratio: tahfizhRatio,
                             color: AppColors.tahfizhOn(context),
                           ),
                           const SizedBox(height: 18),
-                          _DistribusiRow(
+                          DistribusiRow(
                             label: 'Tahsin',
                             count: totalTahsin,
                             ratio: tahsinRatio,
@@ -358,47 +358,3 @@ class _MonthWeekList extends StatelessWidget {
     );
   }
 }
-
-class _DistribusiRow extends StatelessWidget {
-  final String label;
-  final int count;
-  final double ratio;
-  final Color color;
-
-  const _DistribusiRow({
-    required this.label,
-    required this.count,
-    required this.ratio,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-            const Spacer(),
-            Text(
-              '$count laporan • ${(ratio * 100).toStringAsFixed(0)}%',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: ratio,
-            minHeight: 8,
-            backgroundColor: color.withValues(alpha: 0.12),
-            valueColor: AlwaysStoppedAnimation(color),
-          ),
-        ),
-      ],
-    );
-  }
-}
-

@@ -14,6 +14,7 @@ import '../../widgets/status_badge.dart';
 Future<void> showAddRecentRecordsSheet(BuildContext context, {required String folderId}) {
   return showModalBottomSheet(
     context: context,
+    constraints: const BoxConstraints(maxWidth: 640),
     useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,

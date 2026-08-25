@@ -15,6 +15,7 @@ Future<String?> showFolderPickerSheet(
 }) {
   return showModalBottomSheet<String>(
     context: context,
+    constraints: const BoxConstraints(maxWidth: 640),
     useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,

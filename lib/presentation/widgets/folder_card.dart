@@ -30,6 +30,7 @@ class FolderCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
+      constraints: const BoxConstraints(maxWidth: 640),
       useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => SafeArea(

@@ -29,6 +29,21 @@ class QuranReportApp extends StatelessWidget {
         Locale('en', 'US'),
       ],
       locale: const Locale('id', 'ID'),
+      // Banyak kartu/baris di app ini (mis. tabel Rekap Bulanan, kartu
+      // santri) didesain dengan tinggi & padding yang pas untuk skala
+      // teks normal. Kalau user set font sistem Android-nya ke paling
+      // besar (200%), layout itu bisa pecah/overflow parah. Di-clamp ke
+      // rentang 0.85-1.25 biar tetap ada penyesuaian buat aksesibilitas,
+      // tapi nggak sampai merusak layout.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: mq.textScaler.clamp(minScaleFactor: 0.85, maxScaleFactor: 1.25),
+          ),
+          child: child!,
+        );
+      },
       // Startup routing: Splash -> (Onboarding kalau belum selesai) ->
       // (Login kalau belum authenticated) -> Home. Lihat SplashScreen.
       home: const SplashScreen(),

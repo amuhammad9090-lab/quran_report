@@ -93,6 +93,7 @@ Future<void> _showMonthlyExportSheet(
 }) {
   return showModalBottomSheet(
     context: context,
+    constraints: const BoxConstraints(maxWidth: 640),
     useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
@@ -252,7 +253,7 @@ class _MonthlyExportSheetState extends State<_MonthlyExportSheet> {
                 style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
               ),
               const SizedBox(height: 20),
-              _ExportOptionTile(
+              ExportOptionTile(
                 icon: Icons.picture_as_pdf_rounded,
                 color: AppColors.redOn(context),
                 title: 'PDF',
@@ -261,7 +262,7 @@ class _MonthlyExportSheetState extends State<_MonthlyExportSheet> {
                 onTap: _loading ? null : () => _doExport(ExportFormat.pdf),
               ),
               const SizedBox(height: 10),
-              _ExportOptionTile(
+              ExportOptionTile(
                 icon: Icons.description_rounded,
                 color: AppColors.blueOn(context),
                 title: 'Word (.docx)',
@@ -270,7 +271,7 @@ class _MonthlyExportSheetState extends State<_MonthlyExportSheet> {
                 onTap: _loading ? null : () => _doExport(ExportFormat.word),
               ),
               const SizedBox(height: 10),
-              _ExportOptionTile(
+              ExportOptionTile(
                 icon: Icons.grid_on_rounded,
                 color: AppColors.greenOn(context),
                 title: 'Excel (.xlsx)',
@@ -329,62 +330,6 @@ class _MonthlyExportSheetState extends State<_MonthlyExportSheet> {
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ExportOptionTile extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final bool loading;
-  final VoidCallback? onTap;
-
-  const _ExportOptionTile({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.loading,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
-                child: Icon(icon, color: color),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5)),
-                    Text(subtitle, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-              if (loading)
-                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-              else
-                Icon(Icons.chevron_right_rounded, color: color),
-            ],
-          ),
         ),
       ),
     );

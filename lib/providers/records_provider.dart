@@ -123,9 +123,6 @@ class RecordsProvider extends ChangeNotifier {
   HafalanStatus? get filterStatus => _filterStatus;
   Keterangan? get filterKeterangan => _filterKeterangan;
 
-  /// True kalau user yang login adalah guru pembimbing (dibatasi assignment) —
-  /// dipakai UI buat, mis., mengunci pilihan kelas/halaqoh di form.
-  bool get isScoped => _scope != null && !_scope!.isAdmin;
   AccessScope? get scope => _scope;
 
   /// Dipanggil setiap kali status login berubah (restore session saat
@@ -205,17 +202,6 @@ class RecordsProvider extends ChangeNotifier {
       _activatedFolders[key] = folderId;
       await AppPrefsService.instance.setActivatedIdentityFolder(key, folderId);
     }
-    notifyListeners();
-  }
-
-  /// Batalkan kartu Laporan sebuah identitas — cuma relevan/dipanggil UI
-  /// untuk kartu yang BELUM punya laporan sama sekali (lihat
-  /// [SantriCardInfo.hasAnyReport]), supaya tidak pernah "menghapus"
-  /// laporan yang sudah diisi (itu tetap lewat [delete] per-record biasa).
-  Future<void> deactivateIdentity(String identityKey) async {
-    await AppPrefsService.instance.removeActivatedIdentity(identityKey);
-    _activatedKeys.remove(identityKey);
-    _activatedFolders.remove(identityKey);
     notifyListeners();
   }
 
@@ -299,19 +285,6 @@ class RecordsProvider extends ChangeNotifier {
 
   // --- Folder ---
 
-  /// Laporan yang tidak berada di folder mana pun, dengan search/filter
-  /// aktif tetap diterapkan — ini yang tampil di section "Laporan".
-  List<SantriRecord> get filteredRoot =>
-      filtered.where((r) => r.folderId == null).toList();
-
-  /// Semua laporan di dalam satu folder (tidak terpengaruh search/filter
-  /// tab Laporan), terbaru duluan.
-  List<SantriRecord> recordsInFolder(String folderId) {
-    final list = _scoped.where((r) => r.folderId == folderId).toList()
-      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
-    return list;
-  }
-
   int countInFolder(String folderId) => _scoped.where((r) => r.folderId == folderId).length;
 
   SantriRecord? _findById(String id) {
@@ -319,15 +292,6 @@ class RecordsProvider extends ChangeNotifier {
       if (r.id == id) return r;
     }
     return null;
-  }
-
-  Future<void> moveToFolder(String recordId, String? folderId) async {
-    final record = _findById(recordId);
-    if (record == null) return;
-    await StorageService.instance.upsert(
-      folderId == null ? record.copyWith(clearFolder: true) : record.copyWith(folderId: folderId),
-    );
-    await load();
   }
 
   Future<void> moveManyToFolder(Iterable<String> recordIds, String? folderId) async {
@@ -344,8 +308,8 @@ class RecordsProvider extends ChangeNotifier {
   /// Pindahkan SEMUA laporan (semua pekan) milik santri [namaAnak] sekaligus
   /// ke folder [folderId] (null = keluarkan dari folder) — dipakai kartu
   /// santri di tab Laporan ([SantriReportCard]) waktu user pilih "Pindahkan
-  /// ke Folder" buat kartu itu (beda dari [moveToFolder]/[moveManyToFolder]
-  /// biasa yang per-laporan/id).
+  /// ke Folder" buat kartu itu (beda dari [moveManyToFolder] biasa yang
+  /// per-laporan/id).
   Future<void> moveAllForSantriToFolder(String namaAnak, String? folderId) async {
     final ids = recordsForSantri(namaAnak).map((r) => r.id).toList();
     await moveManyToFolder(ids, folderId);
@@ -354,10 +318,7 @@ class RecordsProvider extends ChangeNotifier {
   /// Hapus SEMUA laporan (semua pekan) milik santri [namaAnak] sekaligus,
   /// plus lepas [identityKey]-nya dari daftar identitas aktif kalau ada
   /// (jaga-jaga kartu itu juga "diaktifkan" lewat Buat Laporan) — dipakai
-  /// kartu santri di tab Laporan waktu user pilih "Hapus" buat kartu itu
-  /// (gabungan [delete] per-record lama + [deactivateIdentity] lama, jadi
-  /// satu aksi yang aman dipanggil baik untuk kartu kosong maupun kartu
-  /// yang sudah punya laporan).
+  /// kartu santri di tab Laporan waktu user pilih "Hapus" buat kartu itu.
   Future<void> deleteAllForSantri(String namaAnak, String identityKey) async {
     final ids = recordsForSantri(namaAnak).map((r) => r.id).toList();
     for (final id in ids) {
@@ -409,12 +370,7 @@ class RecordsProvider extends ChangeNotifier {
   bool _hasTahsinComponent(SantriRecord r) =>
       r.status == HafalanStatus.tahsin || r.status == HafalanStatus.tahsinTahfizh;
 
-  int get totalTahfizh => _scoped.where(_hasTahfizhComponent).length;
-  int get totalTahsin => _scoped.where(_hasTahsinComponent).length;
-  int get totalMurojaahTasmi =>
-      _scoped.where((r) => r.status == HafalanStatus.murojaahTasmi).length;
   int get totalHadir => _scoped.where((r) => r.keterangan == Keterangan.hadir).length;
-  int get totalIzinAlpa => _scoped.where((r) => r.keterangan != Keterangan.hadir).length;
   int get totalBarisSetoran =>
       _scoped.fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
 
@@ -445,13 +401,6 @@ class RecordsProvider extends ChangeNotifier {
 
   List<String> get distinctHalaqoh => _scoped
       .map((r) => r.halaqoh)
-      .where((v) => v.trim().isNotEmpty)
-      .toSet()
-      .toList()
-    ..sort();
-
-  List<String> get distinctNamaSantri => _scoped
-      .map((r) => r.namaAnak)
       .where((v) => v.trim().isNotEmpty)
       .toSet()
       .toList()

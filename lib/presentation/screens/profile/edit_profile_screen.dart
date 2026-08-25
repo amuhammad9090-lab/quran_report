@@ -72,6 +72,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final hasPhoto = context.read<AuthProvider>().currentUser?.photoPath != null;
     showModalBottomSheet(
       context: context,
+      constraints: const BoxConstraints(maxWidth: 640),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),

@@ -14,6 +14,7 @@ import '../../widgets/misc_widgets.dart';
 Future<void> showFolderFormSheet(BuildContext context, {ReportFolder? existing}) {
   return showModalBottomSheet(
     context: context,
+    constraints: const BoxConstraints(maxWidth: 640),
     useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
