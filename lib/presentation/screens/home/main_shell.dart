@@ -28,18 +28,34 @@ class _MainShellState extends State<MainShell> {
   // duluan padahal snackbar lain masih tampil.
   int _snackbarHidingFab = 0;
 
+  // Kontrol buka/tutup SpeedDialFab dari luar widgetnya sendiri (lihat
+  // SpeedDialController) -- dibutuhkan buat barrier transparan di bawah
+  // ini, biar tap di sembarang tempat langsung nutup dial-nya (bug fix:
+  // sebelumnya cuma bisa ditutup lewat tombol "+" itu sendiri).
+  final _fabController = SpeedDialController();
+
+  @override
+  void dispose() {
+    _fabController.dispose();
+    super.dispose();
+  }
+
   void _switchTab(int index) {
     if (index == _index) return;
     // Snackbar (mis. dari bell notifikasi di Home) numpang di satu
     // Scaffold yang sama antar-tab (IndexedStack) — kalau nggak di-hide
     // dulu, dia bisa "nyasar" nongol di tab lain waktu pindah tab.
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    // Dial-nya cuma relevan di tab Laporan -- kalau lagi kebuka terus user
+    // pindah tab, tutup dulu biar barrier-nya nggak nyangkut di tab lain.
+    _fabController.close();
     setState(() => _index = index);
   }
 
   void _goToLaporan() => _switchTab(1);
 
   void _setFabVisible(bool visible) {
+    if (!visible) _fabController.close();
     setState(() {
       _snackbarHidingFab = (visible ? _snackbarHidingFab - 1 : _snackbarHidingFab + 1)
           .clamp(0, 1 << 30);
@@ -66,17 +82,45 @@ class _MainShellState extends State<MainShell> {
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        body: IndexedStack(
-          index: _index,
-          children: [
-            BerandaTab(onLihatLaporan: _goToLaporan),
-            LaporanTab(
-              onSelectionModeChanged: (v) => setState(() => _laporanSelecting = v),
-              onFabVisibilityChanged: _setFabVisible,
-            ),
-            const StatistikTab(),
-            const SettingsScreen(),
-          ],
+        // Body dibungkus Stack + barrier transparan (lewat ListenableBuilder
+        // yang dengerin _fabController): pas SpeedDialFab lagi kebuka, tap
+        // di MANA AJA di body ini langsung nutup dial-nya. FAB sendiri
+        // (tombol "+" & 2 mini action-nya) dirender lewat slot
+        // `floatingActionButton` Scaffold, yang otomatis digambar DI ATAS
+        // body -- jadi barrier ini nggak nutupin/nge-block tap ke FAB atau
+        // mini action-nya sendiri, cuma nangkep tap di area lain.
+        body: ListenableBuilder(
+          listenable: _fabController,
+          builder: (context, child) => Stack(
+            children: [
+              child!,
+              if (_fabController.isOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _fabController.close,
+                  ),
+                ),
+            ],
+          ),
+          child: IndexedStack(
+            index: _index,
+            children: [
+              BerandaTab(onLihatLaporan: _goToLaporan),
+              LaporanTab(
+                onSelectionModeChanged: (v) {
+                  // Mode pilih-banyak aktif -> FAB-nya ikut disembunyikan
+                  // (lihat floatingActionButton di bawah), jadi dial-nya
+                  // juga harus ketutup, bukan cuma widget FAB-nya hilang.
+                  if (v) _fabController.close();
+                  setState(() => _laporanSelecting = v);
+                },
+                onFabVisibilityChanged: _setFabVisible,
+              ),
+              const StatistikTab(),
+              const SettingsScreen(),
+            ],
+          ),
         ),
         // Tab Laporan: FAB cuma "+", ditekan nyembul jadi 2 pilihan
         // (Buat Folder / Buat Laporan). Tab lain: FAB disembunyikan lagi
@@ -86,6 +130,7 @@ class _MainShellState extends State<MainShell> {
         // numpuk/ngambang di atas ikon FAB.
         floatingActionButton: _index == 1 && !_laporanSelecting && _snackbarHidingFab == 0
             ? SpeedDialFab(
+          controller: _fabController,
           onBuatFolder: () => showFolderFormSheet(context),
           onBuatLaporan: () => showBuatLaporanSheet(context, onFabVisibilityChanged: _setFabVisible),
         )

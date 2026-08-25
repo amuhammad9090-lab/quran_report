@@ -8,7 +8,6 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final engine = QuranEngineService.instance;
 
     return Scaffold(
@@ -24,29 +23,20 @@ class AboutScreen extends StatelessWidget {
               sliver: SliverList.list(
                 children: [
                   Center(
-                    child: Container(
-                      width: 96,
-                      height: 96,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardTheme.color,
-                        borderRadius: BorderRadius.circular(26),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: cs.primary,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(Icons.auto_stories_rounded,
-                            color: cs.onPrimary, size: 34),
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Sengaja TANPA kotak/latar tambahan — aset app_icon.png
+                        // sendiri sudah squircle hijau lengkap, dibungkus kartu
+                        // putih lagi cuma bikin kelihatan double-box (lihat juga
+                        // Login/Splash/Onboarding yang sudah polos begini).
+                        const AppIconMark(size: 76, borderRadius: 18),
+                        const SizedBox(width: 14),
+                        Container(height: 44, width: 1, color: cs.outlineVariant),
+                        const SizedBox(width: 14),
+                        const SmpitLogoBadge(size: 72, borderRadius: 16),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -57,6 +47,16 @@ class AboutScreen extends StatelessWidget {
                         .textTheme
                         .headlineSmall
                         ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Powered by SMPIT Al Madinah Tanjungpinang',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(

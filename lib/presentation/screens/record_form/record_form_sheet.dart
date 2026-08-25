@@ -786,12 +786,8 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       surahName: tahfizhSegments?.first.surahName,
       ayatMulai: tahfizhSegments?.first.ayatMulai,
       ayatSelesai: tahfizhSegments?.first.ayatSelesai,
-      totalBaris: tahfizhSegments == null
-          ? null
-          : tahfizhSegments.fold<int>(0, (a, s) => a + s.totalBaris),
-      lineIds: tahfizhSegments == null
-          ? null
-          : tahfizhSegments.expand((s) => s.lineIds).toSet().toList(),
+      totalBaris: tahfizhSegments?.fold<int>(0, (a, s) => a + s.totalBaris),
+      lineIds: tahfizhSegments?.expand((s) => s.lineIds).toSet().toList(),
       tahfizhSegments: tahfizhSegments,
       tahsinMode: isTahsinPart ? _tahsinMode : null,
       wafaLevel: isTahsinWafa ? _wafaLevel : null,

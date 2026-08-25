@@ -1196,3 +1196,68 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showAppSnackbar(
   controller.closed.then((_) => onFabVisibilityChanged?.call(true));
   return controller;
 }
+
+/// Logo SMPIT Al Madinah — ukurannya SELALU persegi (1:1) di semua
+/// tempat biar konsisten. Defaultnya dibungkus kartu putih (logo aslinya
+/// berwarna-warni di atas kanvas transparan, jadi butuh alas solid biar
+/// kebaca di background apa pun) — kecuali [withBackground] dimatikan,
+/// dipakai khusus di Splash yang background-nya sendiri sudah gradient
+/// hijau dan sengaja TIDAK mau logo dikasih kotak putih lagi.
+class SmpitLogoBadge extends StatelessWidget {
+  final double size;
+  final bool withBackground;
+  final EdgeInsetsGeometry padding;
+  final double borderRadius;
+
+  const SmpitLogoBadge({
+    super.key,
+    this.size = 56,
+    this.withBackground = true,
+    this.padding = const EdgeInsets.all(8),
+    this.borderRadius = 12,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final logo = Image.asset('assets/images/logo_smpit.png', fit: BoxFit.contain);
+
+    if (!withBackground) {
+      return SizedBox(width: size, height: size, child: logo);
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: logo,
+    );
+  }
+}
+
+/// Icon app (mark hijau berbentuk buku + kubah masjid) — asetnya sendiri
+/// sudah berupa kotak membulat (squircle) dengan sudut transparan, jadi
+/// cukup ditampilkan langsung pakai [ClipRRect] tanpa dus tambahan.
+class AppIconMark extends StatelessWidget {
+  final double size;
+  final double borderRadius;
+  const AppIconMark({super.key, this.size = 84, this.borderRadius = 22});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: Image.asset('assets/images/app_icon.png', width: size, height: size, fit: BoxFit.cover),
+    );
+  }
+}

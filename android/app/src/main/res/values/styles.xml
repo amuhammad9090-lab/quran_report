@@ -5,8 +5,12 @@
         <item name="android:windowBackground">@drawable/launch_background</item>
     </style>
 
-    <!-- Tema setelah Flutter mengambil alih rendering. -->
+    <!-- Tema setelah Flutter mengambil alih rendering, sebelum frame
+         pertama Flutter sempat digambar (mis. selagi main.dart masih
+         nge-load data sebelum runApp) — dibuat hijau brand (BUKAN putih)
+         biar nggak ada kedipan warna netral sebelum splash gradient
+         Flutter muncul. -->
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowBackground">@color/splash_native_bg</item>
     </style>
 </resources>

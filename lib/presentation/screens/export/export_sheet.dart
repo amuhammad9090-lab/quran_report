@@ -9,13 +9,13 @@ import '../../../providers/records_provider.dart';
 import '../../../core/theme/app_colors.dart';
 
 Future<void> showExportSheet(
-  BuildContext context, {
-  List<SantriRecord>? records,
-  String? judul,
-  String? periode,
-  String? guruPembimbing,
-  bool includeTanggal = false,
-}) {
+    BuildContext context, {
+      List<SantriRecord>? records,
+      String? judul,
+      String? periode,
+      String? guruPembimbing,
+      bool includeTanggal = false,
+    }) {
   return showModalBottomSheet(
     context: context,
     useRootNavigator: true,
@@ -77,10 +77,10 @@ class _ExportSheetState extends State<ExportSheet> {
   bool get _isFixed => widget.fixedRecords != null;
 
   String _extFor(ExportFormat f) => switch (f) {
-        ExportFormat.pdf => 'pdf',
-        ExportFormat.word => 'docx',
-        ExportFormat.excel => 'xlsx',
-      };
+    ExportFormat.pdf => 'pdf',
+    ExportFormat.word => 'docx',
+    ExportFormat.excel => 'xlsx',
+  };
 
   Future<void> _doExport(ExportFormat format) async {
     final provider = context.read<RecordsProvider>();
@@ -132,8 +132,21 @@ class _ExportSheetState extends State<ExportSheet> {
           break;
       }
 
-      // Begitu file jadi, langsung dibuka pakai aplikasi bawaan perangkat.
-      await ExportService.instance.openFile(file);
+      // Begitu file jadi, COBA buka otomatis pakai aplikasi bawaan
+      // perangkat. Ini cuma kenyamanan tambahan -- filenya sendiri sudah
+      // berhasil dibuat & tersimpan di penyimpanan internal app duluan
+      // (lihat ExportService._saveBytes di atas), jadi kalau gagal dibuka
+      // otomatis (mis. gak ada app pembuka terpasang, atau device lagi
+      // bermasalah), itu TIDAK BOLEH menggagalkan seluruh proses ekspor.
+      // Sebelumnya kegagalan di sini ketangkep sama catch di bawah dan
+      // bikin user nyangka ekspornya gagal total -- padahal filenya ada,
+      // cuma gak sempat kebuka -- akibatnya user gak pernah nyampe ke
+      // tombol "Bagikan"/"Simpan" sama sekali.
+      try {
+        await ExportService.instance.openFile(file);
+      } catch (_) {
+        // Diamkan -- file tetap berhasil dibuat, lanjut ke layar selesai.
+      }
 
       if (!mounted) return;
       setState(() {

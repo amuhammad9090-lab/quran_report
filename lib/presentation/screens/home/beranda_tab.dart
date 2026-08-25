@@ -265,8 +265,8 @@ class BerandaTab extends StatelessWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const NotificationsScreen()),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(11),
+            child: const Padding(
+              padding: EdgeInsets.all(11),
               child: Icon(Icons.notifications_none_rounded, size: 22),
             ),
           ),

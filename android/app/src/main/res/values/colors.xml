@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warna brand (ujung gelap gradient splash) — dipakai buat
+         background native Android SEBELUM & SELAGI Flutter baru
+         mengambil alih render (proses cold-start & init data di
+         main.dart sebelum runApp), supaya nggak ada kedipan putih/hitam
+         polos sebelum splash Flutter (gradient hijau) muncul, di light
+         MAUPUN dark mode — splash harus selalu keliatan berwarna. -->
+    <color name="splash_native_bg">#0B4A38</color>
+</resources>

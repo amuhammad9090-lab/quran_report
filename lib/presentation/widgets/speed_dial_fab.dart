@@ -1,15 +1,41 @@
 import 'package:flutter/material.dart';
 
+/// Controller kecil buat [SpeedDialFab] -- dibutuhkan supaya dial ini bisa
+/// ditutup dari LUAR widgetnya sendiri, mis. lewat barrier transparan
+/// full-layar yang dipasang [MainShell] pas dial lagi kebuka (tap di mana
+/// aja di layar -> nutup). Tanpa controller ini, satu-satunya cara nutup
+/// dial cuma lewat tombol "+" itu sendiri (bug yang lagi dibenerin).
+class SpeedDialController extends ChangeNotifier {
+  bool isOpen = false;
+
+  void open() {
+    if (isOpen) return;
+    isOpen = true;
+    notifyListeners();
+  }
+
+  void close() {
+    if (!isOpen) return;
+    isOpen = false;
+    notifyListeners();
+  }
+
+  void toggle() => isOpen ? close() : open();
+}
+
 /// Tombol "+" bulat di pojok kanan bawah tab Laporan. Ditekan sekali,
 /// nyembul ke atas dua tombol mini: "Buat Folder" & "Buat Laporan" (dengan
 /// label pill di sampingnya), lalu ikonnya berputar jadi silang. Ditekan
-/// lagi (atau salah satu aksi dipilih) buat nutup lagi.
+/// lagi (atau salah satu aksi dipilih, ATAU tap di area lain layar lewat
+/// barrier yang dipasang MainShell) buat nutup lagi.
 class SpeedDialFab extends StatefulWidget {
+  final SpeedDialController controller;
   final VoidCallback onBuatFolder;
   final VoidCallback onBuatLaporan;
 
   const SpeedDialFab({
     super.key,
+    required this.controller,
     required this.onBuatFolder,
     required this.onBuatLaporan,
   });
@@ -26,21 +52,38 @@ class _SpeedDialFabState extends State<SpeedDialFab>
   );
 
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_syncWithController);
   }
 
-  void _toggle() {
-    if (_ctrl.status == AnimationStatus.dismissed) {
+  @override
+  void didUpdateWidget(covariant SpeedDialFab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_syncWithController);
+      widget.controller.addListener(_syncWithController);
+      _syncWithController();
+    }
+  }
+
+  void _syncWithController() {
+    if (widget.controller.isOpen) {
       _ctrl.forward();
     } else {
       _ctrl.reverse();
     }
   }
 
+  @override
+  void dispose() {
+    widget.controller.removeListener(_syncWithController);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
   void _pick(VoidCallback action) {
-    _ctrl.reverse();
+    widget.controller.close();
     action();
   }
 
@@ -85,7 +128,7 @@ class _SpeedDialFabState extends State<SpeedDialFab>
         ),
         const SizedBox(height: 14),
         FloatingActionButton(
-          onPressed: _toggle,
+          onPressed: widget.controller.toggle,
           child: AnimatedBuilder(
             animation: _ctrl,
             builder: (context, _) => Transform.rotate(

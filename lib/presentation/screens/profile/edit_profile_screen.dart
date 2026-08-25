@@ -228,7 +228,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  SectionLabel('Keamanan'),
+                  const SectionLabel('Keamanan'),
                   const SizedBox(height: 10),
                   Material(
                     color: Theme.of(context).cardTheme.color,

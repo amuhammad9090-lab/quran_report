@@ -4,7 +4,11 @@
         <item name="android:windowBackground">@drawable/launch_background</item>
     </style>
 
+    <!-- Sebelumnya @android:color/black di sini — itu penyebab splash
+         "ilang warna" pas dark mode (kedip hitam polos sebelum gradient
+         hijau Flutter sempat digambar). Disamakan sama versi light: tetap
+         hijau brand, bukan warna netral yang beda-beda per tema. -->
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowBackground">@color/splash_native_bg</item>
     </style>
 </resources>

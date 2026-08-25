@@ -21,6 +21,12 @@ class AppColors {
   static const seed = Color(0xFF0E7C61); // deep teal-green
   static const seedDark = Color(0xFF14A085);
 
+  // --- Splash (gradient diagonal, di-sample presisi dari app icon —
+  // ujung kiri-atas & kanan-bawah icon-nya sendiri emang gradasi hijau
+  // muda ke hijau tua gelap, jadi splash-nya dibikin identik) ---
+  static const splashGradientStart = Color(0xFF52AD65);
+  static const splashGradientEnd = Color(0xFF0B4A38);
+
   // --- Status Tahfizh / Tahsin (versi light — juga dipakai export PDF/Excel) ---
   static const tahfizh = Color(0xFF0E7C61);
   static const tahsin = Color(0xFFB8860B);

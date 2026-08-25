@@ -66,14 +66,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: cs.primaryContainer.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(Icons.auto_stories_rounded, size: 34, color: cs.primary),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const AppIconMark(size: 68, borderRadius: 18),
+                        const SizedBox(width: 14),
+                        Container(height: 40, width: 1, color: cs.outlineVariant),
+                        const SizedBox(width: 14),
+                        const SmpitLogoBadge(size: 64, borderRadius: 14),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),
