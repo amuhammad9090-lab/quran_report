@@ -78,6 +78,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     for (final key in _selected.toList()) {
       final c = provider.cardByIdentityKey(key);
       if (c != null) await provider.moveIdentityToFolder(c, null);
+      if (!context.mounted) return;
     }
     if (!context.mounted) return;
     _exitSelectionMode();
@@ -113,8 +114,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     for (final key in _selected.toList()) {
       final c = provider.cardByIdentityKey(key);
       if (c != null) await provider.deleteAllForSantri(c.nama, c.identityKey);
+      if (!context.mounted) return;
     }
-    if (!context.mounted) return;
     _exitSelectionMode();
   }
 
@@ -127,7 +128,9 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
 
     final existing = provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
     if (existing != null) {
-      showRecordFormSheet(context, existing: existing);
+      // lockIdentity: true -> samain kek buka form laporan baru dari kartu,
+      // identitas santri udah jelas dari kartunya, nggak perlu ditampilin lagi.
+      showRecordFormSheet(context, existing: existing, lockIdentity: true);
       return;
     }
 
@@ -221,7 +224,10 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                   sliver: SliverToBoxAdapter(
-                    child: _ActionButtonsRow(folder: folder),
+                    child: _ActionButtonsRow(
+                      folder: folder,
+                      onFabVisibilityChanged: widget.onFabVisibilityChanged,
+                    ),
                   ),
                 ),
                 if (cards.isEmpty)
@@ -293,7 +299,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
 
 class _ActionButtonsRow extends StatelessWidget {
   final ReportFolder folder;
-  const _ActionButtonsRow({required this.folder});
+  final ValueChanged<bool>? onFabVisibilityChanged;
+  const _ActionButtonsRow({required this.folder, this.onFabVisibilityChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +311,11 @@ class _ActionButtonsRow extends StatelessWidget {
           _ActionChip(
             icon: Icons.note_add_outlined,
             label: 'Buat Laporan',
-            onTap: () => showBuatLaporanSheet(context, folderId: folder.id),
+            onTap: () => showBuatLaporanSheet(
+              context,
+              folderId: folder.id,
+              onFabVisibilityChanged: onFabVisibilityChanged,
+            ),
           ),
           const SizedBox(width: 8),
           _ActionChip(

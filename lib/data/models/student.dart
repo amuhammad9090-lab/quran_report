@@ -1,3 +1,5 @@
+import '../../core/utils/text_utils.dart';
+
 /// Data master satu santri — sumber "siapa saja yang ada", dipakai untuk
 /// autocomplete di form laporan & untuk hitung "santri yang diampu" di
 /// Profile. TIDAK menggantikan [SantriRecord] (laporan tetap berdiri
@@ -33,7 +35,7 @@ class Student {
         id: json['id'] as String,
         nama: json['nama'] as String,
         kelas: json['kelas'] as String,
-        halaqoh: json['halaqoh'] as String,
+        halaqoh: normalizeHalaqoh(json['halaqoh'] as String),
         schoolId: json['schoolId'] as String?,
       );
 }

@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/access/access_scope.dart';
-import '../../../core/utils/week_utils.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../data/services/app_prefs_service.dart';
@@ -51,6 +50,34 @@ Future<void> showRecordFormSheet(
       lockIdentity: lockIdentity,
     ),
   );
+}
+
+/// State 1 segmen Tahfizh di dalam form (surah + rentang ayat + hasil
+/// generate barisnya sendiri). Form bisa punya >1 segmen kalau santri
+/// setoran nyambung lintas surah dalam 1 pertemuan.
+class _TahfizhSegState {
+  int? surahNumber;
+  final TextEditingController ayatMulaiCtrl = TextEditingController();
+  final TextEditingController ayatSelesaiCtrl = TextEditingController();
+  GeneratedLinesResult? generated;
+
+  void dispose() {
+    ayatMulaiCtrl.dispose();
+    ayatSelesaiCtrl.dispose();
+  }
+}
+
+/// State 1 segmen "bentuk Tilawah" (surah + rentang ayat, tanpa generate
+/// baris) — dipakai Tahsin-mode-Tilawah & Muroja'ah/Tasmi'.
+class _TilawahSegState {
+  int? surahNumber;
+  final TextEditingController ayatMulaiCtrl = TextEditingController();
+  final TextEditingController ayatSelesaiCtrl = TextEditingController();
+
+  void dispose() {
+    ayatMulaiCtrl.dispose();
+    ayatSelesaiCtrl.dispose();
+  }
 }
 
 class RecordFormSheet extends StatefulWidget {
@@ -108,11 +135,9 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
   String? _halaqohError;
   String? _namaError;
 
-  // Tahfizh
-  int? _surahNumber;
-  final _ayatMulaiCtrl = TextEditingController();
-  final _ayatSelesaiCtrl = TextEditingController();
-  GeneratedLinesResult? _generated;
+  // Tahfizh — list segmen (selalu >= 1 elemen). Tombol "+" di UI nambah
+  // elemen baru kalau santri setoran nyambung lintas surah.
+  List<_TahfizhSegState> _tahfizhSegs = [_TahfizhSegState()];
   bool _generating = false;
   String? _generateError;
 
@@ -125,9 +150,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
   // di dalam Tahsin+Tahfizh (saat modenya Tilawah), dan Muroja'ah/Tasmi'
   // (yang bentuknya SELALU seperti Tilawah). Nggak ada generate baris di
   // sini sama sekali, sesuai spek.
-  int? _tilawahSurahNumber;
-  final _tilawahAyatMulaiCtrl = TextEditingController();
-  final _tilawahAyatSelesaiCtrl = TextEditingController();
+  List<_TilawahSegState> _tilawahSegs = [_TilawahSegState()];
 
   final _catatanCtrl = TextEditingController();
 
@@ -168,15 +191,29 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     _nama = e?.namaAnak ?? widget.presetNama;
     _status = e?.status ?? HafalanStatus.tahfizh;
     _keterangan = e?.keterangan ?? Keterangan.hadir;
-    _surahNumber = e?.surahNumber;
-    _ayatMulaiCtrl.text = e?.ayatMulai?.toString() ?? '';
-    _ayatSelesaiCtrl.text = e?.ayatSelesai?.toString() ?? '';
+    if (e != null) {
+      final tahfizhSegs = e.tahfizhSegmentsEffective;
+      if (tahfizhSegs.isNotEmpty) {
+        _tahfizhSegs = tahfizhSegs
+            .map((s) => _TahfizhSegState()
+              ..surahNumber = s.surahNumber
+              ..ayatMulaiCtrl.text = s.ayatMulai.toString()
+              ..ayatSelesaiCtrl.text = s.ayatSelesai.toString())
+            .toList();
+      }
+      final tilawahSegs = e.tilawahSegmentsEffective;
+      if (tilawahSegs.isNotEmpty) {
+        _tilawahSegs = tilawahSegs
+            .map((s) => _TilawahSegState()
+              ..surahNumber = s.surahNumber
+              ..ayatMulaiCtrl.text = s.ayatMulai.toString()
+              ..ayatSelesaiCtrl.text = s.ayatSelesai.toString())
+            .toList();
+      }
+    }
     _wafaLevel = e?.wafaLevel;
     _halamanWafaCtrl.text = e?.halamanWafa ?? '';
     _tahsinMode = e?.tahsinMode ?? TahsinMode.wafa;
-    _tilawahSurahNumber = e?.tilawahSurahNumber;
-    _tilawahAyatMulaiCtrl.text = e?.tilawahAyatMulai?.toString() ?? '';
-    _tilawahAyatSelesaiCtrl.text = e?.tilawahAyatSelesai?.toString() ?? '';
     _catatanCtrl.text = e?.catatan ?? '';
 
     if (e == null) {
@@ -229,18 +266,20 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         e.totalBaris != null) {
       // Re-generate biar tampilan baris konsisten saat edit.
       WidgetsBinding.instance
-          .addPostFrameCallback((_) => _generateLines(silent: true));
+          .addPostFrameCallback((_) => _generateAllLines(silent: true));
     }
   }
 
   @override
   void dispose() {
     _draftDebounce?.cancel();
-    _ayatMulaiCtrl.dispose();
-    _ayatSelesaiCtrl.dispose();
+    for (final s in _tahfizhSegs) {
+      s.dispose();
+    }
+    for (final s in _tilawahSegs) {
+      s.dispose();
+    }
     _halamanWafaCtrl.dispose();
-    _tilawahAyatMulaiCtrl.dispose();
-    _tilawahAyatSelesaiCtrl.dispose();
     _catatanCtrl.dispose();
     super.dispose();
   }
@@ -440,15 +479,23 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         'nama': _nama,
         'status': _status.name,
         'keterangan': _keterangan.name,
-        'surahNumber': _surahNumber,
-        'ayatMulai': _ayatMulaiCtrl.text,
-        'ayatSelesai': _ayatSelesaiCtrl.text,
+        'tahfizhSegs': _tahfizhSegs
+            .map((s) => {
+                  'surahNumber': s.surahNumber,
+                  'ayatMulai': s.ayatMulaiCtrl.text,
+                  'ayatSelesai': s.ayatSelesaiCtrl.text,
+                })
+            .toList(),
         'tahsinMode': _tahsinMode.name,
         'wafaLevel': _wafaLevel?.name,
         'halamanWafa': _halamanWafaCtrl.text,
-        'tilawahSurahNumber': _tilawahSurahNumber,
-        'tilawahAyatMulai': _tilawahAyatMulaiCtrl.text,
-        'tilawahAyatSelesai': _tilawahAyatSelesaiCtrl.text,
+        'tilawahSegs': _tilawahSegs
+            .map((s) => {
+                  'surahNumber': s.surahNumber,
+                  'ayatMulai': s.ayatMulaiCtrl.text,
+                  'ayatSelesai': s.ayatSelesaiCtrl.text,
+                })
+            .toList(),
         'catatan': _catatanCtrl.text,
       };
 
@@ -483,18 +530,32 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         if (keteranganName != null) {
           _keterangan = Keterangan.values.byName(keteranganName);
         }
-        _surahNumber = d['surahNumber'] as int?;
-        _ayatMulaiCtrl.text = (d['ayatMulai'] as String?) ?? '';
-        _ayatSelesaiCtrl.text = (d['ayatSelesai'] as String?) ?? '';
+        final tahfizhSegsRaw = d['tahfizhSegs'] as List?;
+        if (tahfizhSegsRaw != null && tahfizhSegsRaw.isNotEmpty) {
+          _tahfizhSegs = tahfizhSegsRaw.map((raw) {
+            final m = raw as Map<String, dynamic>;
+            return _TahfizhSegState()
+              ..surahNumber = m['surahNumber'] as int?
+              ..ayatMulaiCtrl.text = (m['ayatMulai'] as String?) ?? ''
+              ..ayatSelesaiCtrl.text = (m['ayatSelesai'] as String?) ?? '';
+          }).toList();
+        }
         final wafaName = d['wafaLevel'] as String?;
         _wafaLevel = wafaName != null ? WafaLevel.values.byName(wafaName) : null;
         _halamanWafaCtrl.text = (d['halamanWafa'] as String?) ?? '';
         final tahsinModeName = d['tahsinMode'] as String?;
         _tahsinMode =
             tahsinModeName != null ? TahsinMode.values.byName(tahsinModeName) : TahsinMode.wafa;
-        _tilawahSurahNumber = d['tilawahSurahNumber'] as int?;
-        _tilawahAyatMulaiCtrl.text = (d['tilawahAyatMulai'] as String?) ?? '';
-        _tilawahAyatSelesaiCtrl.text = (d['tilawahAyatSelesai'] as String?) ?? '';
+        final tilawahSegsRaw = d['tilawahSegs'] as List?;
+        if (tilawahSegsRaw != null && tilawahSegsRaw.isNotEmpty) {
+          _tilawahSegs = tilawahSegsRaw.map((raw) {
+            final m = raw as Map<String, dynamic>;
+            return _TilawahSegState()
+              ..surahNumber = m['surahNumber'] as int?
+              ..ayatMulaiCtrl.text = (m['ayatMulai'] as String?) ?? ''
+              ..ayatSelesaiCtrl.text = (m['ayatSelesai'] as String?) ?? '';
+          }).toList();
+        }
         _catatanCtrl.text = (d['catatan'] as String?) ?? '';
       });
     } catch (_) {
@@ -503,10 +564,11 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     }
 
     if ((_status == HafalanStatus.tahfizh || _status == HafalanStatus.tahsinTahfizh) &&
-        _surahNumber != null &&
-        _ayatMulaiCtrl.text.trim().isNotEmpty &&
-        _ayatSelesaiCtrl.text.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _generateLines(silent: true));
+        _tahfizhSegs.every((s) =>
+            s.surahNumber != null &&
+            s.ayatMulaiCtrl.text.trim().isNotEmpty &&
+            s.ayatSelesaiCtrl.text.trim().isNotEmpty)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _generateAllLines(silent: true));
     }
     _maybeWarnOwnership();
   }
@@ -519,7 +581,41 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     _clearDraft();
   }
 
-  Future<void> _generateLines({bool silent = false}) async {
+  void _addTahfizhSegment() {
+    setState(() => _tahfizhSegs.add(_TahfizhSegState()));
+    _markEditedAndScheduleDraftSave();
+  }
+
+  void _removeTahfizhSegment(int index) {
+    setState(() {
+      _tahfizhSegs[index].dispose();
+      _tahfizhSegs.removeAt(index);
+    });
+    _markEditedAndScheduleDraftSave();
+  }
+
+  void _addTilawahSegment() {
+    setState(() => _tilawahSegs.add(_TilawahSegState()));
+    _markEditedAndScheduleDraftSave();
+  }
+
+  void _removeTilawahSegment(int index) {
+    setState(() {
+      _tilawahSegs[index].dispose();
+      _tilawahSegs.removeAt(index);
+    });
+    _markEditedAndScheduleDraftSave();
+  }
+
+  /// Generate baris untuk SEMUA segmen Tahfizh sekaligus (bisa lebih dari
+  /// 1 surah kalau santri setoran nyambung lintas surah dalam 1
+  /// pertemuan). Tiap segmen digenerate sendiri-sendiri lewat
+  /// [QuranEngineService.generateLines] (yang cuma nerima 1 surah per
+  /// panggilan), lalu digabung. Baris yang sudah ke-generate di segmen
+  /// SEBELUMNYA (dalam laporan yang sama) ikut di-exclude di segmen
+  /// berikutnya — jaga-jaga kalau ada baris fisik yang somehow overlap
+  /// antar segmen (jarang, tapi mungkin di batas transisi surah).
+  Future<void> _generateAllLines({bool silent = false}) async {
     if (_nama == null || _nama!.trim().isEmpty) {
       if (!silent) {
         setState(() => _generateError =
@@ -527,22 +623,26 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       }
       return;
     }
-    if (_surahNumber == null ||
-        _ayatMulaiCtrl.text.trim().isEmpty ||
-        _ayatSelesaiCtrl.text.trim().isEmpty) {
-      if (!silent) {
-        setState(
-            () => _generateError = 'Pilih surah dan isi rentang ayat dulu.');
+    final ranges = <(int surah, int start, int end)>[];
+    for (final seg in _tahfizhSegs) {
+      if (seg.surahNumber == null ||
+          seg.ayatMulaiCtrl.text.trim().isEmpty ||
+          seg.ayatSelesaiCtrl.text.trim().isEmpty) {
+        if (!silent) {
+          setState(() =>
+              _generateError = 'Pilih surah dan isi rentang ayat dulu (semua segmen).');
+        }
+        return;
       }
-      return;
-    }
-    final start = int.tryParse(_ayatMulaiCtrl.text.trim());
-    final end = int.tryParse(_ayatSelesaiCtrl.text.trim());
-    if (start == null || end == null || start < 1 || end < start) {
-      if (!silent) {
-        setState(() => _generateError = 'Rentang ayat tidak valid.');
+      final start = int.tryParse(seg.ayatMulaiCtrl.text.trim());
+      final end = int.tryParse(seg.ayatSelesaiCtrl.text.trim());
+      if (start == null || end == null || start < 1 || end < start) {
+        if (!silent) {
+          setState(() => _generateError = 'Rentang ayat tidak valid.');
+        }
+        return;
       }
-      return;
+      ranges.add((seg.surahNumber!, start, end));
     }
 
     setState(() {
@@ -559,19 +659,26 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             )
         : <String>{};
 
-    final result = QuranEngineService.instance.generateLines(
-      surah: _surahNumber!,
-      start: start,
-      end: end,
-      excludeLineIds: history,
-    );
+    final excludeSoFar = {...history};
+    var anyUnavailable = false;
+    for (var i = 0; i < ranges.length; i++) {
+      final (surah, start, end) = ranges[i];
+      final result = QuranEngineService.instance.generateLines(
+        surah: surah,
+        start: start,
+        end: end,
+        excludeLineIds: excludeSoFar,
+      );
+      _tahfizhSegs[i].generated = result;
+      excludeSoFar.addAll(result.newLineIds);
+      if (!result.available) anyUnavailable = true;
+    }
 
     setState(() {
       _generating = false;
-      _generated = result;
-      if (!result.available) {
+      if (anyUnavailable) {
         _generateError =
-            'Mapping baris belum tersedia untuk surah ini pada dataset aktif (${QuranEngineService.instance.missingText()}).';
+            'Mapping baris belum tersedia untuk salah satu surah pada dataset aktif (${QuranEngineService.instance.missingText()}).';
       }
     });
   }
@@ -609,9 +716,9 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         _status == HafalanStatus.tahfizh || _status == HafalanStatus.tahsinTahfizh;
 
     if (isiStatusCapaian && needsTahfizhPart) {
-      if (_surahNumber == null ||
-          _generated == null ||
-          !_generated!.available) {
+      final allGenerated = _tahfizhSegs.every(
+          (s) => s.surahNumber != null && s.generated != null && s.generated!.available);
+      if (!allGenerated) {
         _localMessengerKey.currentState?.showSnackBar(
           const SnackBar(
               content:
@@ -632,6 +739,40 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     // Tahsin-mode-Tilawah DAN Muroja'ah/Tasmi'.
     final isTilawahShaped = isTahsinTilawah || isMurojaah;
 
+    // Bentuk daftar segmen Tahfizh lengkap dari state form (bisa >1 kalau
+    // santri setoran nyambung lintas surah). totalBaris/lineIds di bawah
+    // tetap diisi AGREGAT dari semua segmen (lihat catatan di model) biar
+    // konsumen lama (statistik/rekap) yang belum tahu soal multi-surah
+    // tetap dapat angka yang benar. surahNumber/surahName/ayatMulai/
+    // ayatSelesai (singular) diisi dari segmen PERTAMA saja, buat
+    // backward compat.
+    final tahfizhSegments = isTahfizhPart
+        ? _tahfizhSegs
+            .map((s) => TahfizhSegment(
+                  surahNumber: s.surahNumber!,
+                  surahName: kSurahNames[s.surahNumber!]!,
+                  ayatMulai: int.parse(s.ayatMulaiCtrl.text.trim()),
+                  ayatSelesai: int.parse(s.ayatSelesaiCtrl.text.trim()),
+                  totalBaris: s.generated?.totalBaris ?? 0,
+                  lineIds: s.generated?.newLineIds ?? const [],
+                ))
+            .toList()
+        : null;
+    final tilawahSegments = isTilawahShaped
+        ? _tilawahSegs
+            .where((s) =>
+                s.surahNumber != null &&
+                s.ayatMulaiCtrl.text.trim().isNotEmpty &&
+                s.ayatSelesaiCtrl.text.trim().isNotEmpty)
+            .map((s) => TilawahSegment(
+                  surahNumber: s.surahNumber!,
+                  surahName: kSurahNames[s.surahNumber!]!,
+                  ayatMulai: int.tryParse(s.ayatMulaiCtrl.text.trim()) ?? 0,
+                  ayatSelesai: int.tryParse(s.ayatSelesaiCtrl.text.trim()) ?? 0,
+                ))
+            .toList()
+        : null;
+
     final record = SantriRecord(
       id: widget.existing?.id ?? const Uuid().v4(),
       tanggal: _tanggal,
@@ -641,19 +782,25 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       namaAnak: _nama!.trim(),
       status: _status,
       keterangan: _keterangan,
-      surahNumber: isTahfizhPart ? _surahNumber : null,
-      surahName: isTahfizhPart ? kSurahNames[_surahNumber] : null,
-      ayatMulai: isTahfizhPart ? int.tryParse(_ayatMulaiCtrl.text) : null,
-      ayatSelesai: isTahfizhPart ? int.tryParse(_ayatSelesaiCtrl.text) : null,
-      totalBaris: isTahfizhPart ? _generated?.totalBaris : null,
-      lineIds: isTahfizhPart ? _generated?.newLineIds : null,
+      surahNumber: tahfizhSegments?.first.surahNumber,
+      surahName: tahfizhSegments?.first.surahName,
+      ayatMulai: tahfizhSegments?.first.ayatMulai,
+      ayatSelesai: tahfizhSegments?.first.ayatSelesai,
+      totalBaris: tahfizhSegments == null
+          ? null
+          : tahfizhSegments.fold<int>(0, (a, s) => a + s.totalBaris),
+      lineIds: tahfizhSegments == null
+          ? null
+          : tahfizhSegments.expand((s) => s.lineIds).toSet().toList(),
+      tahfizhSegments: tahfizhSegments,
       tahsinMode: isTahsinPart ? _tahsinMode : null,
       wafaLevel: isTahsinWafa ? _wafaLevel : null,
       halamanWafa: isTahsinWafa ? _halamanWafaCtrl.text.trim() : null,
-      tilawahSurahNumber: isTilawahShaped ? _tilawahSurahNumber : null,
-      tilawahSurahName: isTilawahShaped ? kSurahNames[_tilawahSurahNumber] : null,
-      tilawahAyatMulai: isTilawahShaped ? int.tryParse(_tilawahAyatMulaiCtrl.text) : null,
-      tilawahAyatSelesai: isTilawahShaped ? int.tryParse(_tilawahAyatSelesaiCtrl.text) : null,
+      tilawahSurahNumber: tilawahSegments?.isNotEmpty == true ? tilawahSegments!.first.surahNumber : null,
+      tilawahSurahName: tilawahSegments?.isNotEmpty == true ? tilawahSegments!.first.surahName : null,
+      tilawahAyatMulai: tilawahSegments?.isNotEmpty == true ? tilawahSegments!.first.ayatMulai : null,
+      tilawahAyatSelesai: tilawahSegments?.isNotEmpty == true ? tilawahSegments!.first.ayatSelesai : null,
+      tilawahSegments: tilawahSegments,
       catatan:
           _catatanCtrl.text.trim().isEmpty ? null : _catatanCtrl.text.trim(),
       folderId: widget.existing?.folderId ?? widget.initialFolderId,
@@ -779,7 +926,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                   _nama!,
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 13.5,
+                                    fontSize: 15.5,
                                     color: cs.primary,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -787,22 +934,13 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                 if ((_kelas ?? '').isNotEmpty || (_halaqoh ?? '').isNotEmpty)
                                   Text(
                                     '${_kelas ?? '-'} • Halaqoh ${_halaqoh ?? '-'}',
-                                    style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: cs.onSurfaceVariant,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                Text(
-                                  '${WeekUtils.monthWeekLabel(WeekUtils.weekOfMonth(_tanggal))} • '
-                                  // Bulan yang ditampilkan = bulan PEMILIK pekan tanggal
-                                  // ini (bisa beda dari bulan kalender _tanggal sendiri di
-                                  // 1-2 hari ujung bulan) — lihat WeekUtils.ownerMonth,
-                                  // biar label pekan & nama bulannya selalu konsisten.
-                                  '${DateFormat('MMMM yyyy', 'id_ID').format(WeekUtils.ownerMonth(_tanggal))}',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                ),
                               ],
                             ],
                           ),
@@ -1162,13 +1300,152 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     );
   }
 
-  Widget _buildTahfizhFields(ColorScheme cs) {
+  /// Panel hasil generate ("Kolom Baris") untuk SATU segmen — dipakai
+  /// berulang, satu per segmen Tahfizh.
+  Widget _buildGeneratedPanel(ColorScheme cs, GeneratedLinesResult result) {
+    return Material(
+      // Sebelumnya Container(decoration: BoxDecoration(color, border,
+      // borderRadius)) — diganti Material(shape: RoundedRectangleBorder)
+      // biar background+border tetap identik TAPI ListTile "Hal. X —
+      // Baris Y" di dalamnya (lihat ListView di bawah) punya Material
+      // terdekat yang benar, nggak ketutup DecoratedBox lagi.
+      color: cs.primaryContainer.withValues(alpha: 0.35),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: cs.primary.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Row(
+              children: [
+                Icon(Icons.format_list_numbered_rounded, size: 18, color: cs.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Kolom Baris',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: cs.primary),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: cs.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${result.totalBaris} baris baru',
+                    style: TextStyle(
+                        color: cs.onPrimary, fontWeight: FontWeight.w700, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (result.alreadyCountedLines.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.history_rounded, size: 15, color: AppColors.tahsinOn(context)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${result.alreadyCountedLines.length} baris sudah pernah dihitung di laporan sebelumnya (tidak dihitung dobel)',
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.tahsinOn(context),
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (result.newLines.isEmpty && result.alreadyCountedLines.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Text(
+                'Semua baris di rentang ini sudah pernah dihitung sebelumnya.',
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              ),
+            ),
+          if (result.newLines.isNotEmpty) ...[
+            const Divider(height: 1),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: result.newLines.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1, indent: 14, endIndent: 14),
+                itemBuilder: (context, i) {
+                  final l = result.newLines[i];
+                  return ListTile(
+                    dense: true,
+                    leading: CircleAvatar(
+                      radius: 13,
+                      backgroundColor: cs.primary.withValues(alpha: 0.15),
+                      child: Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.w700, color: cs.primary),
+                      ),
+                    ),
+                    title: Text('Hal. ${l.pageNumber} — Baris ${l.lineNumber}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    subtitle: Text(l.ayatRangeText, style: const TextStyle(fontSize: 12)),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 1 blok surah+ayat Tahfizh (dipakai berulang buat tiap segmen).
+  /// Segmen ke-2 dst punya label "Surah ke-N" + tombol hapus.
+  Widget _buildTahfizhSegmentField(ColorScheme cs, int index) {
+    final seg = _tahfizhSegs[index];
     return Column(
-      key: const ValueKey('tahfizh'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (index > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Surah ke-${index + 1} (nyambung)',
+                    style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
+                  ),
+                ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => _removeTahfizhSegment(index),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.close_rounded, size: 18, color: cs.error),
+                  ),
+                ),
+              ],
+            ),
+          ),
         DropdownButtonFormField<int>(
-          initialValue: _surahNumber,
+          initialValue: seg.surahNumber,
           isExpanded: true,
           borderRadius: BorderRadius.circular(16),
           icon: Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
@@ -1186,8 +1463,8 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
               .toList(),
           onChanged: (v) {
             setState(() {
-              _surahNumber = v;
-              _generated = null;
+              seg.surahNumber = v;
+              seg.generated = null;
               _generateError = null;
             });
             _markEditedAndScheduleDraftSave();
@@ -1200,7 +1477,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           children: [
             Expanded(
               child: TextFormField(
-                controller: _ayatMulaiCtrl,
+                controller: seg.ayatMulaiCtrl,
                 keyboardType: TextInputType.number,
                 decoration: fieldDecoration(
                   context,
@@ -1209,7 +1486,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                   accent: cs.primary,
                 ),
                 onChanged: (_) {
-                  setState(() => _generated = null);
+                  setState(() => seg.generated = null);
                   _markEditedAndScheduleDraftSave();
                 },
                 validator: (v) => !_wajibIsiStatusCapaian
@@ -1220,7 +1497,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             const SizedBox(width: 12),
             Expanded(
               child: TextFormField(
-                controller: _ayatSelesaiCtrl,
+                controller: seg.ayatSelesaiCtrl,
                 keyboardType: TextInputType.number,
                 decoration: fieldDecoration(
                   context,
@@ -1229,7 +1506,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                   accent: cs.primary,
                 ),
                 onChanged: (_) {
-                  setState(() => _generated = null);
+                  setState(() => seg.generated = null);
                   _markEditedAndScheduleDraftSave();
                 },
                 validator: (v) => !_wajibIsiStatusCapaian
@@ -1239,7 +1516,45 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        if (seg.generated != null && seg.generated!.available) ...[
+          const SizedBox(height: 14),
+          _buildGeneratedPanel(cs, seg.generated!),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTahfizhFields(ColorScheme cs) {
+    final totalBarisAll =
+        _tahfizhSegs.fold<int>(0, (a, s) => a + (s.generated?.totalBaris ?? 0));
+    final anyGenerated =
+        _tahfizhSegs.any((s) => s.generated != null && s.generated!.available);
+    return Column(
+      key: const ValueKey('tahfizh'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < _tahfizhSegs.length; i++) ...[
+          _buildTahfizhSegmentField(cs, i),
+          if (i != _tahfizhSegs.length - 1) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+          ],
+        ],
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _addTahfizhSegment,
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+            label: const Text('Tambah Surah (nyambung)'),
+            style: TextButton.styleFrom(
+              foregroundColor: cs.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
           child: FilledButton.tonalIcon(
@@ -1248,14 +1563,16 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
               textStyle: const TextStyle(
                   fontSize: 14, fontWeight: FontWeight.w800),
             ),
-            onPressed: _generating ? null : () => _generateLines(),
+            onPressed: _generating ? null : () => _generateAllLines(),
             icon: _generating
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.auto_fix_high_rounded, size: 19),
-            label: Text(_generating ? 'Menghitung...' : 'Generate Baris'),
+            label: Text(_generating
+                ? 'Menghitung...'
+                : (_tahfizhSegs.length > 1 ? 'Generate Semua Baris' : 'Generate Baris')),
           ),
         ),
         if (_generateError != null) ...[
@@ -1278,128 +1595,27 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             ),
           ),
         ],
-        if (_generated != null && _generated!.available) ...[
-          const SizedBox(height: 14),
-          Material(
-            // Sebelumnya Container(decoration: BoxDecoration(color, border,
-            // borderRadius)) — diganti Material(shape: RoundedRectangleBorder)
-            // biar background+border tetap identik TAPI ListTile "Hal. X —
-            // Baris Y" di dalamnya (lihat ListView di bawah) punya Material
-            // terdekat yang benar, nggak ketutup DecoratedBox lagi.
-            color: cs.primaryContainer.withValues(alpha: 0.35),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: cs.primary.withValues(alpha: 0.25)),
+        if (_tahfizhSegs.length > 1 && anyGenerated) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Column(
+            child: Row(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-                  child: Row(
-                    children: [
-                      Icon(Icons.format_list_numbered_rounded,
-                          size: 18, color: cs.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Kolom Baris',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700, color: cs.primary),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: cs.primary,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${_generated!.totalBaris} baris baru',
-                          style: TextStyle(
-                              color: cs.onPrimary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
+                Icon(Icons.functions_rounded, size: 17, color: cs.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Total ${_tahfizhSegs.length} surah',
+                      style: TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w700, color: cs.primary)),
                 ),
-                if (_generated!.alreadyCountedLines.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.history_rounded,
-                              size: 15, color: AppColors.tahsinOn(context)),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              '${_generated!.alreadyCountedLines.length} baris sudah pernah dihitung di laporan sebelumnya (tidak dihitung dobel)',
-                              style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: AppColors.tahsinOn(context),
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                if (_generated!.newLines.isEmpty &&
-                    _generated!.alreadyCountedLines.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                    child: Text(
-                      'Semua baris di rentang ini sudah pernah dihitung sebelumnya.',
-                      style:
-                          TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                    ),
-                  ),
-                if (_generated!.newLines.isNotEmpty) ...[
-                  const Divider(height: 1),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 220),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      itemCount: _generated!.newLines.length,
-                      separatorBuilder: (_, __) =>
-                          const Divider(height: 1, indent: 14, endIndent: 14),
-                      itemBuilder: (context, i) {
-                        final l = _generated!.newLines[i];
-                        return ListTile(
-                          dense: true,
-                          leading: CircleAvatar(
-                            radius: 13,
-                            backgroundColor: cs.primary.withValues(alpha: 0.15),
-                            child: Text(
-                              '${i + 1}',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: cs.primary),
-                            ),
-                          ),
-                          title: Text(
-                              'Hal. ${l.pageNumber} — Baris ${l.lineNumber}',
-                              style: const TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w600)),
-                          subtitle: Text(l.ayatRangeText,
-                              style: const TextStyle(fontSize: 12)),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                Text('$totalBarisAll baris baru',
+                    style: TextStyle(
+                        fontSize: 12.5, fontWeight: FontWeight.w800, color: cs.primary)),
               ],
             ),
           ),
@@ -1452,17 +1668,37 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     );
   }
 
-  /// Blok surah + rentang ayat TANPA tombol generate/hitung baris —
-  /// dipakai untuk Tahsin bermode Tilawah, bagian Tahsin di
-  /// Tahsin+Tahfizh (saat modenya Tilawah), dan Muroja'ah/Tasmi'.
-  Widget _buildTilawahBlock(ColorScheme cs, {Key? key}) {
-    final accent = AppColors.tahsinOn(context);
+  /// 1 blok surah+ayat Tilawah (dipakai berulang buat tiap segmen).
+  Widget _buildTilawahSegmentField(ColorScheme cs, int index, Color accent) {
+    final seg = _tilawahSegs[index];
     return Column(
-      key: key,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (index > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Surah ke-${index + 1} (nyambung)',
+                    style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
+                  ),
+                ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => _removeTilawahSegment(index),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.close_rounded, size: 18, color: cs.error),
+                  ),
+                ),
+              ],
+            ),
+          ),
         DropdownButtonFormField<int>(
-          initialValue: _tilawahSurahNumber,
+          initialValue: seg.surahNumber,
           isExpanded: true,
           borderRadius: BorderRadius.circular(16),
           icon: Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
@@ -1477,7 +1713,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
               .map((e) => DropdownMenuItem(value: e.key, child: Text('${e.key}. ${e.value}')))
               .toList(),
           onChanged: (v) {
-            setState(() => _tilawahSurahNumber = v);
+            setState(() => seg.surahNumber = v);
             _markEditedAndScheduleDraftSave();
           },
           validator: (v) =>
@@ -1488,7 +1724,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           children: [
             Expanded(
               child: TextFormField(
-                controller: _tilawahAyatMulaiCtrl,
+                controller: seg.ayatMulaiCtrl,
                 keyboardType: TextInputType.number,
                 decoration: fieldDecoration(
                   context,
@@ -1505,7 +1741,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             const SizedBox(width: 12),
             Expanded(
               child: TextFormField(
-                controller: _tilawahAyatSelesaiCtrl,
+                controller: seg.ayatSelesaiCtrl,
                 keyboardType: TextInputType.number,
                 decoration: fieldDecoration(
                   context,
@@ -1520,6 +1756,37 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  /// Blok surah + rentang ayat TANPA tombol generate/hitung baris —
+  /// dipakai untuk Tahsin bermode Tilawah, bagian Tahsin di
+  /// Tahsin+Tahfizh (saat modenya Tilawah), dan Muroja'ah/Tasmi'. Bisa
+  /// lebih dari 1 segmen (tombol "+") kalau setoran nyambung lintas surah.
+  Widget _buildTilawahBlock(ColorScheme cs, {Key? key}) {
+    final accent = AppColors.tahsinOn(context);
+    return Column(
+      key: key,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < _tilawahSegs.length; i++) ...[
+          _buildTilawahSegmentField(cs, i, accent),
+          if (i != _tilawahSegs.length - 1) const SizedBox(height: 14),
+        ],
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _addTilawahSegment,
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+            label: const Text('Tambah Surah (nyambung)'),
+            style: TextButton.styleFrom(
+              foregroundColor: accent,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+          ),
         ),
       ],
     );

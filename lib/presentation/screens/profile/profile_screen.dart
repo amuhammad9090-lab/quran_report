@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +11,7 @@ import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
+import 'edit_profile_screen.dart';
 
 /// Profile — identitas user yang login + statistik ringkas SCOPED ke
 /// assignment-nya (bukan angka global), sesuai spesifikasi bagian L/N.
@@ -46,31 +49,10 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _editDisplayName(BuildContext context) async {
-    final auth = context.read<AuthProvider>();
-    final ctrl = TextEditingController(text: auth.currentUser?.displayName ?? '');
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Nama Tampilan'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Nama tampilan'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
+  void _openEditProfile(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
     );
-    if (result != null && result.isNotEmpty) {
-      auth.updateDisplayName(result);
-    }
   }
 
   @override
@@ -107,16 +89,26 @@ class ProfileScreen extends StatelessWidget {
                   Center(
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 44,
-                          backgroundColor: cs.primaryContainer,
-                          child: Text(
-                            user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
-                              color: cs.onPrimaryContainer,
-                            ),
+                        GestureDetector(
+                          onTap: () => _openEditProfile(context),
+                          child: CircleAvatar(
+                            radius: 44,
+                            backgroundColor: cs.primaryContainer,
+                            backgroundImage: user.photoPath != null
+                                ? FileImage(File(user.photoPath!))
+                                : null,
+                            child: user.photoPath == null
+                                ? Text(
+                                    user.displayName.isNotEmpty
+                                        ? user.displayName[0].toUpperCase()
+                                        : '?',
+                                    style: TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w800,
+                                      color: cs.onPrimaryContainer,
+                                    ),
+                                  )
+                                : null,
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -237,7 +229,7 @@ class ProfileScreen extends StatelessWidget {
                   _ProfileActionTile(
                     icon: Icons.edit_outlined,
                     label: 'Edit Profil',
-                    onTap: () => _editDisplayName(context),
+                    onTap: () => _openEditProfile(context),
                   ),
                   _ProfileActionTile(
                     icon: Icons.settings_outlined,

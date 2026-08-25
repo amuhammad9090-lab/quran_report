@@ -1,3 +1,5 @@
+import '../../core/utils/text_utils.dart';
+
 /// Satu unit assignment: kelas TERTENTU + halaqoh TERTENTU, sebagai
 /// PASANGAN yang tidak boleh dipisah.
 ///
@@ -22,7 +24,7 @@ class KelasHalaqoh {
 
   factory KelasHalaqoh.fromJson(Map<String, dynamic> json) => KelasHalaqoh(
         kelas: json['kelas'] as String,
-        halaqoh: json['halaqoh'] as String,
+        halaqoh: normalizeHalaqoh(json['halaqoh'] as String),
       );
 
   @override

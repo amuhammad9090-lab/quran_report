@@ -1,3 +1,4 @@
+import '../../core/utils/text_utils.dart';
 import 'kelas_halaqoh.dart';
 
 /// Role akses user. Admin = akses global, Guru Pembimbing = hanya data
@@ -69,6 +70,7 @@ class UserAccount {
 
   UserAccount copyWith({
     String? displayName,
+    String? passwordHash,
     List<KelasHalaqoh>? assignments,
     String? photoPath,
     bool clearPhoto = false,
@@ -77,7 +79,7 @@ class UserAccount {
       id: id,
       username: username,
       displayName: displayName ?? this.displayName,
-      passwordHash: passwordHash,
+      passwordHash: passwordHash ?? this.passwordHash,
       role: role,
       assignments: assignments ?? this.assignments,
       schoolId: schoolId,
@@ -113,7 +115,8 @@ class UserAccount {
       final halaqohList = (json['halaqoh'] as List?)?.map((e) => e.toString()).toList() ?? const [];
       final len = kelasList.length < halaqohList.length ? kelasList.length : halaqohList.length;
       parsedAssignments = [
-        for (var i = 0; i < len; i++) KelasHalaqoh(kelas: kelasList[i], halaqoh: halaqohList[i]),
+        for (var i = 0; i < len; i++)
+          KelasHalaqoh(kelas: kelasList[i], halaqoh: normalizeHalaqoh(halaqohList[i])),
       ];
     }
 

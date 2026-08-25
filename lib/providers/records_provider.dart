@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/access/access_scope.dart';
 import '../core/utils/week_utils.dart';
 import '../data/models/enums.dart';
+import '../data/models/santri_monthly_recap.dart';
 import '../data/models/santri_record.dart';
 import '../data/services/app_prefs_service.dart';
 import '../data/services/storage_service.dart';
@@ -595,6 +596,65 @@ class RecordsProvider extends ChangeNotifier {
     }
     return result;
   }
+
+  /// Rekap gabungan PER SANTRI untuk satu bulan penuh (Pekan 1 s/d Pekan
+  /// terakhir) — dipakai fitur "Generate Rekap Bulanan". Dibangun dari
+  /// [recordsInMonthWeek] tiap pekan (bukan [recordsInMonth]) supaya
+  /// konsisten dengan Rekap Bulanan → Pekan yang sudah ada, termasuk
+  /// laporan di 1-2 hari ujung bulan yang "dimiliki" pekan bulan itu
+  /// walau tanggalnya sendiri beda bulan (lihat catatan di
+  /// [recordsInMonthWeek]). Hasil terurut nama (case-insensitive).
+  List<SantriMonthlyRecap> monthlySantriRecaps(DateTime month) {
+    final totalWeeks = WeekUtils.weeksInMonth(month);
+
+    final recordsByKeyWeek = <String, Map<int, List<SantriRecord>>>{};
+    final namaByKey = <String, String>{};
+    final kelasByKey = <String, String>{};
+    final halaqohByKey = <String, String>{};
+
+    for (var weekIndex = 1; weekIndex <= totalWeeks; weekIndex++) {
+      for (final r in recordsInMonthWeek(month, weekIndex)) {
+        final key = r.namaAnak.trim().toLowerCase();
+        recordsByKeyWeek.putIfAbsent(key, () => {}).putIfAbsent(weekIndex, () => []).add(r);
+        // Dipakai buat tampilan nama/kelas/halaqoh — ambil dari laporan
+        // TERBARU per santri (bukan pekan pertama) biar ikut kalau
+        // santri pindah kelas/halaqoh di tengah bulan.
+        if (!namaByKey.containsKey(key) || r.tanggal.isAfter(_latestSeen[key] ?? DateTime(0))) {
+          namaByKey[key] = r.namaAnak.trim();
+          kelasByKey[key] = r.kelas;
+          halaqohByKey[key] = r.halaqoh;
+          _latestSeen[key] = r.tanggal;
+        }
+      }
+    }
+    _latestSeen.clear();
+
+    final result = <SantriMonthlyRecap>[];
+    for (final key in recordsByKeyWeek.keys) {
+      final byWeek = recordsByKeyWeek[key]!;
+      final allRecords = byWeek.values.expand((l) => l).toList();
+      final keteranganCounts = <Keterangan, int>{};
+      for (final r in allRecords) {
+        if (r.keterangan == Keterangan.hadir) continue;
+        keteranganCounts[r.keterangan] = (keteranganCounts[r.keterangan] ?? 0) + 1;
+      }
+      result.add(SantriMonthlyRecap(
+        nama: namaByKey[key] ?? key,
+        kelas: kelasByKey[key] ?? '-',
+        halaqoh: halaqohByKey[key] ?? '-',
+        recordsByWeek: byWeek,
+        totalBaris: allRecords.fold(0, (sum, r) => sum + (r.totalBaris ?? 0)),
+        keteranganCounts: keteranganCounts,
+      ));
+    }
+    result.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+    return result;
+  }
+
+  // Dipakai sementara di dalam [monthlySantriRecaps] buat lacak laporan
+  // terbaru per santri (kelas/halaqoh ditampilkan dari yang terbaru) —
+  // di-clear lagi begitu selesai supaya tidak nyangkut antar pemanggilan.
+  final Map<String, DateTime> _latestSeen = {};
 
   /// Laporan (kalau ada) milik santri [namaAnak] pada Pekan [weekIndex]
   /// bulan [month] — dipakai supaya membuka kartu di pekan yang sudah ada

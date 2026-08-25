@@ -15,4 +15,8 @@ abstract class AuthRepository {
   /// suatu Kelas+Halaqoh saat export rekap per kelompok (lihat
   /// AuthProvider.guruPembimbingNameFor).
   Future<List<UserAccount>> allAccounts();
+
+  /// Ganti password (dalam bentuk hash — lihat [AuthHashService]) akun
+  /// [userId]. Return true kalau akun ketemu & berhasil diupdate.
+  Future<bool> updatePasswordHash(String userId, String newHash);
 }

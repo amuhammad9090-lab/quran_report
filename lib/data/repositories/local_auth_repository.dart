@@ -35,4 +35,17 @@ class LocalAuthRepository implements AuthRepository {
 
   @override
   Future<List<UserAccount>> allAccounts() async => List.unmodifiable(_accounts());
+
+  @override
+  Future<bool> updatePasswordHash(String userId, String newHash) async {
+    final accounts = _accounts();
+    final index = accounts.indexWhere((acc) => acc.id == userId);
+    if (index == -1) return false;
+    // Cuma update cache in-memory (sesuai catatan project: seed lokal ini
+    // belum ada persistensi permanen ke disk). Begitu session berakhir
+    // (app di-kill), password kembali ke seed semula — sama seperti
+    // perilaku update displayName sebelumnya.
+    accounts[index] = accounts[index].copyWith(passwordHash: newHash);
+    return true;
+  }
 }

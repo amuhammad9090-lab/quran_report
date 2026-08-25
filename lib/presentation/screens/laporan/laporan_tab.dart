@@ -112,8 +112,8 @@ class _LaporanTabState extends State<LaporanTab> {
               for (final key in _selected.toList()) {
                 final c = provider.cardByIdentityKey(key);
                 if (c != null) await provider.deleteAllForSantri(c.nama, c.identityKey);
+                if (!context.mounted) return;
               }
-              if (!context.mounted) return;
               _exitSelectionMode();
             },
             child: const Text('Hapus'),
@@ -132,11 +132,13 @@ class _LaporanTabState extends State<LaporanTab> {
       return sum + (c.hasAnyReport ? provider.recordsForSantri(c.nama).length : 1);
     });
     final target = await showFolderPickerSheet(context, itemCount: itemCount);
-    if (target == null || !context.mounted) return;
+    if (target == null) return;
+    if (!context.mounted) return;
     final count = keys.length;
     for (final key in keys) {
       final c = provider.cardByIdentityKey(key);
       if (c != null) await provider.moveIdentityToFolder(c, target.isEmpty ? null : target);
+      if (!context.mounted) return;
     }
     if (!context.mounted) return;
     _exitSelectionMode();
@@ -180,8 +182,10 @@ class _LaporanTabState extends State<LaporanTab> {
 
     final existing = provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
     if (existing != null) {
-
-      showRecordFormSheet(context, existing: existing);
+      // lockIdentity: true -> samain kek buka form laporan baru dari kartu
+      // santri ini (section "Identitas Santri" ikut disembunyikan, karena
+      // identitasnya sudah jelas dari konteks kartu yang di-tap).
+      showRecordFormSheet(context, existing: existing, lockIdentity: true);
       return;
     }
 
@@ -212,7 +216,8 @@ class _LaporanTabState extends State<LaporanTab> {
           context,
           itemCount: card.hasAnyReport ? provider.recordsForSantri(card.nama).length : 1,
         );
-    if (target == null || !context.mounted) return;
+    if (target == null) return;
+    if (!context.mounted) return;
     await provider.moveIdentityToFolder(card, target.isEmpty ? null : target);
     if (!context.mounted) return;
     showAppSnackbar(

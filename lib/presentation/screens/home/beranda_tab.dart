@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +12,7 @@ import '../../widgets/filter_sheet.dart';
 import '../profile/profile_screen.dart';
 import '../laporan/buat_laporan_sheet.dart';
 import '../export/export_sheet.dart';
+import '../notifications/notifications_screen.dart';
 
 /// Tab "Home" — dashboard ringkasan. Daftar laporan penuh ada di tab
 /// "Laporan"; tile kategori di sini cuma set filter lalu pindah ke sana.
@@ -22,6 +25,12 @@ class BerandaTab extends StatelessWidget {
     final provider = context.watch<RecordsProvider>();
     final cs = Theme.of(context).colorScheme;
 
+    // Shortcut kategori di Home SELALU pindah ke tab Laporan setelah
+    // ditekan (bukan toggle in-place) — jadi "aktif/nonaktif" filter yang
+    // sama tidak relevan lagi di sini (user sudah tidak melihat Home saat
+    // itu terjadi). Makanya logic-nya disederhanakan: tekan kategori =
+    // set filter itu lalu pindah, titik. Untuk hapus/ganti filter, itu
+    // dilakukan di tab Laporan sendiri (di mana toggle-nya kelihatan).
     void goToFiltered(HafalanStatus? status) {
       provider.setFilterStatus(status);
       onLihatLaporan();
@@ -129,11 +138,7 @@ class BerandaTab extends StatelessWidget {
                             icon: Icons.auto_stories_rounded,
                             color: AppColors.tahfizhOn(context),
                             active: provider.filterStatus == HafalanStatus.tahfizh,
-                            onTap: () => goToFiltered(
-                              provider.filterStatus == HafalanStatus.tahfizh
-                                  ? null
-                                  : HafalanStatus.tahfizh,
-                            ),
+                            onTap: () => goToFiltered(HafalanStatus.tahfizh),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -143,11 +148,7 @@ class BerandaTab extends StatelessWidget {
                             icon: Icons.menu_book_rounded,
                             color: AppColors.tahsinOn(context),
                             active: provider.filterStatus == HafalanStatus.tahsin,
-                            onTap: () => goToFiltered(
-                              provider.filterStatus == HafalanStatus.tahsin
-                                  ? null
-                                  : HafalanStatus.tahsin,
-                            ),
+                            onTap: () => goToFiltered(HafalanStatus.tahsin),
                           ),
                         ),
                       ],
@@ -192,6 +193,16 @@ class BerandaTab extends StatelessWidget {
     );
   }
 
+  void _openProfile(BuildContext context) {
+    // Satu titik navigasi ke Profile — avatar & sapaan nama dulu masing-
+    // masing manggil push terpisah, sekarang disatukan biar rute yang
+    // ditempuh selalu konsisten (gampang diubah sekali di sini kalau nanti
+    // Profile mau dibuka lewat cara lain, mis. modal sheet).
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     // displayName user yang login dipakai di sini kalau ada — fallback ke
@@ -199,6 +210,7 @@ class BerandaTab extends StatelessWidget {
     final user = context.watch<AuthProvider>().currentUser;
     final nama = user?.displayName ?? 'Pengelola Laporan';
     final initial = nama.isNotEmpty ? nama[0].toUpperCase() : '?';
+    final photoPath = user?.photoPath;
 
     return Row(
       children: [
@@ -207,29 +219,28 @@ class BerandaTab extends StatelessWidget {
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            ),
+            onTap: () => _openProfile(context),
             child: CircleAvatar(
               radius: 26,
               backgroundColor: cs.primaryContainer,
-              child: Text(
-                initial,
-                style: TextStyle(
-                  color: cs.onPrimaryContainer,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                ),
-              ),
+              backgroundImage: photoPath != null ? FileImage(File(photoPath)) : null,
+              child: photoPath == null
+                  ? Text(
+                      initial,
+                      style: TextStyle(
+                        color: cs.onPrimaryContainer,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    )
+                  : null,
             ),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: GestureDetector(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            ),
+            onTap: () => _openProfile(context),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -251,33 +262,12 @@ class BerandaTab extends StatelessWidget {
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Belum ada notifikasi baru')),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
             ),
             child: Padding(
               padding: const EdgeInsets.all(11),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const Icon(Icons.notifications_none_rounded, size: 22),
-                  Positioned(
-                    right: -1,
-                    top: -1,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: AppColors.greenOn(context),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Theme.of(context).cardTheme.color ?? Colors.white,
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: Icon(Icons.notifications_none_rounded, size: 22),
             ),
           ),
         ),

@@ -263,19 +263,6 @@ class _SantriReportCardState extends State<SantriReportCard> {
                   ],
                 ],
               ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.calendar_today_rounded, size: 12, color: cs.onSurfaceVariant),
-                  const SizedBox(width: 5),
-                  Text(
-                    DateFormat('d MMM yyyy', 'id_ID').format(record.tanggal),
-                    style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
-                  ),
-                  const Spacer(),
-                  KeteranganChip(keterangan: record.keterangan, compact: true),
-                ],
-              ),
             ],
             const SizedBox(height: 10),
             SizedBox(
@@ -300,7 +287,6 @@ class _SantriReportCardState extends State<SantriReportCard> {
     // ujung bulan) — lihat WeekUtils.ownerMonth.
     final thisMonth = WeekUtils.ownerMonth(now);
     final latest = widget.info.latestRecord;
-    final filledCount = widget.info.weeksWithReportThisMonth.length;
 
     final canOpenActions = widget.onPindahkanKeFolder != null || widget.onHapus != null;
 
@@ -382,20 +368,6 @@ class _SantriReportCardState extends State<SantriReportCard> {
               ),
               const SizedBox(height: 12),
               Row(
-                children: [
-                  Text(
-                    DateFormat('MMMM yyyy', 'id_ID').format(now),
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '$filledCount / ${widget.info.totalWeeksThisMonth} pekan',
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
                 children: List.generate(widget.info.totalWeeksThisMonth, (i) {
                   final weekIndex = i + 1;
                   final isLast = weekIndex == widget.info.totalWeeksThisMonth;
@@ -424,32 +396,6 @@ class _SantriReportCardState extends State<SantriReportCard> {
                 child: _expandedWeek == null
                     ? const SizedBox(width: double.infinity)
                     : _buildWeekInfoPanel(context, cs, thisMonth, _expandedWeek!),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Text(
-                    'Progress laporan',
-                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                  ),
-                  const Spacer(),
-                  Text(
-                    widget.info.totalWeeksThisMonth == 0
-                        ? '0%'
-                        : '${(filledCount / widget.info.totalWeeksThisMonth * 100).round()}%',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: cs.primary),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: widget.info.totalWeeksThisMonth == 0 ? 0 : filledCount / widget.info.totalWeeksThisMonth,
-                  minHeight: 6,
-                  backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                  color: cs.primary,
-                ),
               ),
               if (latest != null) ...[
                 const SizedBox(height: 12),

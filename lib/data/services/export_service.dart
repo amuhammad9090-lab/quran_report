@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/utils/docx_builder.dart';
 import '../models/enums.dart';
+import '../models/santri_monthly_recap.dart';
 import '../models/santri_record.dart';
 
 class ExportService {
@@ -50,10 +51,25 @@ class ExportService {
   /// kolom "Capaian" (nama surah/jenjang) & "Ayat/Hal" (rentang angka),
   /// masing-masing lewat method terpisah di bawah supaya kolomnya tetap
   /// konsisten dengan versi sebelum ada status Tahsin+Tahfizh/Muroja'ah.
+  // Nama-nama surah Tahfizh laporan ini digabung ", " — bisa lebih dari 1
+  // kalau setoran nyambung lintas surah (lihat SantriRecord.tahfizhSegments).
+  String _tahfizhSurahNames(SantriRecord r) {
+    final segs = r.tahfizhSegmentsEffective;
+    return segs.isEmpty ? '-' : segs.map((s) => s.surahName).join(', ');
+  }
+
+  String _tahfizhAyatRanges(SantriRecord r) {
+    final segs = r.tahfizhSegmentsEffective;
+    return segs.isEmpty ? '-' : segs.map((s) => '${s.ayatMulai}-${s.ayatSelesai}').join(' + ');
+  }
+
   String _tahsinPartLabel(SantriRecord r) {
     final mode = r.tahsinMode ?? TahsinMode.wafa;
     if (mode == TahsinMode.tilawah) {
-      return 'Tilawah${r.tilawahSurahName != null ? ' - ${r.tilawahSurahName}' : ''}';
+      final segs = r.tilawahSegmentsEffective;
+      return segs.isEmpty
+          ? 'Tilawah'
+          : 'Tilawah - ${segs.map((s) => s.surahName).join(', ')}';
     }
     return r.wafaLevel?.label ?? '-';
   }
@@ -61,8 +77,10 @@ class ExportService {
   String _tahsinPartRange(SantriRecord r) {
     final mode = r.tahsinMode ?? TahsinMode.wafa;
     if (mode == TahsinMode.tilawah) {
-      if (r.tilawahAyatMulai == null || r.tilawahAyatSelesai == null) return '-';
-      return '${r.tilawahAyatMulai}-${r.tilawahAyatSelesai}';
+      final segs = r.tilawahSegmentsEffective;
+      return segs.isEmpty
+          ? '-'
+          : segs.map((s) => '${s.ayatMulai}-${s.ayatSelesai}').join(' + ');
     }
     final hal = r.halamanWafa?.trim();
     return (hal == null || hal.isEmpty) ? '-' : hal;
@@ -71,16 +89,16 @@ class ExportService {
   String _capaianLabel(SantriRecord r) {
     switch (r.status) {
       case HafalanStatus.tahfizh:
-        return r.surahName != null ? '${r.status.label} - ${r.surahName}' : r.status.label;
+        return '${r.status.label} - ${_tahfizhSurahNames(r)}';
       case HafalanStatus.tahsin:
         return '${r.status.label} - ${_tahsinPartLabel(r)}';
       case HafalanStatus.tahsinTahfizh:
-        final tahfizhPart = r.surahName ?? '-';
-        return '${r.status.label} - ${_tahsinPartLabel(r)} & $tahfizhPart';
+        return '${r.status.label} - ${_tahsinPartLabel(r)} & ${_tahfizhSurahNames(r)}';
       case HafalanStatus.murojaahTasmi:
-        return r.tilawahSurahName != null
-            ? '${r.status.label} - ${r.tilawahSurahName}'
-            : r.status.label;
+        final segs = r.tilawahSegmentsEffective;
+        return segs.isEmpty
+            ? r.status.label
+            : '${r.status.label} - ${segs.map((s) => s.surahName).join(', ')}';
     }
   }
 
@@ -89,18 +107,16 @@ class ExportService {
   String _ayatHalRange(SantriRecord r) {
     switch (r.status) {
       case HafalanStatus.tahfizh:
-        if (r.ayatMulai == null || r.ayatSelesai == null) return '-';
-        return '${r.ayatMulai}-${r.ayatSelesai}';
+        return _tahfizhAyatRanges(r);
       case HafalanStatus.tahsin:
         return _tahsinPartRange(r);
       case HafalanStatus.tahsinTahfizh:
-        final tahfizhRange = (r.ayatMulai != null && r.ayatSelesai != null)
-            ? '${r.ayatMulai}-${r.ayatSelesai}'
-            : '-';
-        return '${_tahsinPartRange(r)} + $tahfizhRange';
+        return '${_tahsinPartRange(r)} + ${_tahfizhAyatRanges(r)}';
       case HafalanStatus.murojaahTasmi:
-        if (r.tilawahAyatMulai == null || r.tilawahAyatSelesai == null) return '-';
-        return '${r.tilawahAyatMulai}-${r.tilawahAyatSelesai}';
+        final segs = r.tilawahSegmentsEffective;
+        return segs.isEmpty
+            ? '-'
+            : segs.map((s) => '${s.ayatMulai}-${s.ayatSelesai}').join(' + ');
     }
   }
 
@@ -153,6 +169,34 @@ class ExportService {
       ]);
     }
     return rows;
+  }
+
+  /// Ringkasan "Nx <jenis>" per santri untuk semua Keterangan SELAIN Hadir
+  /// (Izin Sakit, Izin Lomba, Izin Pelatihan, Alpa), dihitung dari
+  /// [records] yang lagi diekspor — otomatis ikut periode data itu
+  /// (pekanan, per Kelas+Halaqoh, bulanan, dll — apapun yang dikirim ke
+  /// exportPdf/exportExcel/exportWord). Cuma santri yang punya minimal 1
+  /// keterangan non-Hadir yang muncul. Terurut nama (case-insensitive).
+  List<MapEntry<String, String>> _keteranganSummaryPerSantri(List<SantriRecord> records) {
+    final byName = <String, Map<Keterangan, int>>{};
+    for (final r in records) {
+      if (r.keterangan == Keterangan.hadir) continue;
+      final name = r.namaAnak.trim();
+      if (name.isEmpty) continue;
+      final counts = byName.putIfAbsent(name, () => {});
+      counts[r.keterangan] = (counts[r.keterangan] ?? 0) + 1;
+    }
+    final names = byName.keys.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return [
+      for (final name in names)
+        MapEntry(
+          name,
+          (byName[name]!.entries.toList()..sort((a, b) => a.key.index.compareTo(b.key.index)))
+              .map((e) => '${e.value}x ${e.key.shortLabel}')
+              .join(', '),
+        ),
+    ];
   }
 
   Future<File> _saveBytes(String filename, List<int> bytes) async {
@@ -272,6 +316,19 @@ class ExportService {
             'Total data: ${records.length}',
             style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
           ),
+          if (_keteranganSummaryPerSantri(records).isNotEmpty) ...[
+            pw.SizedBox(height: 10),
+            pw.Text(
+              'Rekap Keterangan (Izin/Sakit/Alpa)',
+              style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 3),
+            for (final e in _keteranganSummaryPerSantri(records))
+              pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 2),
+                child: pw.Text('- ${e.key}: ${e.value}', style: const pw.TextStyle(fontSize: 8.5)),
+              ),
+          ],
         ],
       ),
     );
@@ -363,6 +420,17 @@ class ExportService {
       sheet.setColumnWidth(5, 18);
     }
 
+    row += rows.length;
+
+    final keteranganSummary = _keteranganSummaryPerSantri(records);
+    if (keteranganSummary.isNotEmpty) {
+      row++; // spasi
+      writeMerged('Rekap Keterangan (Izin/Sakit/Alpa)', xls.CellStyle(bold: true, fontSize: 11));
+      for (final e in keteranganSummary) {
+        writeMerged('- ${e.key}: ${e.value}', labelStyle);
+      }
+    }
+
     final bytes = book.encode()!;
     return _saveBytes('${_slug(judul)}.xlsx', Uint8List.fromList(bytes));
   }
@@ -395,6 +463,188 @@ class ExportService {
     builder.addTable(headers, includeTanggal ? _rowsWithTanggal(records) : _rows(records));
     builder.addSpacer();
     builder.addParagraph('Total data: ${records.length}', bold: true);
+
+    final keteranganSummary = _keteranganSummaryPerSantri(records);
+    if (keteranganSummary.isNotEmpty) {
+      builder.addSpacer();
+      builder.addParagraph('Rekap Keterangan (Izin/Sakit/Alpa)', bold: true);
+      for (final e in keteranganSummary) {
+        builder.addParagraph('- ${e.key}: ${e.value}');
+      }
+    }
+
+    final bytes = builder.build();
+    return _saveBytes('${_slug(judul)}.docx', bytes);
+  }
+
+  // -------------------- REKAP BULANAN PER SANTRI (fitur Generate) --------------------
+  // Beda dari exportPdf/exportExcel/exportWord di atas (yang 1 baris = 1
+  // laporan) — di sini 1 baris = 1 SANTRI, dengan kolom Pekan 1..N
+  // menampilkan ringkasan capaiannya tiap pekan (lihat
+  // SantriMonthlyRecap.capaianForWeek). Dipakai tombol Generate + tombol
+  // export pojok kanan atas di layar Rekap Bulanan.
+
+  List<String> _monthlyHeaders(int totalWeeks) => [
+        'No',
+        'Nama Murid',
+        'Kelas/Halaqoh',
+        for (var w = 1; w <= totalWeeks; w++) 'Pekan $w',
+        'Total Baris',
+        'Keterangan',
+      ];
+
+  List<List<String>> _monthlyRows(List<SantriMonthlyRecap> recaps, int totalWeeks) {
+    final rows = <List<String>>[];
+    for (var i = 0; i < recaps.length; i++) {
+      final r = recaps[i];
+      rows.add([
+        '${i + 1}',
+        r.nama,
+        '${r.kelas}/${r.halaqoh}',
+        for (var w = 1; w <= totalWeeks; w++) r.capaianForWeek(w),
+        '${r.totalBaris}',
+        r.keteranganSummaryText,
+      ]);
+    }
+    return rows;
+  }
+
+  Future<File> exportMonthlyRecapPdf(
+    List<SantriMonthlyRecap> recaps, {
+    required String judul,
+    required int totalWeeks,
+    String? periode,
+  }) async {
+    final doc = pw.Document();
+    final headers = _monthlyHeaders(totalWeeks);
+    final rows = _monthlyRows(recaps, totalWeeks);
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(24),
+        header: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text(_judulLaporan,
+                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+                textAlign: pw.TextAlign.center),
+            pw.SizedBox(height: 2),
+            pw.Text(_namaSekolah,
+                style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700),
+                textAlign: pw.TextAlign.center),
+            if (periode != null && periode.trim().isNotEmpty) ...[
+              pw.SizedBox(height: 2),
+              pw.Text(periode,
+                  style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold),
+                  textAlign: pw.TextAlign.center),
+            ],
+            pw.SizedBox(height: 10),
+          ],
+        ),
+        build: (context) => [
+          pw.TableHelper.fromTextArray(
+            headers: headers,
+            data: rows,
+            headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 8.5),
+            headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF0E7C61)),
+            cellStyle: const pw.TextStyle(fontSize: 7.5),
+            cellHeight: 22,
+            cellAlignment: pw.Alignment.centerLeft,
+            cellAlignments: const {0: pw.Alignment.center},
+            border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.4),
+            oddRowDecoration: const pw.BoxDecoration(color: PdfColors.grey100),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Text('Total santri: ${recaps.length}',
+              style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+        ],
+      ),
+    );
+
+    final bytes = await doc.save();
+    return _saveBytes('${_slug(judul)}.pdf', bytes);
+  }
+
+  Future<File> exportMonthlyRecapExcel(
+    List<SantriMonthlyRecap> recaps, {
+    required String judul,
+    required int totalWeeks,
+    String? periode,
+  }) async {
+    final book = xls.Excel.createExcel();
+    const sheetName = 'Rekap Bulanan';
+    book.rename('Sheet1', sheetName);
+    final sheet = book[sheetName];
+
+    final headers = _monthlyHeaders(totalWeeks);
+    final titleStyle = xls.CellStyle(bold: true, fontSize: 14);
+    final subtitleStyle = xls.CellStyle(fontSize: 11, italic: true);
+
+    var row = 0;
+    void writeMerged(String text, xls.CellStyle style) {
+      final start = xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row);
+      final end = xls.CellIndex.indexByColumnRow(columnIndex: headers.length - 1, rowIndex: row);
+      sheet.merge(start, end);
+      final cell = sheet.cell(start);
+      cell.value = xls.TextCellValue(text);
+      cell.cellStyle = style;
+      row++;
+    }
+
+    writeMerged(_judulLaporan, titleStyle);
+    writeMerged(_namaSekolah, subtitleStyle);
+    if (periode != null && periode.trim().isNotEmpty) writeMerged(periode, subtitleStyle);
+    row++; // spasi
+
+    final headerStyle = xls.CellStyle(
+      bold: true,
+      fontColorHex: xls.ExcelColor.white,
+      backgroundColorHex: xls.ExcelColor.fromHexString('#0E7C61'),
+    );
+    for (var c = 0; c < headers.length; c++) {
+      final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row));
+      cell.value = xls.TextCellValue(headers[c]);
+      cell.cellStyle = headerStyle;
+    }
+    row++;
+
+    final rows = _monthlyRows(recaps, totalWeeks);
+    for (var r = 0; r < rows.length; r++) {
+      for (var c = 0; c < rows[r].length; c++) {
+        final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row + r));
+        cell.value = xls.TextCellValue(rows[r][c]);
+      }
+    }
+
+    sheet.setColumnWidth(0, 5);
+    sheet.setColumnWidth(1, 22);
+    sheet.setColumnWidth(2, 16);
+    for (var w = 0; w < totalWeeks; w++) {
+      sheet.setColumnWidth(3 + w, 26);
+    }
+    sheet.setColumnWidth(3 + totalWeeks, 12);
+    sheet.setColumnWidth(4 + totalWeeks, 20);
+
+    final bytes = book.encode()!;
+    return _saveBytes('${_slug(judul)}.xlsx', Uint8List.fromList(bytes));
+  }
+
+  Future<File> exportMonthlyRecapWord(
+    List<SantriMonthlyRecap> recaps, {
+    required String judul,
+    required int totalWeeks,
+    String? periode,
+  }) async {
+    final builder = DocxBuilder();
+    builder.addTitle(_judulLaporan);
+    builder.addSubtitle(_namaSekolah);
+    if (periode != null && periode.trim().isNotEmpty) builder.addSubtitle(periode);
+    builder.addSpacer();
+    builder.addTable(_monthlyHeaders(totalWeeks), _monthlyRows(recaps, totalWeeks));
+    builder.addSpacer();
+    builder.addParagraph('Total santri: ${recaps.length}', bold: true);
 
     final bytes = builder.build();
     return _saveBytes('${_slug(judul)}.docx', bytes);

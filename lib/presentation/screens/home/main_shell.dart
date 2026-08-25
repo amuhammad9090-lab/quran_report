@@ -87,7 +87,7 @@ class _MainShellState extends State<MainShell> {
         floatingActionButton: _index == 1 && !_laporanSelecting && _snackbarHidingFab == 0
             ? SpeedDialFab(
           onBuatFolder: () => showFolderFormSheet(context),
-          onBuatLaporan: () => showBuatLaporanSheet(context),
+          onBuatLaporan: () => showBuatLaporanSheet(context, onFabVisibilityChanged: _setFabVisible),
         )
             : null,
         bottomNavigationBar: Container(

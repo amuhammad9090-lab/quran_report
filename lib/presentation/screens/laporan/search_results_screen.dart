@@ -70,7 +70,9 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
 
     final existing = provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
     if (existing != null) {
-      showRecordFormSheet(context, existing: existing);
+      // lockIdentity: true -> samain kek buka form laporan baru dari kartu,
+      // identitas santri udah jelas dari kartunya, nggak perlu ditampilin lagi.
+      showRecordFormSheet(context, existing: existing, lockIdentity: true);
       return;
     }
 

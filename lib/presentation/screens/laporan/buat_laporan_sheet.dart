@@ -13,14 +13,21 @@ import '../../widgets/misc_widgets.dart';
 /// Laporan (lihat [RecordsProvider.laporanCards]); capaian pekanan diisi
 /// belakangan lewat kartu itu (tap kartu -> Bottom Sheet "Laporan Baru"
 /// yang sudah ada, tidak dibuat ulang).
-Future<void> showBuatLaporanSheet(BuildContext context, {String? folderId}) {
+Future<void> showBuatLaporanSheet(
+  BuildContext context, {
+  String? folderId,
+  ValueChanged<bool>? onFabVisibilityChanged,
+}) {
   return showModalBottomSheet(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => BuatLaporanSheet(folderId: folderId),
+    builder: (_) => BuatLaporanSheet(
+      folderId: folderId,
+      onFabVisibilityChanged: onFabVisibilityChanged,
+    ),
   );
 }
 
@@ -30,7 +37,11 @@ class BuatLaporanSheet extends StatefulWidget {
   /// [RecordsProvider.activateIdentity]), jadi user nggak perlu pindahkan
   /// manual lagi sesudahnya.
   final String? folderId;
-  const BuatLaporanSheet({super.key, this.folderId});
+  /// Diteruskan ke [showAppSnackbar] supaya FAB di layar belakang ikut
+  /// disembunyikan selama snackbar "kartu dibuat/sudah ada/gagal" tampil
+  /// (sheet ini sendiri nggak punya FAB, tapi Scaffold di baliknya punya).
+  final ValueChanged<bool>? onFabVisibilityChanged;
+  const BuatLaporanSheet({super.key, this.folderId, this.onFabVisibilityChanged});
 
   @override
   State<BuatLaporanSheet> createState() => _BuatLaporanSheetState();
@@ -173,7 +184,12 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
     final alreadyExists = provider.laporanCards.any((c) => c.identityKey == key);
     if (alreadyExists) {
       if (!mounted) return;
-      showAppSnackbar(context, 'Kartu laporan "$_nama" sudah ada.', icon: Icons.info_outline_rounded);
+      showAppSnackbar(
+        context,
+        'Kartu laporan "$_nama" sudah ada.',
+        icon: Icons.info_outline_rounded,
+        onFabVisibilityChanged: widget.onFabVisibilityChanged,
+      );
       Navigator.of(context).pop();
       return;
     }
@@ -187,15 +203,21 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
         folderId: widget.folderId,
       );
       if (!mounted) return;
-      showAppSnackbar(context, 'Kartu laporan "$_nama" dibuat.', icon: Icons.check_circle_outline_rounded);
+      showAppSnackbar(
+        context,
+        'Kartu laporan "$_nama" dibuat.',
+        icon: Icons.check_circle_outline_rounded,
+        onFabVisibilityChanged: widget.onFabVisibilityChanged,
+      );
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e is ScopeViolationException ? e.message : 'Gagal membuat kartu laporan.'),
-        ),
+      showAppSnackbar(
+        context,
+        e is ScopeViolationException ? e.message : 'Gagal membuat kartu laporan.',
+        icon: Icons.error_outline_rounded,
+        onFabVisibilityChanged: widget.onFabVisibilityChanged,
       );
     }
   }

@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
+import '../export/export_sheet.dart';
+import 'generate_rekap_bulanan_screen.dart';
 import 'rekap_pekan_bulan_screen.dart';
 
 /// Rekap semua record tahfizh & tahsin dalam SATU bulan, dengan navigasi
@@ -51,9 +53,24 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const PushedPageHeader(
+            PushedPageHeader(
               title: 'Rekap Bulanan',
               subtitle: 'Semua capaian tahfizh & tahsin dalam sebulan',
+              // Export langsung seluruh data bulan yang lagi dilihat, tanpa
+              // harus masuk ke tiap Pekan satu-satu dulu.
+              trailing: records.isEmpty
+                  ? null
+                  : IconButton(
+                      onPressed: () => showExportSheet(
+                        context,
+                        records: records,
+                        judul: 'Rekap Bulanan - ${DateFormat('MMMM yyyy', 'id_ID').format(_month)}',
+                        periode: DateFormat('MMMM yyyy', 'id_ID').format(_month),
+                        includeTanggal: true,
+                      ),
+                      icon: const Icon(Icons.ios_share_rounded),
+                      tooltip: 'Export Rekap Bulanan',
+                    ),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
@@ -70,6 +87,24 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                 ),
               ),
             ),
+            if (records.isNotEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+                sliver: SliverToBoxAdapter(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => GenerateRekapBulananScreen(month: _month),
+                        ),
+                      ),
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      label: const Text('Generate Rekap Bulanan (Pekan 1-Terakhir)'),
+                    ),
+                  ),
+                ),
+              ),
             if (records.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,

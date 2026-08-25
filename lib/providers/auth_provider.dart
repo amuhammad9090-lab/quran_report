@@ -7,6 +7,7 @@ import '../data/repositories/auth_repository.dart';
 import '../data/repositories/local_auth_repository.dart';
 import '../data/repositories/school_repository.dart';
 import '../data/services/app_prefs_service.dart';
+import '../data/services/auth_hash_service.dart';
 
 /// State authentication: user yang sedang login, sekolahnya, dan session
 /// restore saat app dibuka. Disuntik dengan implementasi repository lewat
@@ -135,5 +136,43 @@ class AuthProvider extends ChangeNotifier {
     if (_currentUser == null || newName.trim().isEmpty) return;
     _currentUser = _currentUser!.copyWith(displayName: newName.trim());
     notifyListeners();
+  }
+
+  /// Ganti kata sandi user yang sedang login. Verifikasi [oldPassword]
+  /// dulu terhadap hash tersimpan sebelum mengganti — lihat catatan
+  /// security di [AuthHashService] soal batasan hashing lokal ini.
+  ///
+  /// Return null kalau berhasil, atau pesan error kalau gagal (biar UI
+  /// tinggal tampilkan apa adanya, tidak perlu logic tambahan).
+  Future<String?> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final user = _currentUser;
+    if (user == null) return 'Sesi tidak valid, silakan login ulang.';
+
+    if (!AuthHashService.instance.verify(oldPassword, user.passwordHash)) {
+      return 'Kata sandi lama tidak sesuai.';
+    }
+    if (newPassword.trim().length < 4) {
+      return 'Kata sandi baru minimal 4 karakter.';
+    }
+    if (newPassword == oldPassword) {
+      return 'Kata sandi baru tidak boleh sama dengan yang lama.';
+    }
+
+    final newHash = AuthHashService.instance.hash(newPassword);
+    final ok = await _authRepo.updatePasswordHash(user.id, newHash);
+    if (!ok) return 'Gagal memperbarui kata sandi, coba lagi.';
+
+    _currentUser = user.copyWith(passwordHash: newHash);
+    // Jaga konsistensi cache allAccounts juga, meski nggak berpengaruh ke
+    // guruPembimbingNameFor (yang cuma pakai displayName), biar tidak ada
+    // versi data yang beda-beda dalam satu sesi.
+    _allAccounts = [
+      for (final acc in _allAccounts) if (acc.id == user.id) _currentUser! else acc,
+    ];
+    notifyListeners();
+    return null;
   }
 }
