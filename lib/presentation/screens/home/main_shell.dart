@@ -81,99 +81,113 @@ class _MainShellState extends State<MainShell> {
         systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
-      child: Scaffold(
-        // Body dibungkus Stack + barrier transparan (lewat ListenableBuilder
-        // yang dengerin _fabController): pas SpeedDialFab lagi kebuka, tap
-        // di MANA AJA di body ini langsung nutup dial-nya. FAB sendiri
-        // (tombol "+" & 2 mini action-nya) dirender lewat slot
-        // `floatingActionButton` Scaffold, yang otomatis digambar DI ATAS
-        // body -- jadi barrier ini nggak nutupin/nge-block tap ke FAB atau
-        // mini action-nya sendiri, cuma nangkep tap di area lain.
-        body: ListenableBuilder(
-          listenable: _fabController,
-          builder: (context, child) => Stack(
-            children: [
-              child!,
-              if (_fabController.isOpen)
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _fabController.close,
+      // Fix: MainShell ini root route-nya app (nggak ada Navigator di
+      // atasnya) -- sebelumnya, tap tombol back hardware/gesture pas lagi
+      // di tab Laporan/Statistik/Pengaturan langsung nutup/keluar app,
+      // padahal harusnya balik dulu ke tab Home (baru app ke-close kalau
+      // ditekan sekali lagi dari Home). canPop cuma true kalau udah di
+      // Home (_index == 0); selain itu, "pop" ditangkap di sini dan cuma
+      // dipakai buat pindah tab, nggak ikut di-propagate buat nutup app.
+      child: PopScope(
+        canPop: _index == 0,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          _switchTab(0);
+        },
+        child: Scaffold(
+          // Body dibungkus Stack + barrier transparan (lewat ListenableBuilder
+          // yang dengerin _fabController): pas SpeedDialFab lagi kebuka, tap
+          // di MANA AJA di body ini langsung nutup dial-nya. FAB sendiri
+          // (tombol "+" & 2 mini action-nya) dirender lewat slot
+          // `floatingActionButton` Scaffold, yang otomatis digambar DI ATAS
+          // body -- jadi barrier ini nggak nutupin/nge-block tap ke FAB atau
+          // mini action-nya sendiri, cuma nangkep tap di area lain.
+          body: ListenableBuilder(
+            listenable: _fabController,
+            builder: (context, child) => Stack(
+              children: [
+                child!,
+                if (_fabController.isOpen)
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _fabController.close,
+                    ),
                   ),
+              ],
+            ),
+            child: IndexedStack(
+              index: _index,
+              children: [
+                BerandaTab(onLihatLaporan: _goToLaporan),
+                LaporanTab(
+                  onSelectionModeChanged: (v) {
+                    // Mode pilih-banyak aktif -> FAB-nya ikut disembunyikan
+                    // (lihat floatingActionButton di bawah), jadi dial-nya
+                    // juga harus ketutup, bukan cuma widget FAB-nya hilang.
+                    if (v) _fabController.close();
+                    setState(() => _laporanSelecting = v);
+                  },
+                  onFabVisibilityChanged: _setFabVisible,
                 ),
-            ],
+                const StatistikTab(),
+                const SettingsScreen(),
+              ],
+            ),
           ),
-          child: IndexedStack(
-            index: _index,
-            children: [
-              BerandaTab(onLihatLaporan: _goToLaporan),
-              LaporanTab(
-                onSelectionModeChanged: (v) {
-                  // Mode pilih-banyak aktif -> FAB-nya ikut disembunyikan
-                  // (lihat floatingActionButton di bawah), jadi dial-nya
-                  // juga harus ketutup, bukan cuma widget FAB-nya hilang.
-                  if (v) _fabController.close();
-                  setState(() => _laporanSelecting = v);
-                },
-                onFabVisibilityChanged: _setFabVisible,
-              ),
-              const StatistikTab(),
-              const SettingsScreen(),
-            ],
-          ),
-        ),
-        // Tab Laporan: FAB cuma "+", ditekan nyembul jadi 2 pilihan
-        // (Buat Folder / Buat Laporan). Tab lain: FAB disembunyikan lagi
-        // seperti semula. Pas mode pilih-banyak aktif ATAU snackbar
-        // "dipindahkan/dikeluarkan" lagi tampil, FAB ikut disembunyikan
-        // juga — biar snackbar bisa nempel rapi di atas bottom nav tanpa
-        // numpuk/ngambang di atas ikon FAB.
-        floatingActionButton: _index == 1 && !_laporanSelecting && _snackbarHidingFab == 0
-            ? SpeedDialFab(
-          controller: _fabController,
-          onBuatFolder: () => showFolderFormSheet(context),
-          onBuatLaporan: () => showBuatLaporanSheet(context, onFabVisibilityChanged: _setFabVisible),
-        )
-            : null,
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
-                blurRadius: 24,
-                offset: const Offset(0, -6),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            child: NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: _switchTab,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home_rounded),
-                  label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.calendar_month_outlined),
-                  selectedIcon: Icon(Icons.calendar_month_rounded),
-                  label: 'Laporan',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  selectedIcon: Icon(Icons.bar_chart_rounded),
-                  label: 'Statistik',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings_rounded),
-                  label: 'Pengaturan',
+          // Tab Laporan: FAB cuma "+", ditekan nyembul jadi 2 pilihan
+          // (Buat Folder / Buat Laporan). Tab lain: FAB disembunyikan lagi
+          // seperti semula. Pas mode pilih-banyak aktif ATAU snackbar
+          // "dipindahkan/dikeluarkan" lagi tampil, FAB ikut disembunyikan
+          // juga — biar snackbar bisa nempel rapi di atas bottom nav tanpa
+          // numpuk/ngambang di atas ikon FAB.
+          floatingActionButton: _index == 1 && !_laporanSelecting && _snackbarHidingFab == 0
+              ? SpeedDialFab(
+            controller: _fabController,
+            onBuatFolder: () => showFolderFormSheet(context),
+            onBuatLaporan: () => showBuatLaporanSheet(context, onFabVisibilityChanged: _setFabVisible),
+          )
+              : null,
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
+                  blurRadius: 24,
+                  offset: const Offset(0, -6),
                 ),
               ],
+            ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              child: NavigationBar(
+                selectedIndex: _index,
+                onDestinationSelected: _switchTab,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home_rounded),
+                    label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.calendar_month_outlined),
+                    selectedIcon: Icon(Icons.calendar_month_rounded),
+                    label: 'Laporan',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.bar_chart_outlined),
+                    selectedIcon: Icon(Icons.bar_chart_rounded),
+                    label: 'Statistik',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(Icons.settings_rounded),
+                    label: 'Pengaturan',
+                  ),
+                ],
+              ),
             ),
           ),
         ),

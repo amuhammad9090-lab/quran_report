@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/enums.dart';
 import '../../../data/models/santri_record.dart';
+import '../../../data/services/download_notification_service.dart';
 import '../../../data/services/export_service.dart';
 import '../../../providers/records_provider.dart';
 import '../../../core/theme/app_colors.dart';
@@ -70,6 +71,26 @@ class _ExportSheetState extends State<ExportSheet> {
   bool _loading = false;
   ExportFormat? _loadingFormat;
 
+  // Fix snackbar "membelakangi": sheet ini dibuka lewat
+  // showModalBottomSheet(useRootNavigator: true), jadi dia dirender di atas
+  // SEMUA konten halaman -- termasuk di atas Overlay tempat ScaffoldMessenger
+  // punya halaman di baliknya nampilin SnackBar. Sebelumnya kode ini manggil
+  // ScaffoldMessenger.of(context) pakai context sheet, yang nemu
+  // ScaffoldMessenger milik Scaffold HALAMAN DI BALIK sheet (karena sheet ini
+  // sendiri nggak punya Scaffold/ScaffoldMessenger) -- akibatnya SnackBar-nya
+  // kegambar di belakang/ketutup sheet, bukan di atasnya.
+  // Fix-nya: bikin ScaffoldMessenger lokal punya sheet ini sendiri (lihat
+  // build() di bawah), dan selalu tampilkan SnackBar lewat key ini -- supaya
+  // overlay SnackBar-nya jadi bagian dari subtree sheet, digambar DI ATAS
+  // konten sheet, bukan di halaman di baliknya.
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+
+  void _showSnack(String message) {
+    _messengerKey.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   // Diisi begitu ekspor sukses — sheet pindah ke tampilan "selesai" dengan
   // tombol Bagikan & Simpan ke Perangkat.
   File? _exportedFile;
@@ -90,9 +111,7 @@ class _ExportSheetState extends State<ExportSheet> {
         widget.fixedRecords ?? (_useFilteredOnly ? provider.filtered : provider.all);
 
     if (records.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak ada data untuk diekspor.')),
-      );
+      _showSnack('Tidak ada data untuk diekspor.');
       return;
     }
 
@@ -158,9 +177,7 @@ class _ExportSheetState extends State<ExportSheet> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal ekspor: $e')),
-        );
+        _showSnack('Gagal ekspor: $e');
       }
     } finally {
       if (mounted) {
@@ -180,21 +197,27 @@ class _ExportSheetState extends State<ExportSheet> {
   Future<void> _saveToDevice() async {
     if (_exportedFile == null || _exportedFormat == null) return;
     try {
+      final ext = _extFor(_exportedFormat!);
+      final fileName = '${_exportedJudul ?? 'laporan'}.$ext';
       await ExportService.instance.saveToDevice(
         _exportedFile!,
         filename: _exportedJudul ?? 'laporan',
-        ext: _extFor(_exportedFormat!),
+        ext: ext,
+      );
+      // Bug fix #1: sebelumnya cuma SnackBar di dalam app -- sekarang juga
+      // munculin notifikasi sistem "Unduhan selesai" (lihat
+      // DownloadNotificationService), sama kayak pola download di app lain
+      // pada umumnya, dan bisa diketuk buat langsung buka filenya lagi.
+      await DownloadNotificationService.instance.notifySaved(
+        fileName: fileName,
+        file: _exportedFile!,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tersimpan ke perangkat.')),
-        );
+        _showSnack('Tersimpan ke Download.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan: $e')),
-        );
+        _showSnack('Gagal menyimpan: $e');
       }
     }
   }
@@ -206,158 +229,170 @@ class _ExportSheetState extends State<ExportSheet> {
     final count = widget.fixedRecords?.length ??
         (_useFilteredOnly ? provider.filtered.length : provider.all.length);
 
-    return SafeArea(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).bottomSheetTheme.backgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-            if (_exportedFile == null) ...[
-              Text('Ekspor Laporan',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text(
-                '$count data akan diekspor',
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-              ),
-              const SizedBox(height: 16),
-              if (!_isFixed)
-                Material(
-                  // Sebelumnya Container(decoration: BoxDecoration(color,
-                  // borderRadius)) — diganti Material supaya RadioListTile
-                  // di dalamnya (2 baris di bawah) punya Material terdekat
-                  // yang benar, nggak ketutup DecoratedBox lagi.
-                  color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(14),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Column(
-                      children: [
-                        RadioListTile<bool>(
-                          value: true,
-                          // ignore: deprecated_member_use
-                          groupValue: _useFilteredOnly,
-                          // ignore: deprecated_member_use
-                          onChanged: (v) => setState(() => _useFilteredOnly = v ?? true),
-                          title: const Text('Sesuai filter/pencarian aktif',
-                              style: TextStyle(fontSize: 13.5)),
-                          dense: true,
-                        ),
-                        RadioListTile<bool>(
-                          value: false,
-                          // ignore: deprecated_member_use
-                          groupValue: _useFilteredOnly,
-                          // ignore: deprecated_member_use
-                          onChanged: (v) => setState(() => _useFilteredOnly = v ?? false),
-                          title: const Text('Semua data', style: TextStyle(fontSize: 13.5)),
-                          dense: true,
-                        ),
-                      ],
-                    ),
+    return ScaffoldMessenger(
+      key: _messengerKey,
+      child: Builder(
+        builder: (context) => Scaffold(
+          // Transparan & tanpa resizeToAvoidBottomInset khusus -- Scaffold
+          // ini cuma "host" lokal buat ScaffoldMessenger di atas, bukan
+          // scaffold halaman. Tampilan sheet-nya sendiri full custom lewat
+          // Container di bawah, sama seperti sebelumnya.
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).bottomSheetTheme.backgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-              SizedBox(height: _isFixed ? 4 : 20),
-              ExportOptionTile(
-                icon: Icons.picture_as_pdf_rounded,
-                color: AppColors.redOn(context),
-                title: 'PDF',
-                subtitle: 'Untuk cetak & bagikan cepat',
-                loading: _loading && _loadingFormat == ExportFormat.pdf,
-                onTap: _loading ? null : () => _doExport(ExportFormat.pdf),
               ),
-              const SizedBox(height: 10),
-              ExportOptionTile(
-                icon: Icons.description_rounded,
-                color: AppColors.blueOn(context),
-                title: 'Word (.docx)',
-                subtitle: 'Bisa diedit lebih lanjut',
-                loading: _loading && _loadingFormat == ExportFormat.word,
-                onTap: _loading ? null : () => _doExport(ExportFormat.word),
-              ),
-              const SizedBox(height: 10),
-              ExportOptionTile(
-                icon: Icons.grid_on_rounded,
-                color: AppColors.greenOn(context),
-                title: 'Excel (.xlsx)',
-                subtitle: 'Untuk rekap & olah data lanjutan',
-                loading: _loading && _loadingFormat == ExportFormat.excel,
-                onTap: _loading ? null : () => _doExport(ExportFormat.excel),
-              ),
-            ] else ...[
-              // --- Selesai: file sudah dibuat & otomatis kebuka ---
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: cs.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.check_rounded, color: cs.primary),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Berhasil diekspor',
-                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                        Text('File sudah dibuka otomatis.',
-                            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _share,
-                      icon: const Icon(Icons.ios_share_rounded, size: 18),
-                      label: const Text('Bagikan'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _saveToDevice,
-                      icon: const Icon(Icons.download_rounded, size: 18),
-                      label: const Text('Simpan'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Tutup'),
+              if (_exportedFile == null) ...[
+                Text('Ekspor Laporan',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(
+                  '$count data akan diekspor',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                 ),
-              ),
+                const SizedBox(height: 16),
+                if (!_isFixed)
+                  Material(
+                    // Sebelumnya Container(decoration: BoxDecoration(color,
+                    // borderRadius)) — diganti Material supaya RadioListTile
+                    // di dalamnya (2 baris di bawah) punya Material terdekat
+                    // yang benar, nggak ketutup DecoratedBox lagi.
+                    color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Column(
+                        children: [
+                          RadioListTile<bool>(
+                            value: true,
+                            // ignore: deprecated_member_use
+                            groupValue: _useFilteredOnly,
+                            // ignore: deprecated_member_use
+                            onChanged: (v) => setState(() => _useFilteredOnly = v ?? true),
+                            title: const Text('Sesuai filter/pencarian aktif',
+                                style: TextStyle(fontSize: 13.5)),
+                            dense: true,
+                          ),
+                          RadioListTile<bool>(
+                            value: false,
+                            // ignore: deprecated_member_use
+                            groupValue: _useFilteredOnly,
+                            // ignore: deprecated_member_use
+                            onChanged: (v) => setState(() => _useFilteredOnly = v ?? false),
+                            title: const Text('Semua data', style: TextStyle(fontSize: 13.5)),
+                            dense: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                SizedBox(height: _isFixed ? 4 : 20),
+                ExportOptionTile(
+                  icon: Icons.picture_as_pdf_rounded,
+                  color: AppColors.redOn(context),
+                  title: 'PDF',
+                  subtitle: 'Untuk cetak & bagikan cepat',
+                  loading: _loading && _loadingFormat == ExportFormat.pdf,
+                  onTap: _loading ? null : () => _doExport(ExportFormat.pdf),
+                ),
+                const SizedBox(height: 10),
+                ExportOptionTile(
+                  icon: Icons.description_rounded,
+                  color: AppColors.blueOn(context),
+                  title: 'Word (.docx)',
+                  subtitle: 'Bisa diedit lebih lanjut',
+                  loading: _loading && _loadingFormat == ExportFormat.word,
+                  onTap: _loading ? null : () => _doExport(ExportFormat.word),
+                ),
+                const SizedBox(height: 10),
+                ExportOptionTile(
+                  icon: Icons.grid_on_rounded,
+                  color: AppColors.greenOn(context),
+                  title: 'Excel (.xlsx)',
+                  subtitle: 'Untuk rekap & olah data lanjutan',
+                  loading: _loading && _loadingFormat == ExportFormat.excel,
+                  onTap: _loading ? null : () => _doExport(ExportFormat.excel),
+                ),
+              ] else ...[
+                // --- Selesai: file sudah dibuat & otomatis kebuka ---
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.check_rounded, color: cs.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Berhasil diekspor',
+                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                          Text('File sudah dibuka otomatis.',
+                              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _share,
+                        icon: const Icon(Icons.ios_share_rounded, size: 18),
+                        label: const Text('Bagikan'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _saveToDevice,
+                        icon: const Icon(Icons.download_rounded, size: 18),
+                        label: const Text('Simpan'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Tutup'),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
+      ),
+          ),
         ),
       ),
     );

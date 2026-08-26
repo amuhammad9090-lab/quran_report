@@ -13,6 +13,7 @@ import '../record_form/record_form_sheet.dart';
 import '../folder/folder_detail_screen.dart';
 import '../folder/folder_form_sheet.dart';
 import '../folder/move_to_folder_sheet.dart';
+import 'search_results_screen.dart';
 
 /// Tab "Laporan" — pencarian, filter, section Folder, dan daftar kartu
 /// santri
@@ -385,7 +386,12 @@ class _LaporanTabState extends State<LaporanTab> {
                   ),
                   SelectionAction(
                     icon: Icons.drive_file_move_outline,
-                    label: 'Pindahkan ke Folder',
+                    // Sebelumnya 'Pindahkan ke Folder' -> kepanjangan buat
+                    // Expanded selebar setengah bar di layar HP (apalagi
+                    // berdampingan sama tombol "Hapus"), jadinya numpuk 2
+                    // baris / kepotong nggak rapi. Dipendekin, konsisten
+                    // sama gaya label singkat tombol "Hapus" di sebelahnya.
+                    label: 'Pindahkan',
                     onTap: _selected.isEmpty ? null : _pindahkanSelected,
                     filled: true,
                   ),
@@ -492,6 +498,18 @@ class _LaporanTabState extends State<LaporanTab> {
     );
   }
 
+  /// Bug fix: dulu ada halaman "Hasil Pencarian" ([SearchResultsScreen])
+  /// yang nyari ke SEMUA kartu santri termasuk yang sudah masuk folder
+  /// (bukan cuma yang tanpa folder kayak list di tab ini) -- tapi nggak ada
+  /// satupun tempat yang manggil halaman itu lagi, jadi fiturnya
+  /// "hilang" dari user meskipun kodenya masih ada. Sekalian ngebenerin
+  /// itu: field pencarian di tab ini sekarang jadi pintu masuk ke sana.
+  void _openSearchResults(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SearchResultsScreen()),
+    );
+  }
+
   Widget _buildSearchAndFilter(BuildContext context, RecordsProvider provider) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
@@ -499,21 +517,29 @@ class _LaporanTabState extends State<LaporanTab> {
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: provider.setSearch,
-              decoration: InputDecoration(
-                hintText: 'Cari nama santri...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _searchCtrl.text.isNotEmpty
-                    ? IconButton(
-                  icon: const Icon(Icons.clear_rounded, size: 18),
-                  onPressed: () {
-                    _searchCtrl.clear();
-                    provider.setSearch('');
-                  },
-                )
-                    : null,
+            // Bug fix: field ini sebelumnya TextField biasa yang langsung
+            // bisa diketik di tempat -- pas di-tap, dia dapet fokus &
+            // nampilin kursor, tapi ketikannya cuma nyaring kartu yang
+            // TANPA folder (lihat _filteredCards di atas), jadi hasil
+            // pencarian yang ada di dalam folder nggak pernah kelihatan
+            // dari sini, dan kursornya nggak pernah "ilang" karena field-nya
+            // emang tetap fokus/aktif nungguin ketikan lanjutan.
+            // Sekarang field ini cuma TAMPILAN (AbsorbPointer -- nggak bisa
+            // difokus/diketik, jadi nggak akan pernah nampilin kursor sama
+            // sekali), tap di mana aja langsung buka SearchResultsScreen,
+            // yang punya field pencarian sungguhan (bisa diketik & ada
+            // kursor di sana) DAN nyari sampai ke dalam folder.
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _openSearchResults(context),
+              child: AbsorbPointer(
+                child: TextField(
+                  controller: _searchCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Cari nama santri...',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+                ),
               ),
             ),
           ),
