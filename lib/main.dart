@@ -17,6 +17,7 @@ import 'providers/theme_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await MediaStore.ensureInitialized();
   MediaStore.appFolder = 'Quran Report';
 
   await initializeDateFormatting('id_ID', null);
