@@ -8,8 +8,12 @@ import 'export_service.dart';
 /// notification tray HP tiap kali user simpan file ekspor ke penyimpanan
 /// perangkat lewat [ExportService.saveToDevice] -- Bug #1 di laporan bug:
 /// sebelumnya proses simpan cuma nampilin SnackBar sesaat di dalam app,
-/// nggak ada jejak apapun di notifikasi sistem, padahal file yang sama
-/// (lewat FileSaver) sebenarnya SUDAH ditulis ke folder Download publik.
+/// nggak ada jejak apapun di notifikasi sistem. (Sempat ada bug lain yang
+/// nyusul: `saveToDevice` ternyata nggak beneran nulis ke folder Download
+/// PUBLIK di Android -- lihat catatan panjang di
+/// [ExportService.saveToDevice] -- sudah dibenerin lewat penggantian
+/// package, jadi sekarang notifikasi ini valid: filenya emang beneran ada
+/// di Download publik pas notifikasi ini muncul.)
 ///
 /// CATATAN SETUP (belum otomatis lewat kode ini saja, karena repo yang
 /// dianalisis cuma folder lib/ -- pubspec.yaml & folder android/ tidak ada

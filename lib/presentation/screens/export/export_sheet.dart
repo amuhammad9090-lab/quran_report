@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -71,24 +72,41 @@ class _ExportSheetState extends State<ExportSheet> {
   bool _loading = false;
   ExportFormat? _loadingFormat;
 
-  // Fix snackbar "membelakangi": sheet ini dibuka lewat
-  // showModalBottomSheet(useRootNavigator: true), jadi dia dirender di atas
-  // SEMUA konten halaman -- termasuk di atas Overlay tempat ScaffoldMessenger
-  // punya halaman di baliknya nampilin SnackBar. Sebelumnya kode ini manggil
-  // ScaffoldMessenger.of(context) pakai context sheet, yang nemu
-  // ScaffoldMessenger milik Scaffold HALAMAN DI BALIK sheet (karena sheet ini
-  // sendiri nggak punya Scaffold/ScaffoldMessenger) -- akibatnya SnackBar-nya
-  // kegambar di belakang/ketutup sheet, bukan di atasnya.
-  // Fix-nya: bikin ScaffoldMessenger lokal punya sheet ini sendiri (lihat
-  // build() di bawah), dan selalu tampilkan SnackBar lewat key ini -- supaya
-  // overlay SnackBar-nya jadi bagian dari subtree sheet, digambar DI ATAS
-  // konten sheet, bukan di halaman di baliknya.
-  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+  // Fix snackbar "membelakangi" (v1) -> "nyisain space kosong" (v2):
+  // - v1 (lama banget): pakai ScaffoldMessenger.of(context) punya HALAMAN
+  //   DI BALIK sheet (karena sheet ini sendiri gak punya Scaffold) ->
+  //   SnackBar kegambar di belakang sheet.
+  // - v2 (percobaan sebelumnya): dibungkus Scaffold lokal biar punya
+  //   ScaffoldMessenger sendiri -> SnackBar-nya emang jadi kegambar di
+  //   depan, TAPI widget Scaffold SELALU melebar mengisi constraints
+  //   penuh yang dikasih parent-nya (constraints.biggest), TERLEPAS dari
+  //   seberapa tinggi body-nya sendiri. Karena sheet ini dibuka dengan
+  //   isScrollControlled: true (constraints tinggi maksimalnya = hampir
+  //   1 layar penuh), Scaffold jadi ikut setinggi itu juga, padahal
+  //   konten aslinya (Container di bawah) cuma butuh tinggi secukupnya
+  //   -> nyisa ruang kosong transparan di bawah kartu putihnya.
+  // Fix final: JANGAN pakai Scaffold/ScaffoldMessenger sama sekali di
+  // sini. Pesannya ditampilkan sebagai banner kecil biasa, jadi BAGIAN
+  // dari Column konten sheet ini sendiri (lihat build() -> _InlineBanner)
+  // -- otomatis selalu di depan (karena memang bagian dari layout sheet,
+  // bukan overlay terpisah) dan otomatis nggak nambah tinggi kosong
+  // (karena ukurannya ngikutin isi teksnya doang, sama seperti
+  // widget-widget lain di Column ini).
+  String? _inlineMessage;
+  Timer? _inlineMessageTimer;
 
   void _showSnack(String message) {
-    _messengerKey.currentState
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    _inlineMessageTimer?.cancel();
+    setState(() => _inlineMessage = message);
+    _inlineMessageTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _inlineMessage = null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _inlineMessageTimer?.cancel();
+    super.dispose();
   }
 
   // Diisi begitu ekspor sukses — sheet pindah ke tampilan "selesai" dengan
@@ -229,37 +247,32 @@ class _ExportSheetState extends State<ExportSheet> {
     final count = widget.fixedRecords?.length ??
         (_useFilteredOnly ? provider.filtered.length : provider.all.length);
 
-    return ScaffoldMessenger(
-      key: _messengerKey,
-      child: Builder(
-        builder: (context) => Scaffold(
-          // Transparan & tanpa resizeToAvoidBottomInset khusus -- Scaffold
-          // ini cuma "host" lokal buat ScaffoldMessenger di atas, bukan
-          // scaffold halaman. Tampilan sheet-nya sendiri full custom lewat
-          // Container di bawah, sama seperti sebelumnya.
-          backgroundColor: Colors.transparent,
-          body: SafeArea(
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).bottomSheetTheme.backgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+    return SafeArea(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).bottomSheetTheme.backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
+            ),
+            if (_inlineMessage != null) ...[
+              _InlineMessageBanner(message: _inlineMessage!),
+              const SizedBox(height: 12),
+            ],
               if (_exportedFile == null) ...[
                 Text('Ekspor Laporan',
                     style: Theme.of(context)
@@ -391,9 +404,37 @@ class _ExportSheetState extends State<ExportSheet> {
               ],
             ],
           ),
-      ),
-          ),
         ),
+      );
+  }
+}
+
+/// Banner pesan singkat (pengganti SnackBar) yang jadi BAGIAN dari layout
+/// [ExportSheet] sendiri -- lihat catatan di [_ExportSheetState._showSnack]
+/// kenapa SnackBar/ScaffoldMessenger dihindari di sheet ini.
+class _InlineMessageBanner extends StatelessWidget {
+  final String message;
+  const _InlineMessageBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 17, color: cs.primary),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(message, style: const TextStyle(fontSize: 12.5)),
+          ),
+        ],
       ),
     );
   }

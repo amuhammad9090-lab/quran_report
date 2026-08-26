@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:media_store_plus/media_store_plus.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
@@ -15,6 +16,8 @@ import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  MediaStore.appFolder = 'Quran Report';
 
   await initializeDateFormatting('id_ID', null);
   await StorageService.instance.init();

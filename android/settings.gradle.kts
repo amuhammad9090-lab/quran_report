@@ -27,4 +27,4 @@ plugins {
 include(":app")
 
 // 📛 Nama root project
-rootProject.name = "laporan_hafalan"
+rootProject.name = "quran_report"

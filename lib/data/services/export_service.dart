@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xls;
-import 'package:file_saver/file_saver.dart';
+import 'package:media_store_plus/media_store_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -47,12 +47,7 @@ class ExportService {
     'Keterangan',
   ];
 
-  /// Teks ringkas bagian Tahsin saja (WAFA atau Tilawah) — dipakai untuk
-  /// kolom "Capaian" (nama surah/jenjang) & "Ayat/Hal" (rentang angka),
-  /// masing-masing lewat method terpisah di bawah supaya kolomnya tetap
-  /// konsisten dengan versi sebelum ada status Tahsin+Tahfizh/Muroja'ah.
-  // Nama-nama surah Tahfizh laporan ini digabung ", " — bisa lebih dari 1
-  // kalau setoran nyambung lintas surah (lihat SantriRecord.tahfizhSegments).
+  /// Teks ringkas bagian Tahsin saja (WAFA atau Tilawah)
   String _tahfizhSurahNames(SantriRecord r) {
     final segs = r.tahfizhSegmentsEffective;
     return segs.isEmpty ? '-' : segs.map((s) => s.surahName).join(', ');
@@ -122,8 +117,6 @@ class ExportService {
 
   // Baris cuma dihitung buat status yang punya bagian hafalan baru
   // (Tahfizh, atau bagian Tahfizh di Tahsin+Tahfizh) — hasil generate.
-  // Tilawah/Muroja'ah/Tasmi' tidak melalui proses hitung baris sama
-  // sekali, jadi selalu '-'.
   String _barisText(SantriRecord r) =>
       (r.status == HafalanStatus.tahfizh || r.status == HafalanStatus.tahsinTahfizh)
           ? '${r.totalBaris ?? 0}'
@@ -150,9 +143,7 @@ class ExportService {
     return rows;
   }
 
-  /// Versi [_rows] dengan kolom Hari & Tanggal — dipakai saat
-  /// [includeTanggal] true (rekap yang mencakup >1 hari, mis. export per
-  /// Kelas+Halaqoh pekanan/bulanan).
+  /// Versi [_rows] dengan kolom Hari & Tanggal
   List<List<String>> _rowsWithTanggal(List<SantriRecord> records) {
     final rows = <List<String>>[];
     for (var i = 0; i < records.length; i++) {
@@ -172,11 +163,7 @@ class ExportService {
   }
 
   /// Ringkasan "Nx <jenis>" per santri untuk semua Keterangan SELAIN Hadir
-  /// (Izin Sakit, Izin Lomba, Izin Pelatihan, Alpa), dihitung dari
-  /// [records] yang lagi diekspor — otomatis ikut periode data itu
-  /// (pekanan, per Kelas+Halaqoh, bulanan, dll — apapun yang dikirim ke
-  /// exportPdf/exportExcel/exportWord). Cuma santri yang punya minimal 1
-  /// keterangan non-Hadir yang muncul. Terurut nama (case-insensitive).
+  /// (Izin Sakit, Izin Lomba, Izin Pelatihan, Alpa)
   List<MapEntry<String, String>> _keteranganSummaryPerSantri(List<SantriRecord> records) {
     final byName = <String, Map<Keterangan, int>>{};
     for (final r in records) {
@@ -208,14 +195,14 @@ class ExportService {
 
   // -------------------- PDF (A4 potrait) --------------------
   Future<File> exportPdf(
-    List<SantriRecord> records, {
-    required String judul,
-    String? kelas,
-    String? halaqoh,
-    String? periode,
-    String? guruPembimbing,
-    bool includeTanggal = false,
-  }) async {
+      List<SantriRecord> records, {
+        required String judul,
+        String? kelas,
+        String? halaqoh,
+        String? periode,
+        String? guruPembimbing,
+        bool includeTanggal = false,
+      }) async {
     final doc = pw.Document();
     final headers = includeTanggal ? _headersWithTanggal : _headers;
     final rows = includeTanggal ? _rowsWithTanggal(records) : _rows(records);
@@ -223,23 +210,23 @@ class ExportService {
     final halaqohValue = halaqoh ?? _uniqueJoin(records.map((r) => r.halaqoh));
     final columnWidths = includeTanggal
         ? const {
-            0: pw.FixedColumnWidth(20),
-            1: pw.FlexColumnWidth(1.3),
-            2: pw.FlexColumnWidth(1.3),
-            3: pw.FlexColumnWidth(1.9),
-            4: pw.FlexColumnWidth(2.3),
-            5: pw.FlexColumnWidth(1.3),
-            6: pw.FlexColumnWidth(0.8),
-            7: pw.FlexColumnWidth(1.4),
-          }
+      0: pw.FixedColumnWidth(20),
+      1: pw.FlexColumnWidth(1.3),
+      2: pw.FlexColumnWidth(1.3),
+      3: pw.FlexColumnWidth(1.9),
+      4: pw.FlexColumnWidth(2.3),
+      5: pw.FlexColumnWidth(1.3),
+      6: pw.FlexColumnWidth(0.8),
+      7: pw.FlexColumnWidth(1.4),
+    }
         : const {
-            0: pw.FixedColumnWidth(26),
-            1: pw.FlexColumnWidth(2.3),
-            2: pw.FlexColumnWidth(2.3),
-            3: pw.FlexColumnWidth(1.3),
-            4: pw.FlexColumnWidth(0.9),
-            5: pw.FlexColumnWidth(1.7),
-          };
+      0: pw.FixedColumnWidth(26),
+      1: pw.FlexColumnWidth(2.3),
+      2: pw.FlexColumnWidth(2.3),
+      3: pw.FlexColumnWidth(1.3),
+      4: pw.FlexColumnWidth(0.9),
+      5: pw.FlexColumnWidth(1.7),
+    };
     final cellAlignments = includeTanggal
         ? const {0: pw.Alignment.center, 6: pw.Alignment.center}
         : const {0: pw.Alignment.center, 4: pw.Alignment.center};
@@ -339,14 +326,14 @@ class ExportService {
 
   // -------------------- EXCEL --------------------
   Future<File> exportExcel(
-    List<SantriRecord> records, {
-    required String judul,
-    String? kelas,
-    String? halaqoh,
-    String? periode,
-    String? guruPembimbing,
-    bool includeTanggal = false,
-  }) async {
+      List<SantriRecord> records, {
+        required String judul,
+        String? kelas,
+        String? halaqoh,
+        String? periode,
+        String? guruPembimbing,
+        bool includeTanggal = false,
+      }) async {
     final book = xls.Excel.createExcel();
     const sheetName = 'Laporan';
     book.rename('Sheet1', sheetName);
@@ -437,14 +424,14 @@ class ExportService {
 
   // -------------------- WORD (.docx, A4 potrait — bawaan builder) --------------------
   Future<File> exportWord(
-    List<SantriRecord> records, {
-    required String judul,
-    String? kelas,
-    String? halaqoh,
-    String? periode,
-    String? guruPembimbing,
-    bool includeTanggal = false,
-  }) async {
+      List<SantriRecord> records, {
+        required String judul,
+        String? kelas,
+        String? halaqoh,
+        String? periode,
+        String? guruPembimbing,
+        bool includeTanggal = false,
+      }) async {
     final builder = DocxBuilder();
     final headers = includeTanggal ? _headersWithTanggal : _headers;
     final kelasValue = kelas ?? _uniqueJoin(records.map((r) => r.kelas));
@@ -483,15 +470,14 @@ class ExportService {
   // menampilkan ringkasan capaiannya tiap pekan (lihat
   // SantriMonthlyRecap.capaianForWeek). Dipakai tombol Generate + tombol
   // export pojok kanan atas di layar Rekap Bulanan.
-
   List<String> _monthlyHeaders(int totalWeeks) => [
-        'No',
-        'Nama Murid',
-        'Kelas/Halaqoh',
-        for (var w = 1; w <= totalWeeks; w++) 'Pekan $w',
-        'Total Baris',
-        'Keterangan',
-      ];
+    'No',
+    'Nama Murid',
+    'Kelas/Halaqoh',
+    for (var w = 1; w <= totalWeeks; w++) 'Pekan $w',
+    'Total Baris',
+    'Keterangan',
+  ];
 
   List<List<String>> _monthlyRows(List<SantriMonthlyRecap> recaps, int totalWeeks) {
     final rows = <List<String>>[];
@@ -510,11 +496,11 @@ class ExportService {
   }
 
   Future<File> exportMonthlyRecapPdf(
-    List<SantriMonthlyRecap> recaps, {
-    required String judul,
-    required int totalWeeks,
-    String? periode,
-  }) async {
+      List<SantriMonthlyRecap> recaps, {
+        required String judul,
+        required int totalWeeks,
+        String? periode,
+      }) async {
     final doc = pw.Document();
     final headers = _monthlyHeaders(totalWeeks);
     final rows = _monthlyRows(recaps, totalWeeks);
@@ -568,11 +554,11 @@ class ExportService {
   }
 
   Future<File> exportMonthlyRecapExcel(
-    List<SantriMonthlyRecap> recaps, {
-    required String judul,
-    required int totalWeeks,
-    String? periode,
-  }) async {
+      List<SantriMonthlyRecap> recaps, {
+        required String judul,
+        required int totalWeeks,
+        String? periode,
+      }) async {
     final book = xls.Excel.createExcel();
     const sheetName = 'Rekap Bulanan';
     book.rename('Sheet1', sheetName);
@@ -632,11 +618,11 @@ class ExportService {
   }
 
   Future<File> exportMonthlyRecapWord(
-    List<SantriMonthlyRecap> recaps, {
-    required String judul,
-    required int totalWeeks,
-    String? periode,
-  }) async {
+      List<SantriMonthlyRecap> recaps, {
+        required String judul,
+        required int totalWeeks,
+        String? periode,
+      }) async {
     final builder = DocxBuilder();
     builder.addTitle(_judulLaporan);
     builder.addSubtitle(_namaSekolah);
@@ -667,24 +653,15 @@ class ExportService {
     );
   }
 
-  /// Simpan salinan file ke penyimpanan perangkat (folder Download / lokasi
-  /// yang dipilih user), terpisah dari copy internal aplikasi.
+  /// Simpan salinan file ke penyimpanan perangkat (folder Download publik
+  /// di Android / lokasi yang dipilih user di iOS)
   Future<void> saveToDevice(File file, {required String filename, required String ext}) async {
-    final bytes = await file.readAsBytes();
-    await FileSaver.instance.saveFile(
-      name: filename,
-      bytes: bytes,
-      ext: ext,
-      mimeType: _mimeFor(ext),
+    await MediaStore().saveFile(
+      tempFilePath: file.path,
+      dirType: DirType.download,
+      dirName: DirName.download,
     );
   }
-
-  MimeType _mimeFor(String ext) => switch (ext) {
-        'pdf' => MimeType.pdf,
-        'docx' => MimeType.microsoftWord,
-        'xlsx' => MimeType.microsoftExcel,
-        _ => MimeType.other,
-      };
 
   Future<void> printPdfDirectly(List<SantriRecord> records, {required String judul}) async {
     final file = await exportPdf(records, judul: judul);

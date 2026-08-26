@@ -9,7 +9,6 @@ plugins {
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
-
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
@@ -45,8 +44,6 @@ android {
         }
 
         getByName("release") {
-            // Fallback ke signing debug kalau key.properties belum ada,
-            // biar `flutter build apk` tetap jalan sebelum keystore diisi.
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
