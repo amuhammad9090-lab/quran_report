@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xls;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:media_store_plus/media_store_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
@@ -46,6 +47,113 @@ class ExportService {
     'Baris',
     'Keterangan',
   ];
+
+  // -------------------- Font PDF (Unicode-safe) --------------------
+  // Font base14 (Helvetica) bawaan package `pdf` nggak punya glyph buat
+  // en dash (–) & karakter non-ASCII lain yang dipakai di teks macam
+  // "Ayat 21–25" — hasilnya keluar kotak hitam (tofu) di PDF.
+  // Solusinya: embed font Unicode (Noto Sans) ke tiap pw.Document.
+  pw.ThemeData? _cachedPdfTheme;
+
+  Future<pw.ThemeData> _pdfTheme() async {
+    if (_cachedPdfTheme != null) return _cachedPdfTheme!;
+    final theme = await _buildPdfTheme();
+    _cachedPdfTheme = theme;
+    return theme;
+  }
+
+  Future<pw.ThemeData> _buildPdfTheme() async {
+    // Coba pakai font yang di-bundle di assets dulu (tidak butuh koneksi
+    // internet). Kalau belum ditambahkan ke pubspec.yaml, fallback ke
+    // PdfGoogleFonts (download + cache otomatis oleh package `printing`).
+    try {
+      final regularData = await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
+      final boldData = await rootBundle.load('assets/fonts/NotoSans-Bold.ttf');
+      return pw.ThemeData.withFont(
+        base: pw.Font.ttf(regularData),
+        bold: pw.Font.ttf(boldData),
+      );
+    } catch (_) {
+      final regular = await PdfGoogleFonts.notoSansRegular();
+      final bold = await PdfGoogleFonts.notoSansBold();
+      return pw.ThemeData.withFont(base: regular, bold: bold);
+    }
+  }
+
+  // -------------------- Teks ASCII-safe khusus PDF Rekap Bulanan --------------------
+  // `r.capaianText` (getter di SantriRecord, dipakai luas di UI kartu-kartu)
+  // pakai karakter "•" dan "–" — aman di layar (font sistem Flutter
+  // lengkap glyph-nya), tapi bikin kotak hitam/tofu kalau dirender ke
+  // PDF. Laporan Pekanan biasa (exportPdf) sudah aman dari awal karena
+  // _capaianLabel/_ayatHalRange di atas emang murni ASCII (pakai "-").
+  // Method2 di bawah ini niru persis logic capaianText/partText tapi
+  // full ASCII, KHUSUS dipakai exportMonthlyRecapPdf — capaianText di
+  // model sendiri sengaja tidak diubah supaya tampilan UI tetap sama.
+  String _plainPartText(String surahName, int ayatMulai, int ayatSelesai) =>
+      '$surahName - Ayat $ayatMulai-$ayatSelesai';
+
+  String _plainTahsinPartText(SantriRecord r) {
+    final mode = r.tahsinMode ?? TahsinMode.wafa;
+    if (mode == TahsinMode.tilawah) {
+      final segs = r.tilawahSegmentsEffective;
+      if (segs.isEmpty) return 'Tilawah - -';
+      return 'Tilawah - ${segs.map((s) => _plainPartText(s.surahName, s.ayatMulai, s.ayatSelesai)).join(' + ')}';
+    }
+    final level = r.wafaLevel?.label ?? '-';
+    final hal = r.halamanWafa ?? '-';
+    return '$level - Hal. $hal';
+  }
+
+  String _plainTahfizhPartText(SantriRecord r) {
+    final segs = r.tahfizhSegmentsEffective;
+    if (segs.isEmpty) return '-';
+    return segs.map((s) => _plainPartText(s.surahName, s.ayatMulai, s.ayatSelesai)).join(' + ');
+  }
+
+  String _plainMurojaahPartText(SantriRecord r) {
+    final segs = r.tilawahSegmentsEffective;
+    if (segs.isEmpty) return '-';
+    return segs.map((s) => _plainPartText(s.surahName, s.ayatMulai, s.ayatSelesai)).join(' + ');
+  }
+
+  String _plainCapaianText(SantriRecord r) {
+    switch (r.status) {
+      case HafalanStatus.tahfizh:
+        return _plainTahfizhPartText(r);
+      case HafalanStatus.tahsin:
+        return _plainTahsinPartText(r);
+      case HafalanStatus.tahsinTahfizh:
+        return '${_plainTahsinPartText(r)} + ${_plainTahfizhPartText(r)}';
+      case HafalanStatus.murojaahTasmi:
+        return _plainMurojaahPartText(r);
+    }
+  }
+
+  /// Versi ASCII-safe dari [SantriMonthlyRecap.capaianForWeek] — dipakai
+  /// hanya untuk tabel PDF rekap bulanan.
+  String _plainCapaianForWeek(SantriMonthlyRecap recap, int weekIndex) {
+    final recs = recap.recordsByWeek[weekIndex];
+    if (recs == null || recs.isEmpty) return '-';
+    return recs.map(_plainCapaianText).join('; ');
+  }
+
+  /// Versi ASCII-safe dari [_monthlyRows] — dipakai khusus untuk PDF
+  /// (Excel & Word tetap pakai capaianText asli karena bebas masalah font).
+  List<List<String>> _monthlyRowsPlain(List<SantriMonthlyRecap> recaps, int totalWeeks) {
+    final rows = <List<String>>[];
+    for (var i = 0; i < recaps.length; i++) {
+      final r = recaps[i];
+      rows.add([
+        '${i + 1}',
+        r.nama,
+        '${r.kelas}/${r.halaqoh}',
+        for (var w = 1; w <= totalWeeks; w++) _plainCapaianForWeek(r, w),
+        '${r.totalBaris}',
+        r.keteranganSummaryText,
+      ]);
+    }
+    return rows;
+  }
 
   /// Teks ringkas bagian Tahsin saja (WAFA atau Tilawah)
   String _tahfizhSurahNames(SantriRecord r) {
@@ -203,7 +311,8 @@ class ExportService {
         String? guruPembimbing,
         bool includeTanggal = false,
       }) async {
-    final doc = pw.Document();
+    final theme = await _pdfTheme();
+    final doc = pw.Document(theme: theme);
     final headers = includeTanggal ? _headersWithTanggal : _headers;
     final rows = includeTanggal ? _rowsWithTanggal(records) : _rows(records);
     final kelasValue = kelas ?? _uniqueJoin(records.map((r) => r.kelas));
@@ -466,10 +575,7 @@ class ExportService {
 
   // -------------------- REKAP BULANAN PER SANTRI (fitur Generate) --------------------
   // Beda dari exportPdf/exportExcel/exportWord di atas (yang 1 baris = 1
-  // laporan) — di sini 1 baris = 1 SANTRI, dengan kolom Pekan 1..N
-  // menampilkan ringkasan capaiannya tiap pekan (lihat
-  // SantriMonthlyRecap.capaianForWeek). Dipakai tombol Generate + tombol
-  // export pojok kanan atas di layar Rekap Bulanan.
+  // laporan) — di sini 1 baris = 1 SANTRI
   List<String> _monthlyHeaders(int totalWeeks) => [
     'No',
     'Nama Murid',
@@ -501,9 +607,10 @@ class ExportService {
         required int totalWeeks,
         String? periode,
       }) async {
-    final doc = pw.Document();
+    final theme = await _pdfTheme();
+    final doc = pw.Document(theme: theme);
     final headers = _monthlyHeaders(totalWeeks);
-    final rows = _monthlyRows(recaps, totalWeeks);
+    final rows = _monthlyRowsPlain(recaps, totalWeeks);
 
     doc.addPage(
       pw.MultiPage(
@@ -654,13 +761,29 @@ class ExportService {
   }
 
   /// Simpan salinan file ke penyimpanan perangkat (folder Download publik
-  /// di Android / lokasi yang dipilih user di iOS)
+  /// di Android lewat MediaStore)
   Future<void> saveToDevice(File file, {required String filename, required String ext}) async {
-    await MediaStore().saveFile(
-      tempFilePath: file.path,
-      dirType: DirType.download,
-      dirName: DirName.download,
-    );
+    final safeName = _sanitizeFileName(filename);
+    final dir = await getApplicationDocumentsDirectory();
+    final renamedPath = '${dir.path}/$safeName.$ext';
+    final tempFile = await file.copy(renamedPath);
+
+    try {
+      await MediaStore().saveFile(
+        tempFilePath: tempFile.path,
+        dirType: DirType.download,
+        dirName: DirName.download,
+      );
+    } finally {
+      if (await tempFile.exists()) await tempFile.delete();
+    }
+  }
+
+  /// Bersihin nama file dari karakter yang nggak valid buat nama file
+  /// (khususnya di Android/media_store_plus)
+  String _sanitizeFileName(String name) {
+    final cleaned = name.trim().replaceAll(RegExp(r'[/\\:*?"<>|]'), '-').replaceAll(RegExp(r'\s+'), ' ');
+    return cleaned.isEmpty ? 'Laporan' : cleaned;
   }
 
   Future<void> printPdfDirectly(List<SantriRecord> records, {required String judul}) async {

@@ -306,6 +306,25 @@ class SantriRecord {
     return segs.map((s) => s.partText).join(' + ');
   }
 
+  /// Total jumlah ayat yang disetorkan di laporan ini — dijumlahkan dari
+  /// SEMUA segmen (Tahfizh + Tilawah, keduanya bisa ada bareng di status
+  /// Tahsin+Tahfizh), dipakai buat chart "Ayat Tersetor/Minggu" di tab
+  /// Statistik. Rentang ayatMulai..ayatSelesai dihitung inklusif kedua
+  /// ujungnya (mis. ayat 5–8 = 4 ayat).
+  int get jumlahAyat {
+    int rangeCount(int mulai, int selesai) =>
+        selesai >= mulai ? (selesai - mulai + 1) : 0;
+    final tahfizh = tahfizhSegmentsEffective.fold<int>(
+      0,
+      (sum, s) => sum + rangeCount(s.ayatMulai, s.ayatSelesai),
+    );
+    final tilawah = tilawahSegmentsEffective.fold<int>(
+      0,
+      (sum, s) => sum + rangeCount(s.ayatMulai, s.ayatSelesai),
+    );
+    return tahfizh + tilawah;
+  }
+
   /// Ringkasan capaian untuk ditampilkan di kartu / laporan.
   String get capaianText {
     switch (status) {

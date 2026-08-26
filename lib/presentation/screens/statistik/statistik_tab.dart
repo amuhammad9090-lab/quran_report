@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/records_provider.dart';
+import '../../../core/utils/week_utils.dart';
 import '../../widgets/misc_widgets.dart';
 import 'santri_list_screen.dart';
 import 'kehadiran_screen.dart';
@@ -66,6 +67,10 @@ class StatistikTab extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               sliver: SliverList.list(
                 children: [
+                  _AyatWeeklyChartCard(
+                    weeklyData: provider.weeklyAyatSummary(weekCount: 6),
+                  ),
+                  const SizedBox(height: 24),
                   Row(
                     children: [
                       Expanded(
@@ -149,6 +154,195 @@ class StatistikTab extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Kartu "Ayat Tersetor / Minggu" — bar chart 6 pekan terakhir + 2 pil
+/// ringkasan (total & rata-rata), ditaruh paling atas tab Statistik biar
+/// progres mingguan langsung kelihatan sebelum angka-angka lain.
+class _AyatWeeklyChartCard extends StatelessWidget {
+  final List<WeeklyAyatPoint> weeklyData;
+
+  const _AyatWeeklyChartCard({required this.weeklyData});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final totals = weeklyData.map((p) => p.total).toList();
+    final maxValue = totals.isEmpty ? 0 : totals.reduce((a, b) => a > b ? a : b);
+    final totalAyat = totals.fold<int>(0, (sum, v) => sum + v);
+    final rataRata = totals.isEmpty ? 0.0 : totalAyat / totals.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionLabel('Grafik Perkembangan'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ayat Tersetor / Minggu',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5, color: cs.onSurface),
+                ),
+                const SizedBox(height: 18),
+                if (maxValue == 0)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        'Belum ada setoran ayat 6 pekan terakhir',
+                        style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 140,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        for (int i = 0; i < weeklyData.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 10),
+                          Expanded(
+                            child: _WeekBar(
+                              value: weeklyData[i].total,
+                              maxValue: maxValue,
+                              // Pekan terakhir (pekan berjalan) dikasih warna
+                              // beda (hijau tosca, warna brand utama) biar
+                              // langsung keliatan mana "minggu ini" — sisanya
+                              // pakai warna amber Tahsin, senada palet app.
+                              color: i == weeklyData.length - 1
+                                  ? cs.primary
+                                  : AppColors.tahsinOn(context),
+                              // Label pakai rentang tanggal pekan (Senin-Minggu)
+                              // via WeekUtils — sistem penanggalan pekanan yang
+                              // sama dipakai di seluruh app (mis. "3–9 Agu"),
+                              // BUKAN label generik "W1"/"W2" yang nggak nyambung
+                              // sama kalender beneran.
+                              label: WeekUtils.rangeLabel(
+                                MonthWeekRange(
+                                  start: weeklyData[i].weekStart,
+                                  end: weeklyData[i].weekStart.add(const Duration(days: 6)),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MiniStatPill(
+                        value: '$totalAyat',
+                        label: 'Total Ayat 6 Pekan',
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _MiniStatPill(
+                        value: rataRata.toStringAsFixed(1),
+                        label: 'Rata² Setoran/Minggu',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 1 batang bar chart + label pekan di bawahnya. Tinggi batang proporsional
+/// terhadap [maxValue] (nilai tertinggi di antara semua pekan), minimum 6px
+/// biar pekan dengan nilai 0 tetap kelihatan ada batangnya (bukan hilang
+/// total, biar sumbu tetap gampang dibaca).
+class _WeekBar extends StatelessWidget {
+  final int value;
+  final int maxValue;
+  final Color color;
+  final String label;
+
+  const _WeekBar({
+    required this.value,
+    required this.maxValue,
+    required this.color,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final ratio = maxValue == 0 ? 0.0 : value / maxValue;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: FractionallySizedBox(
+              heightFactor: ratio.clamp(0.04, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant, height: 1.15),
+        ),
+      ],
+    );
+  }
+}
+
+/// Pil ringkasan kecil (angka besar + label) di bawah chart — dipisah dari
+/// [_TappableStat] karena ini bukan tombol (tidak ada halaman detail buat
+/// "total ayat 6 pekan", murni informasi).
+class _MiniStatPill extends StatelessWidget {
+  final String value;
+  final String label;
+
+  const _MiniStatPill({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }

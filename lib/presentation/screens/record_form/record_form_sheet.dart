@@ -951,15 +951,29 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                   ),
                   const Divider(height: 1),
                   Expanded(
-                    child: Form(
-                      key: _formKey,
-                      child: ListView(
-                        padding: EdgeInsets.fromLTRB(
-                            20, 16, 20, mq.viewInsets.bottom + 24),
-                        children: [
-                          if (_draftBannerVisible) ...[
-                            _buildDraftBanner(cs),
-                            const SizedBox(height: 16),
+                    // Padding bawah di SINI (bukan di dalam padding konten
+                    // ListView) sengaja dipakai buat "mengecilkan" tinggi
+                    // viewport ListView pas keyboard muncul — supaya field
+                    // yang lagi difokus otomatis ke-scroll ke atas keyboard
+                    // (mekanisme bawaan Flutter, Scrollable.ensureVisible,
+                    // baru jalan kalau ukuran viewport-nya BENERAN mengecil;
+                    // sebelumnya cuma padding konten ListView yang nambah,
+                    // jadi ukuran viewport tetap sama dan field yang ketutup
+                    // keyboard nggak pernah dianggap "di luar layar" —
+                    // makanya sheet kelihatan nggak langsung nyesuain
+                    // keyboard). Ini TIDAK bentrok dengan resizeToAvoidBottomInset
+                    // yang sengaja false di atas, karena cuma satu tempat ini
+                    // yang mengurangi viewInsets.bottom (bukan dobel).
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+                      child: Form(
+                        key: _formKey,
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          children: [
+                            if (_draftBannerVisible) ...[
+                              _buildDraftBanner(cs),
+                              const SizedBox(height: 16),
                           ],
                           FormSectionCard(
                             title: 'Tanggal',
@@ -1127,6 +1141,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                         ],
                       ),
                     ),
+                  ),
                   ),
                 ],
               ),

@@ -40,6 +40,7 @@ enum TahsinMode {
 enum Keterangan {
   hadir,
   izinSakit,
+  izin,
   izinLomba,
   izinPelatihan,
   alpa;
@@ -47,6 +48,7 @@ enum Keterangan {
   String get label => switch (this) {
         Keterangan.hadir => 'Hadir',
         Keterangan.izinSakit => 'Izin Sakit',
+        Keterangan.izin => 'Izin',
         Keterangan.izinLomba => 'Izin Lomba',
         Keterangan.izinPelatihan => 'Izin Pelatihan',
         Keterangan.alpa => 'Tanpa Keterangan (Alpa)',
@@ -55,6 +57,7 @@ enum Keterangan {
   String get shortLabel => switch (this) {
         Keterangan.hadir => 'Hadir',
         Keterangan.izinSakit => 'Sakit',
+        Keterangan.izin => 'Izin',
         Keterangan.izinLomba => 'Lomba',
         Keterangan.izinPelatihan => 'Pelatihan',
         Keterangan.alpa => 'Alpa',
@@ -63,6 +66,7 @@ enum Keterangan {
   IconData get icon => switch (this) {
         Keterangan.hadir => Icons.check_circle_rounded,
         Keterangan.izinSakit => Icons.local_hospital_rounded,
+        Keterangan.izin => Icons.description_rounded,
         Keterangan.izinLomba => Icons.emoji_events_rounded,
         Keterangan.izinPelatihan => Icons.school_rounded,
         Keterangan.alpa => Icons.cancel_rounded,

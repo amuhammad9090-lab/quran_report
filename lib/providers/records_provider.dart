@@ -374,6 +374,33 @@ class RecordsProvider extends ChangeNotifier {
   int get totalBarisSetoran =>
       _scoped.fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
 
+  /// Total ayat tersetor per pekan untuk [weekCount] pekan terakhir
+  /// (termasuk pekan berjalan), dipakai chart "Ayat Tersetor/Minggu" di
+  /// tab Statistik. Pekan dihitung Senin–Minggu — definisi yang SAMA
+  /// dengan [WeekUtils.startOfWeek] (bukan sistem "pekan dalam bulan"
+  /// punya Rekap Bulanan, karena rentang 6 pekan di sini bisa lintas
+  /// bulan dan nggak butuh ikut aturan "pekan milik bulan mana").
+  /// Hasil array terurut dari pekan TERLAMA -> TERBARU (index terakhir =
+  /// pekan ini), jadi tinggal langsung dipetakan ke chart kiri-ke-kanan.
+  List<WeeklyAyatPoint> weeklyAyatSummary({int weekCount = 6}) {
+    final thisWeekStart = WeekUtils.startOfWeek(DateTime.now());
+    final totals = List<int>.filled(weekCount, 0);
+
+    for (final r in _scoped) {
+      final recordWeekStart = WeekUtils.startOfWeek(r.tanggal);
+      final diffWeeks = thisWeekStart.difference(recordWeekStart).inDays ~/ 7;
+      final index = weekCount - 1 - diffWeeks; // 0 = pekan terlama
+      if (index >= 0 && index < weekCount) {
+        totals[index] += r.jumlahAyat;
+      }
+    }
+
+    return List.generate(weekCount, (i) {
+      final weekStart = thisWeekStart.subtract(Duration(days: (weekCount - 1 - i) * 7));
+      return WeeklyAyatPoint(weekStart: weekStart, total: totals[i]);
+    });
+  }
+
   // --- Ringkasan "Hari Ini" untuk Home & Profile ---
   bool _isToday(DateTime d) {
     final now = DateTime.now();
@@ -763,4 +790,16 @@ class KelasHalaqohGroup {
   });
 
   int get totalBaris => records.fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
+}
+
+/// Satu titik data pekanan buat chart "Ayat Tersetor/Minggu" di tab
+/// Statistik — lihat [RecordsProvider.weeklyAyatSummary]. [weekStart]
+/// adalah tanggal Senin pekan itu (definisi [WeekUtils.startOfWeek]),
+/// dipakai buat generate label rentang tanggal via [WeekUtils.rangeLabel]
+/// biar labelnya konsisten sama sistem penanggalan pekanan yang dipakai
+/// di seluruh app (bukan sekadar "W1"/"W2" generik).
+class WeeklyAyatPoint {
+  final DateTime weekStart;
+  final int total;
+  const WeeklyAyatPoint({required this.weekStart, required this.total});
 }

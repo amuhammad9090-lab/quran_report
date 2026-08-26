@@ -46,6 +46,7 @@ class AppColors {
   // --- Keterangan (versi light) ---
   static const hadir = Color(0xFF2E9E5B);
   static const izinSakit = Color(0xFFE0724A);
+  static const izin = Color(0xFF4A90A4);
   static const izinLomba = Color(0xFF6C5CE7);
   static const izinPelatihan = Color(0xFF2F80B4);
   static const alpa = Color(0xFFD64545);
@@ -53,6 +54,7 @@ class AppColors {
   // --- Keterangan (versi dark) ---
   static const hadirDark = Color(0xFF4FCE85);
   static const izinSakitDark = Color(0xFFFF9269);
+  static const izinDark = Color(0xFF7FC3D6);
   static const izinLombaDark = Color(0xFFA79BFF);
   static const izinPelatihanDark = Color(0xFF6FB6EA);
   static const alpaDark = Color(0xFFFF7A7A);
@@ -94,6 +96,7 @@ class AppColors {
     return switch (key) {
       'hadir' => dark ? hadirDark : hadir,
       'izinSakit' => dark ? izinSakitDark : izinSakit,
+      'izin' => dark ? izinDark : izin,
       'izinLomba' => dark ? izinLombaDark : izinLomba,
       'izinPelatihan' => dark ? izinPelatihanDark : izinPelatihan,
       'alpa' => dark ? alpaDark : alpa,
@@ -107,6 +110,7 @@ class AppColors {
   static Color keteranganColor(String key) => switch (key) {
         'hadir' => hadir,
         'izinSakit' => izinSakit,
+        'izin' => izin,
         'izinLomba' => izinLomba,
         'izinPelatihan' => izinPelatihan,
         'alpa' => alpa,

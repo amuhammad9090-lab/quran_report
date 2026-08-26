@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -1195,6 +1197,68 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showAppSnackbar(
   );
   controller.closed.then((_) => onFabVisibilityChanged?.call(true));
   return controller;
+}
+
+/// Mixin buat nampilin pesan singkat (pengganti SnackBar) sebagai BAGIAN
+/// dari Column konten sheet sendiri, bukan lewat ScaffoldMessenger —
+/// dipakai di bottom sheet yang gak punya Scaffold sendiri (mis. export
+/// sheet). `ScaffoldMessenger.of(context)` dari dalam sheet modal begitu
+/// bakal nemu Scaffold HALAMAN DI BALIK sheet, jadi SnackBar-nya kegambar
+/// di belakang sheet — ketutup, gak kelihatan user. Solusinya: tampilkan
+/// sebagai [InlineMessageBanner] biasa, jadi bagian layout Column sheet
+/// itu sendiri (otomatis selalu di depan & otomatis nggak nyisain ruang
+/// kosong kalau lagi gak ada pesan, karena ukurannya ngikutin isi
+/// teksnya doang — pola ini sudah kebukti jalan lebih dulu di
+/// ExportSheet, lihat catatan panjang di sana). Cara pakai: campur
+/// `with InlineMessageMixin<TWidget>` di State, panggil
+/// [showInlineMessage], render `if (inlineMessage != null)
+/// InlineMessageBanner(message: inlineMessage!)` di build().
+mixin InlineMessageMixin<T extends StatefulWidget> on State<T> {
+  String? inlineMessage;
+  Timer? _inlineMessageTimer;
+
+  void showInlineMessage(String message) {
+    _inlineMessageTimer?.cancel();
+    setState(() => inlineMessage = message);
+    _inlineMessageTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => inlineMessage = null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _inlineMessageTimer?.cancel();
+    super.dispose();
+  }
+}
+
+/// Banner pesan singkat inline — lihat [InlineMessageMixin].
+class InlineMessageBanner extends StatelessWidget {
+  final String message;
+  const InlineMessageBanner({super.key, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 17, color: cs.primary),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(message, style: const TextStyle(fontSize: 12.5)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Logo SMPIT Al Madinah — ukurannya SELALU persegi (1:1) di semua
