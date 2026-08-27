@@ -20,6 +20,7 @@ class AppPrefsService {
   static const _keyRecordDraft = 'record_form_draft';
   static const _keyActivatedIdentities = 'activated_report_identities';
   static const _keyActivatedIdentityFolders = 'activated_report_identity_folders';
+  static const _keyPasswordOverrides = 'password_overrides';
 
   late Box<String> _box;
 
@@ -128,5 +129,32 @@ class AppPrefsService {
     final current = activatedIdentityFolders;
     if (current.remove(key) == null) return;
     await _box.put(_keyActivatedIdentityFolders, jsonEncode(current));
+  }
+
+  // --- Override password akun lokal ---
+  //
+  // BUG FIX: sebelumnya ganti password cuma diterapkan ke cache in-memory
+  // punya LocalAuthRepository (lihat riwayat perubahan di sana) — begitu
+  // app di-kill (bukan cuma logout, tapi bener-bener ditutup prosesnya),
+  // seluruh state di RAM ikut hilang, jadi pas dibuka lagi password balik
+  // ke seed semula sementara user ngira udah kesimpen. Sekarang hash
+  // password baru DISIMPAN di sini (Hive, persist ke disk) dan
+  // LocalAuthRepository menerapkannya di atas data seed tiap kali akun
+  // dimuat ulang — jadi selamat dari logout maupun app di-kill total.
+  Map<String, String> get passwordOverrides {
+    final raw = _box.get(_keyPasswordOverrides);
+    if (raw == null || raw.trim().isEmpty) return {};
+    try {
+      final map = jsonDecode(raw) as Map;
+      return map.map((k, v) => MapEntry(k.toString(), v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setPasswordOverride(String userId, String newHash) async {
+    final current = passwordOverrides;
+    current[userId] = newHash;
+    await _box.put(_keyPasswordOverrides, jsonEncode(current));
   }
 }

@@ -1,21 +1,17 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xls;
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:media_store_plus/media_store_plus.dart';
 import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/utils/docx_builder.dart';
 import '../models/enums.dart';
 import '../models/santri_monthly_recap.dart';
 import '../models/santri_record.dart';
+import 'platform_file/exported_file.dart';
+import 'platform_file/file_actions.dart';
 
 class ExportService {
   ExportService._();
@@ -33,127 +29,24 @@ class ExportService {
     'Ayat/Hal',
     'Baris',
     'Keterangan',
+    'Catatan',
   ];
 
   // Dipakai saat [includeTanggal] true (export rekap per Kelas+Halaqoh
   // yang bisa mencakup lebih dari 1 hari) — lihat KelasHalaqohGroupCard.
+  // Hari & Tanggal SENGAJA digabung jadi 1 kolom ("Senin, 17 Agu 2026")
+  // biar tabelnya nggak kelewat lebar — 2 kolom terpisah buat info yang
+  // sebenarnya cuma 1 potong data itu boros tempat.
   static const _headersWithTanggal = [
     'No',
-    'Hari',
-    'Tanggal',
+    'Hari/Tanggal',
     'Nama Murid',
     'Capaian Tahsin/Tahfizh',
     'Ayat/Hal',
     'Baris',
     'Keterangan',
+    'Catatan',
   ];
-
-  // -------------------- Font PDF (Unicode-safe) --------------------
-  // Font base14 (Helvetica) bawaan package `pdf` nggak punya glyph buat
-  // en dash (–) & karakter non-ASCII lain yang dipakai di teks macam
-  // "Ayat 21–25" — hasilnya keluar kotak hitam (tofu) di PDF.
-  // Solusinya: embed font Unicode (Noto Sans) ke tiap pw.Document.
-  pw.ThemeData? _cachedPdfTheme;
-
-  Future<pw.ThemeData> _pdfTheme() async {
-    if (_cachedPdfTheme != null) return _cachedPdfTheme!;
-    final theme = await _buildPdfTheme();
-    _cachedPdfTheme = theme;
-    return theme;
-  }
-
-  Future<pw.ThemeData> _buildPdfTheme() async {
-    // Coba pakai font yang di-bundle di assets dulu (tidak butuh koneksi
-    // internet). Kalau belum ditambahkan ke pubspec.yaml, fallback ke
-    // PdfGoogleFonts (download + cache otomatis oleh package `printing`).
-    try {
-      final regularData = await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
-      final boldData = await rootBundle.load('assets/fonts/NotoSans-Bold.ttf');
-      return pw.ThemeData.withFont(
-        base: pw.Font.ttf(regularData),
-        bold: pw.Font.ttf(boldData),
-      );
-    } catch (_) {
-      final regular = await PdfGoogleFonts.notoSansRegular();
-      final bold = await PdfGoogleFonts.notoSansBold();
-      return pw.ThemeData.withFont(base: regular, bold: bold);
-    }
-  }
-
-  // -------------------- Teks ASCII-safe khusus PDF Rekap Bulanan --------------------
-  // `r.capaianText` (getter di SantriRecord, dipakai luas di UI kartu-kartu)
-  // pakai karakter "•" dan "–" — aman di layar (font sistem Flutter
-  // lengkap glyph-nya), tapi bikin kotak hitam/tofu kalau dirender ke
-  // PDF. Laporan Pekanan biasa (exportPdf) sudah aman dari awal karena
-  // _capaianLabel/_ayatHalRange di atas emang murni ASCII (pakai "-").
-  // Method2 di bawah ini niru persis logic capaianText/partText tapi
-  // full ASCII, KHUSUS dipakai exportMonthlyRecapPdf — capaianText di
-  // model sendiri sengaja tidak diubah supaya tampilan UI tetap sama.
-  String _plainPartText(String surahName, int ayatMulai, int ayatSelesai) =>
-      '$surahName - Ayat $ayatMulai-$ayatSelesai';
-
-  String _plainTahsinPartText(SantriRecord r) {
-    final mode = r.tahsinMode ?? TahsinMode.wafa;
-    if (mode == TahsinMode.tilawah) {
-      final segs = r.tilawahSegmentsEffective;
-      if (segs.isEmpty) return 'Tilawah - -';
-      return 'Tilawah - ${segs.map((s) => _plainPartText(s.surahName, s.ayatMulai, s.ayatSelesai)).join(' + ')}';
-    }
-    final level = r.wafaLevel?.label ?? '-';
-    final hal = r.halamanWafa ?? '-';
-    return '$level - Hal. $hal';
-  }
-
-  String _plainTahfizhPartText(SantriRecord r) {
-    final segs = r.tahfizhSegmentsEffective;
-    if (segs.isEmpty) return '-';
-    return segs.map((s) => _plainPartText(s.surahName, s.ayatMulai, s.ayatSelesai)).join(' + ');
-  }
-
-  String _plainMurojaahPartText(SantriRecord r) {
-    final segs = r.tilawahSegmentsEffective;
-    if (segs.isEmpty) return '-';
-    return segs.map((s) => _plainPartText(s.surahName, s.ayatMulai, s.ayatSelesai)).join(' + ');
-  }
-
-  String _plainCapaianText(SantriRecord r) {
-    switch (r.status) {
-      case HafalanStatus.tahfizh:
-        return _plainTahfizhPartText(r);
-      case HafalanStatus.tahsin:
-        return _plainTahsinPartText(r);
-      case HafalanStatus.tahsinTahfizh:
-        return '${_plainTahsinPartText(r)} + ${_plainTahfizhPartText(r)}';
-      case HafalanStatus.murojaahTasmi:
-        return _plainMurojaahPartText(r);
-    }
-  }
-
-  /// Versi ASCII-safe dari [SantriMonthlyRecap.capaianForWeek] — dipakai
-  /// hanya untuk tabel PDF rekap bulanan.
-  String _plainCapaianForWeek(SantriMonthlyRecap recap, int weekIndex) {
-    final recs = recap.recordsByWeek[weekIndex];
-    if (recs == null || recs.isEmpty) return '-';
-    return recs.map(_plainCapaianText).join('; ');
-  }
-
-  /// Versi ASCII-safe dari [_monthlyRows] — dipakai khusus untuk PDF
-  /// (Excel & Word tetap pakai capaianText asli karena bebas masalah font).
-  List<List<String>> _monthlyRowsPlain(List<SantriMonthlyRecap> recaps, int totalWeeks) {
-    final rows = <List<String>>[];
-    for (var i = 0; i < recaps.length; i++) {
-      final r = recaps[i];
-      rows.add([
-        '${i + 1}',
-        r.nama,
-        '${r.kelas}/${r.halaqoh}',
-        for (var w = 1; w <= totalWeeks; w++) _plainCapaianForWeek(r, w),
-        '${r.totalBaris}',
-        r.keteranganSummaryText,
-      ]);
-    }
-    return rows;
-  }
 
   /// Teks ringkas bagian Tahsin saja (WAFA atau Tilawah)
   String _tahfizhSurahNames(SantriRecord r) {
@@ -230,6 +123,18 @@ class ExportService {
           ? '${r.totalBaris ?? 0}'
           : '-';
 
+  // Hari+tanggal digabung 1 kolom, mis. "Senin, 17 Agu 2026".
+  String _hariTanggalText(DateTime d) =>
+      '${DateFormat('EEEE', 'id_ID').format(d)}, ${DateFormat('d MMM yyyy', 'id_ID').format(d)}';
+
+  // Catatan bebas dari form Buat Laporan — sama persis field yang diisi
+  // guru pembimbing di sana (SantriRecord.catatan), bukan kolom baru
+  // yang beda sumber.
+  String _catatanText(SantriRecord r) {
+    final c = r.catatan?.trim();
+    return (c == null || c.isEmpty) ? '-' : c;
+  }
+
   String _uniqueJoin(Iterable<String> values) {
     final set = values.map((v) => v.trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
     return set.join(', ');
@@ -246,25 +151,26 @@ class ExportService {
         _ayatHalRange(r),
         _barisText(r),
         r.keterangan.label,
+        _catatanText(r),
       ]);
     }
     return rows;
   }
 
-  /// Versi [_rows] dengan kolom Hari & Tanggal
+  /// Versi [_rows] dengan kolom Hari/Tanggal gabungan
   List<List<String>> _rowsWithTanggal(List<SantriRecord> records) {
     final rows = <List<String>>[];
     for (var i = 0; i < records.length; i++) {
       final r = records[i];
       rows.add([
         '${i + 1}',
-        DateFormat('EEEE', 'id_ID').format(r.tanggal),
-        DateFormat('d MMM yyyy', 'id_ID').format(r.tanggal),
+        _hariTanggalText(r.tanggal),
         r.namaAnak,
         _capaianLabel(r),
         _ayatHalRange(r),
         _barisText(r),
         r.keterangan.label,
+        _catatanText(r),
       ]);
     }
     return rows;
@@ -294,15 +200,11 @@ class ExportService {
     ];
   }
 
-  Future<File> _saveBytes(String filename, List<int> bytes) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/$filename');
-    await file.writeAsBytes(bytes, flush: true);
-    return file;
-  }
+  Future<ExportedFile> _saveBytes(String filename, List<int> bytes) =>
+      persistExportedFile(filename, bytes);
 
   // -------------------- PDF (A4 potrait) --------------------
-  Future<File> exportPdf(
+  Future<ExportedFile> exportPdf(
       List<SantriRecord> records, {
         required String judul,
         String? kelas,
@@ -311,33 +213,33 @@ class ExportService {
         String? guruPembimbing,
         bool includeTanggal = false,
       }) async {
-    final theme = await _pdfTheme();
-    final doc = pw.Document(theme: theme);
+    final doc = pw.Document();
     final headers = includeTanggal ? _headersWithTanggal : _headers;
     final rows = includeTanggal ? _rowsWithTanggal(records) : _rows(records);
     final kelasValue = kelas ?? _uniqueJoin(records.map((r) => r.kelas));
     final halaqohValue = halaqoh ?? _uniqueJoin(records.map((r) => r.halaqoh));
     final columnWidths = includeTanggal
         ? const {
-      0: pw.FixedColumnWidth(20),
-      1: pw.FlexColumnWidth(1.3),
-      2: pw.FlexColumnWidth(1.3),
-      3: pw.FlexColumnWidth(1.9),
-      4: pw.FlexColumnWidth(2.3),
-      5: pw.FlexColumnWidth(1.3),
-      6: pw.FlexColumnWidth(0.8),
-      7: pw.FlexColumnWidth(1.4),
+      0: pw.FixedColumnWidth(20),  // No
+      1: pw.FlexColumnWidth(2.0),  // Hari/Tanggal (gabungan)
+      2: pw.FlexColumnWidth(1.7),  // Nama
+      3: pw.FlexColumnWidth(2.1),  // Capaian
+      4: pw.FlexColumnWidth(1.2),  // Ayat/Hal
+      5: pw.FlexColumnWidth(0.7),  // Baris
+      6: pw.FlexColumnWidth(1.2),  // Keterangan
+      7: pw.FlexColumnWidth(1.6),  // Catatan
     }
         : const {
-      0: pw.FixedColumnWidth(26),
-      1: pw.FlexColumnWidth(2.3),
-      2: pw.FlexColumnWidth(2.3),
-      3: pw.FlexColumnWidth(1.3),
-      4: pw.FlexColumnWidth(0.9),
-      5: pw.FlexColumnWidth(1.7),
+      0: pw.FixedColumnWidth(26),  // No
+      1: pw.FlexColumnWidth(2.0),  // Nama
+      2: pw.FlexColumnWidth(2.0),  // Capaian
+      3: pw.FlexColumnWidth(1.1),  // Ayat/Hal
+      4: pw.FlexColumnWidth(0.8),  // Baris
+      5: pw.FlexColumnWidth(1.4),  // Keterangan
+      6: pw.FlexColumnWidth(1.8),  // Catatan
     };
     final cellAlignments = includeTanggal
-        ? const {0: pw.Alignment.center, 6: pw.Alignment.center}
+        ? const {0: pw.Alignment.center, 5: pw.Alignment.center}
         : const {0: pw.Alignment.center, 4: pw.Alignment.center};
 
     doc.addPage(
@@ -434,7 +336,7 @@ class ExportService {
   }
 
   // -------------------- EXCEL --------------------
-  Future<File> exportExcel(
+  Future<ExportedFile> exportExcel(
       List<SantriRecord> records, {
         required String judul,
         String? kelas,
@@ -499,21 +401,22 @@ class ExportService {
     }
 
     if (includeTanggal) {
-      sheet.setColumnWidth(0, 5);
-      sheet.setColumnWidth(1, 12);
-      sheet.setColumnWidth(2, 12);
-      sheet.setColumnWidth(3, 20);
-      sheet.setColumnWidth(4, 24);
-      sheet.setColumnWidth(5, 12);
-      sheet.setColumnWidth(6, 8);
-      sheet.setColumnWidth(7, 18);
+      sheet.setColumnWidth(0, 5);   // No
+      sheet.setColumnWidth(1, 20);  // Hari/Tanggal (gabungan)
+      sheet.setColumnWidth(2, 20);  // Nama
+      sheet.setColumnWidth(3, 24);  // Capaian
+      sheet.setColumnWidth(4, 12);  // Ayat/Hal
+      sheet.setColumnWidth(5, 8);   // Baris
+      sheet.setColumnWidth(6, 18);  // Keterangan
+      sheet.setColumnWidth(7, 22);  // Catatan
     } else {
-      sheet.setColumnWidth(0, 5);
-      sheet.setColumnWidth(1, 22);
-      sheet.setColumnWidth(2, 24);
-      sheet.setColumnWidth(3, 12);
-      sheet.setColumnWidth(4, 8);
-      sheet.setColumnWidth(5, 18);
+      sheet.setColumnWidth(0, 5);   // No
+      sheet.setColumnWidth(1, 22);  // Nama
+      sheet.setColumnWidth(2, 24);  // Capaian
+      sheet.setColumnWidth(3, 12);  // Ayat/Hal
+      sheet.setColumnWidth(4, 8);   // Baris
+      sheet.setColumnWidth(5, 18);  // Keterangan
+      sheet.setColumnWidth(6, 22);  // Catatan
     }
 
     row += rows.length;
@@ -532,7 +435,7 @@ class ExportService {
   }
 
   // -------------------- WORD (.docx, A4 potrait — bawaan builder) --------------------
-  Future<File> exportWord(
+  Future<ExportedFile> exportWord(
       List<SantriRecord> records, {
         required String judul,
         String? kelas,
@@ -575,7 +478,10 @@ class ExportService {
 
   // -------------------- REKAP BULANAN PER SANTRI (fitur Generate) --------------------
   // Beda dari exportPdf/exportExcel/exportWord di atas (yang 1 baris = 1
-  // laporan) — di sini 1 baris = 1 SANTRI
+  // laporan) — di sini 1 baris = 1 SANTRI, dengan kolom Pekan 1..N
+  // menampilkan ringkasan capaiannya tiap pekan (lihat
+  // SantriMonthlyRecap.capaianForWeek). Dipakai tombol Generate + tombol
+  // export pojok kanan atas di layar Rekap Bulanan.
   List<String> _monthlyHeaders(int totalWeeks) => [
     'No',
     'Nama Murid',
@@ -601,16 +507,15 @@ class ExportService {
     return rows;
   }
 
-  Future<File> exportMonthlyRecapPdf(
+  Future<ExportedFile> exportMonthlyRecapPdf(
       List<SantriMonthlyRecap> recaps, {
         required String judul,
         required int totalWeeks,
         String? periode,
       }) async {
-    final theme = await _pdfTheme();
-    final doc = pw.Document(theme: theme);
+    final doc = pw.Document();
     final headers = _monthlyHeaders(totalWeeks);
-    final rows = _monthlyRowsPlain(recaps, totalWeeks);
+    final rows = _monthlyRows(recaps, totalWeeks);
 
     doc.addPage(
       pw.MultiPage(
@@ -660,7 +565,7 @@ class ExportService {
     return _saveBytes('${_slug(judul)}.pdf', bytes);
   }
 
-  Future<File> exportMonthlyRecapExcel(
+  Future<ExportedFile> exportMonthlyRecapExcel(
       List<SantriMonthlyRecap> recaps, {
         required String judul,
         required int totalWeeks,
@@ -724,7 +629,7 @@ class ExportService {
     return _saveBytes('${_slug(judul)}.xlsx', Uint8List.fromList(bytes));
   }
 
-  Future<File> exportMonthlyRecapWord(
+  Future<ExportedFile> exportMonthlyRecapWord(
       List<SantriMonthlyRecap> recaps, {
         required String judul,
         required int totalWeeks,
@@ -746,49 +651,22 @@ class ExportService {
   // -------------------- Buka / Bagikan / Simpan --------------------
 
   /// Buka file langsung pakai aplikasi bawaan perangkat (PDF viewer, Word,
-  /// Excel, dst) — dipanggil otomatis begitu file selesai dibuat.
-  Future<void> openFile(File file) async {
-    await OpenFilex.open(file.path);
-  }
+  /// Excel, dst) — dipanggil otomatis begitu file selesai dibuat. Di Web,
+  /// ini otomatis jadi trigger download (lihat file_actions_web.dart).
+  Future<void> openFile(ExportedFile file) => openExportedFile(file);
 
-  Future<void> shareFile(File file, {String? subject}) async {
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path)],
-        subject: subject,
-      ),
-    );
-  }
+  Future<void> shareFile(ExportedFile file, {String? subject}) =>
+      shareExportedFile(file, subject: subject);
 
   /// Simpan salinan file ke penyimpanan perangkat (folder Download publik
-  /// di Android lewat MediaStore)
-  Future<void> saveToDevice(File file, {required String filename, required String ext}) async {
-    final safeName = _sanitizeFileName(filename);
-    final dir = await getApplicationDocumentsDirectory();
-    final renamedPath = '${dir.path}/$safeName.$ext';
-    final tempFile = await file.copy(renamedPath);
-
-    try {
-      await MediaStore().saveFile(
-        tempFilePath: tempFile.path,
-        dirType: DirType.download,
-        dirName: DirName.download,
-      );
-    } finally {
-      if (await tempFile.exists()) await tempFile.delete();
-    }
-  }
-
-  /// Bersihin nama file dari karakter yang nggak valid buat nama file
-  /// (khususnya di Android/media_store_plus)
-  String _sanitizeFileName(String name) {
-    final cleaned = name.trim().replaceAll(RegExp(r'[/\\:*?"<>|]'), '-').replaceAll(RegExp(r'\s+'), ' ');
-    return cleaned.isEmpty ? 'Laporan' : cleaned;
-  }
+  /// di Android / lokasi yang dipilih user di iOS / trigger download
+  /// browser di Web).
+  Future<void> saveToDevice(ExportedFile file, {required String filename, required String ext}) =>
+      saveExportedFileToDevice(file, filename: filename, ext: ext);
 
   Future<void> printPdfDirectly(List<SantriRecord> records, {required String judul}) async {
     final file = await exportPdf(records, judul: judul);
-    await Printing.layoutPdf(onLayout: (_) => file.readAsBytes());
+    await Printing.layoutPdf(onLayout: (_) async => file.bytes);
   }
 
   String _slug(String s) {

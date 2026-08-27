@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +6,7 @@ import '../../../data/models/enums.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../data/services/download_notification_service.dart';
 import '../../../data/services/export_service.dart';
+import '../../../data/services/platform_file/exported_file.dart';
 import '../../../providers/records_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../widgets/misc_widgets.dart';
@@ -111,7 +111,7 @@ class _ExportSheetState extends State<ExportSheet> {
 
   // Diisi begitu ekspor sukses — sheet pindah ke tampilan "selesai" dengan
   // tombol Bagikan & Simpan ke Perangkat.
-  File? _exportedFile;
+  ExportedFile? _exportedFile;
   ExportFormat? _exportedFormat;
   String? _exportedJudul;
 
@@ -140,7 +140,7 @@ class _ExportSheetState extends State<ExportSheet> {
 
     try {
       final judul = widget.judul ?? 'Laporan Pekanan Al Quran';
-      File file;
+      ExportedFile file;
       switch (format) {
         case ExportFormat.pdf:
           file = await ExportService.instance.exportPdf(

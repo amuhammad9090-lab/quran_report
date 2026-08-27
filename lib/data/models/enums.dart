@@ -43,7 +43,10 @@ enum Keterangan {
   izin,
   izinLomba,
   izinPelatihan,
-  alpa;
+  alpa,
+  tidakSetoran,
+  tidakTahsin,
+  tidakMurojaah;
 
   String get label => switch (this) {
         Keterangan.hadir => 'Hadir',
@@ -52,6 +55,9 @@ enum Keterangan {
         Keterangan.izinLomba => 'Izin Lomba',
         Keterangan.izinPelatihan => 'Izin Pelatihan',
         Keterangan.alpa => 'Tanpa Keterangan (Alpa)',
+        Keterangan.tidakSetoran => 'Tidak Setoran',
+        Keterangan.tidakTahsin => 'Tidak Tahsin',
+        Keterangan.tidakMurojaah => 'Tidak Murojaah',
       };
 
   String get shortLabel => switch (this) {
@@ -61,6 +67,9 @@ enum Keterangan {
         Keterangan.izinLomba => 'Lomba',
         Keterangan.izinPelatihan => 'Pelatihan',
         Keterangan.alpa => 'Alpa',
+        Keterangan.tidakSetoran => 'Tdk Setoran',
+        Keterangan.tidakTahsin => 'Tdk Tahsin',
+        Keterangan.tidakMurojaah => 'Tdk Murojaah',
       };
 
   IconData get icon => switch (this) {
@@ -70,7 +79,19 @@ enum Keterangan {
         Keterangan.izinLomba => Icons.emoji_events_rounded,
         Keterangan.izinPelatihan => Icons.school_rounded,
         Keterangan.alpa => Icons.cancel_rounded,
+        Keterangan.tidakSetoran => Icons.edit_off_rounded,
+        Keterangan.tidakTahsin => Icons.menu_book_outlined,
+        Keterangan.tidakMurojaah => Icons.replay_outlined,
       };
+
+  /// Tiga keterangan "sanksi" (santri HADIR tapi nggak setor/tahsin/
+  /// murojaah — males/ketiduran/dll, bukan izin/sakit/alpa) — dipakai di
+  /// mana-mana yang perlu bedain "nggak hadir" vs "hadir tapi nggak
+  /// setor", mis. Kehadiran (tetap dihitung hadir) vs Distribusi Capaian.
+  bool get isSanksiTanpaSetoran =>
+      this == Keterangan.tidakSetoran ||
+      this == Keterangan.tidakTahsin ||
+      this == Keterangan.tidakMurojaah;
 
   static Keterangan fromLabel(String label) =>
       Keterangan.values.firstWhere((e) => e.label == label, orElse: () => Keterangan.hadir);

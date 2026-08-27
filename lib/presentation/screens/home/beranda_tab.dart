@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../data/models/enums.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/records_provider.dart';
+import '../../widgets/avatar_image_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/filter_sheet.dart';
 import '../profile/profile_screen.dart';
@@ -223,7 +222,7 @@ class BerandaTab extends StatelessWidget {
             child: CircleAvatar(
               radius: 26,
               backgroundColor: cs.primaryContainer,
-              backgroundImage: photoPath != null ? FileImage(File(photoPath)) : null,
+              backgroundImage: resolveAvatarImage(photoPath),
               child: photoPath == null
                   ? Text(
                       initial,

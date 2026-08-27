@@ -1,11 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/services/profile_photo_service.dart';
 import '../../../providers/auth_provider.dart';
+import '../../widgets/avatar_image_provider.dart';
 import '../../widgets/misc_widgets.dart';
 
 /// Edit Profil — lebih dari sekadar ganti nama: ada juga ganti foto
@@ -164,8 +163,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           CircleAvatar(
                             radius: 48,
                             backgroundColor: cs.primaryContainer,
-                            backgroundImage:
-                                user.photoPath != null ? FileImage(File(user.photoPath!)) : null,
+                            backgroundImage: resolveAvatarImage(user.photoPath),
                             child: _savingPhoto
                                 ? const CircularProgressIndicator(strokeWidth: 2.4)
                                 : (user.photoPath == null

@@ -1,5 +1,6 @@
 import '../local_seed/local_seed_data.dart';
 import '../models/user_account.dart';
+import '../services/app_prefs_service.dart';
 import '../services/auth_hash_service.dart';
 import 'auth_repository.dart';
 
@@ -10,7 +11,23 @@ class LocalAuthRepository implements AuthRepository {
   List<UserAccount>? _cache;
 
   List<UserAccount> _accounts() {
-    return _cache ??= kSeedAccountsJson.map(UserAccount.fromJson).toList();
+    if (_cache != null) return _cache!;
+    final seeded = kSeedAccountsJson.map(UserAccount.fromJson).toList();
+    // Timpa passwordHash dari seed dengan override yang pernah disimpan
+    // user (lihat AppPrefsService.passwordOverrides) — supaya ganti
+    // password tetap kepakai walau app sempat ditutup total, bukan cuma
+    // logout. Ini dibaca SEKALI aja pas cache pertama kali dibangun
+    // (bukan tiap _accounts() dipanggil), karena override cuma berubah
+    // lewat updatePasswordHash di bawah yang juga langsung update cache.
+    final overrides = AppPrefsService.instance.passwordOverrides;
+    _cache = [
+      for (final acc in seeded)
+        if (overrides.containsKey(acc.id))
+          acc.copyWith(passwordHash: overrides[acc.id])
+        else
+          acc,
+    ];
+    return _cache!;
   }
 
   @override
@@ -41,11 +58,12 @@ class LocalAuthRepository implements AuthRepository {
     final accounts = _accounts();
     final index = accounts.indexWhere((acc) => acc.id == userId);
     if (index == -1) return false;
-    // Cuma update cache in-memory (sesuai catatan project: seed lokal ini
-    // belum ada persistensi permanen ke disk). Begitu session berakhir
-    // (app di-kill), password kembali ke seed semula — sama seperti
-    // perilaku update displayName sebelumnya.
     accounts[index] = accounts[index].copyWith(passwordHash: newHash);
+    // Persist ke Hive (lihat AppPrefsService.passwordOverrides) — INI yang
+    // sebelumnya kelewat, cuma update cache in-memory jadi hilang begitu
+    // app di-kill total. Sekarang login pakai password baru tetap jalan
+    // setelah logout ATAUPUN app ditutup & dibuka lagi dari awal.
+    await AppPrefsService.instance.setPasswordOverride(userId, newHash);
     return true;
   }
 }

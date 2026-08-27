@@ -370,7 +370,14 @@ class RecordsProvider extends ChangeNotifier {
   bool _hasTahsinComponent(SantriRecord r) =>
       r.status == HafalanStatus.tahsin || r.status == HafalanStatus.tahsinTahfizh;
 
-  int get totalHadir => _scoped.where((r) => r.keterangan == Keterangan.hadir).length;
+  // "Hadir" di sini artinya fisiknya hadir — termasuk 3 keterangan
+  // sanksi (Tidak Setoran/Tahsin/Murojaah), karena itu santrinya HADIR
+  // tapi nggak setor/tahsin/murojaah (males/ketiduran/dll), BUKAN nggak
+  // masuk. Beda dari Izin Sakit/Izin/Izin Lomba/Izin Pelatihan/Alpa yang
+  // memang nggak hadir secara fisik.
+  int get totalHadir => _scoped
+      .where((r) => r.keterangan == Keterangan.hadir || r.keterangan.isSanksiTanpaSetoran)
+      .length;
   int get totalBarisSetoran =>
       _scoped.fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
 
@@ -644,6 +651,29 @@ class RecordsProvider extends ChangeNotifier {
         .toList()
       ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
     return list.isEmpty ? null : list.first;
+  }
+
+  /// Laporan (kalau ada) milik santri [namaAnak] pada tanggal PERSIS [date]
+  /// — dipakai buat cek "sudah ada laporan hari ini belum" waktu user tap
+  /// kartu pekan buat isi laporan baru.
+  ///
+  /// BUG FIX: sebelumnya dicek per-PEKAN lewat [recordForSantriInWeek]
+  /// (niatnya cegah laporan duplikat — spek bagian 7), tapi efeknya
+  /// laporan Senin ikut kebuka mode EDIT waktu user coba isi laporan hari
+  /// Selasa di pekan yang sama, dan begitu tanggalnya diubah ke Selasa,
+  /// laporan Senin yang asli JADI HILANG (record yang sama cuma
+  /// dipindah tanggalnya, bukan dibuatkan record baru). Sekarang dicek
+  /// per-HARI: laporan Senin & Selasa tetap dua record terpisah, cuma
+  /// laporan di TANGGAL YANG SAMA PERSIS yang dianggap "sudah ada" dan
+  /// dibuka sebagai edit (itu baru beneran duplikat).
+  SantriRecord? recordForSantriOnDate(String namaAnak, DateTime date) {
+    final key = namaAnak.trim().toLowerCase();
+    for (final r in _scoped) {
+      if (r.namaAnak.trim().toLowerCase() == key && DateUtils.isSameDay(r.tanggal, date)) {
+        return r;
+      }
+    }
+    return null;
   }
 
   /// Kartu santri untuk tab Laporan — SATU kartu per santri (bukan per

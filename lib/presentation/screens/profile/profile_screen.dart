@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +6,7 @@ import '../../../core/utils/week_utils.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
+import '../../widgets/avatar_image_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
@@ -94,9 +93,7 @@ class ProfileScreen extends StatelessWidget {
                           child: CircleAvatar(
                             radius: 44,
                             backgroundColor: cs.primaryContainer,
-                            backgroundImage: user.photoPath != null
-                                ? FileImage(File(user.photoPath!))
-                                : null,
+                            backgroundImage: resolveAvatarImage(user.photoPath),
                             child: user.photoPath == null
                                 ? Text(
                                     user.displayName.isNotEmpty

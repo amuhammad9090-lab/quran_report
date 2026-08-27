@@ -1,20 +1,26 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'export_service.dart';
+import 'platform_file/exported_file.dart';
 
 /// Nampilin notifikasi status unduhan ("Tersimpan ke Download") di
 /// notification tray HP tiap kali user simpan file ekspor ke penyimpanan
 /// perangkat lewat [ExportService.saveToDevice] -- Bug #1 di laporan bug:
 /// sebelumnya proses simpan cuma nampilin SnackBar sesaat di dalam app,
 /// nggak ada jejak apapun di notifikasi sistem. (Sempat ada bug lain yang
-/// nyusul: `saveToDevice` manggil `MediaStore().saveFile()` TANPA
-/// parameter `fileName` -- padahal itu parameter WAJIB di media_store_plus
-/// -- jadi file yang tersimpan bukan nama yang dimaksud/gagal. TETAP
-/// pakai package media_store_plus yang sama, bukan ganti package -- cuma
-/// parameter yang kelewat itu yang dilengkapi. Lihat catatan lengkap di
-/// [ExportService.saveToDevice].)
+/// nyusul: `saveToDevice` ternyata nggak beneran nulis ke folder Download
+/// PUBLIK di Android -- lihat catatan panjang di
+/// [ExportService.saveToDevice] -- sudah dibenerin lewat penggantian
+/// package, jadi sekarang notifikasi ini valid: filenya emang beneran ada
+/// di Download publik pas notifikasi ini muncul.)
+///
+/// Di Web, seluruh service ini SENGAJA no-op ([kIsWeb] check di [init] &
+/// [notifySaved]) -- browser sudah punya UI/notifikasi downloadnya
+/// sendiri (bar unduhan bawaan), notifikasi sistem tambahan dari app
+/// cuma redundant/tidak relevan di konteks web, dan `flutter_local_
+/// notifications` versi Android (`AndroidNotificationDetails` di bawah)
+/// memang tidak berlaku di sana.
 ///
 /// CATATAN SETUP (belum otomatis lewat kode ini saja, karena repo yang
 /// dianalisis cuma folder lib/ -- pubspec.yaml & folder android/ tidak ada
@@ -40,21 +46,21 @@ class DownloadNotificationService {
   bool _initialized = false;
 
   // File yang lagi/baru saja ditampilkan notifnya, dipetakan dari id
-  // notifikasi -> path file, supaya tap notifikasi bisa langsung buka
-  // filenya (pakai OpenFilex yang sama dengan ExportService.openFile).
-  final Map<int, String> _notifIdToPath = {};
+  // notifikasi -> ExportedFile, supaya tap notifikasi bisa langsung buka
+  // filenya lagi (pakai ExportService.openFile yang sama).
+  final Map<int, ExportedFile> _notifIdToFile = {};
   int _nextId = 1000;
 
   Future<void> init() async {
-    if (_initialized) return;
+    if (kIsWeb || _initialized) return;
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidInit);
     await _plugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (response) {
-        final path = _notifIdToPath[response.id];
-        if (path != null) {
-          ExportService.instance.openFile(File(path));
+        final file = _notifIdToFile[response.id];
+        if (file != null) {
+          ExportService.instance.openFile(file);
         }
       },
     );
@@ -67,10 +73,10 @@ class DownloadNotificationService {
   }
 
   /// Panggil setelah [ExportService.saveToDevice] sukses.
-  Future<void> notifySaved({required String fileName, required File file}) async {
-    if (!_initialized) return; // Diamkan kalau belum di-init dari main.dart.
+  Future<void> notifySaved({required String fileName, required ExportedFile file}) async {
+    if (kIsWeb || !_initialized) return; // Diamkan kalau belum di-init dari main.dart / di Web.
     final id = _nextId++;
-    _notifIdToPath[id] = file.path;
+    _notifIdToFile[id] = file;
     const androidDetails = AndroidNotificationDetails(
       _channelId,
       _channelName,

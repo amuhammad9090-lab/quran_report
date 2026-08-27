@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -8,8 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/santri_monthly_recap.dart';
-import '../../../data/services/download_notification_service.dart';
 import '../../../data/services/export_service.dart';
+import '../../../data/services/platform_file/exported_file.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 
@@ -18,35 +16,9 @@ import '../../widgets/misc_widgets.dart';
 /// supaya guru pembimbing bisa lihat progres sebulan penuh sekaligus
 /// tanpa bolak-balik buka tiap Pekan. Bisa langsung diekspor lewat tombol
 /// di pojok kanan atas (PDF/Word/Excel, format tabel Nama x Pekan).
-///
-/// Daftarnya dikelompokkan per Kelas & Halaqoh (bukan list nama santri
-/// campur semua) — tiap kelompok dapat tabelnya sendiri, biar guru
-/// pembimbing bisa langsung lihat/scroll kelompoknya sendiri tanpa perlu
-/// nyari-nyari di antara ratusan santri kelas/halaqoh lain.
 class GenerateRekapBulananScreen extends StatelessWidget {
   final DateTime month;
   const GenerateRekapBulananScreen({super.key, required this.month});
-
-  /// Kelompokkan [recaps] per pasangan Kelas+Halaqoh, urut alfabetis
-  /// (kelas dulu, baru halaqoh); dalam tiap kelompok urut nama santri.
-  Map<String, List<SantriMonthlyRecap>> _groupByKelasHalaqoh(List<SantriMonthlyRecap> recaps) {
-    final map = <String, List<SantriMonthlyRecap>>{};
-    for (final r in recaps) {
-      final key = '${r.kelas}||${r.halaqoh}';
-      map.putIfAbsent(key, () => []).add(r);
-    }
-    for (final list in map.values) {
-      list.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
-    }
-    final sortedKeys = map.keys.toList()
-      ..sort((a, b) {
-        final pa = a.split('||');
-        final pb = b.split('||');
-        final byKelas = pa[0].compareTo(pb[0]);
-        return byKelas != 0 ? byKelas : pa[1].compareTo(pb[1]);
-      });
-    return {for (final k in sortedKeys) k: map[k]!};
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +26,6 @@ class GenerateRekapBulananScreen extends StatelessWidget {
     final recaps = provider.monthlySantriRecaps(month);
     final totalWeeks = WeekUtils.weeksInMonth(month);
     final bulanLabel = DateFormat('MMMM yyyy', 'id_ID').format(month);
-    final groups = _groupByKelasHalaqoh(recaps);
 
     return Scaffold(
       body: SafeArea(
@@ -101,54 +72,14 @@ class GenerateRekapBulananScreen extends StatelessWidget {
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                sliver: SliverList.list(
-                  children: [
-                    for (final entry in groups.entries) ...[
-                      _KelasHalaqohHeader(
-                        kelas: entry.value.first.kelas,
-                        halaqoh: entry.value.first.halaqoh,
-                        count: entry.value.length,
-                      ),
-                      const SizedBox(height: 8),
-                      _MonthlyRecapTable(recaps: entry.value, totalWeeks: totalWeeks),
-                      const SizedBox(height: 20),
-                    ],
-                  ],
+                sliver: SliverToBoxAdapter(
+                  child: _MonthlyRecapTable(recaps: recaps, totalWeeks: totalWeeks),
                 ),
               ),
             ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _KelasHalaqohHeader extends StatelessWidget {
-  final String kelas;
-  final String halaqoh;
-  final int count;
-  const _KelasHalaqohHeader({required this.kelas, required this.halaqoh, required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        SoftIconBox(icon: Icons.groups_2_rounded, color: cs.primary, size: 15, padding: 7, radius: 10),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            'Kelas $kelas • Halaqoh $halaqoh',
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        Text(
-          '$count santri',
-          style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant, fontWeight: FontWeight.w600),
-        ),
-      ],
     );
   }
 }
@@ -189,15 +120,10 @@ class _MonthlyExportSheet extends StatefulWidget {
   State<_MonthlyExportSheet> createState() => _MonthlyExportSheetState();
 }
 
-// `with InlineMessageMixin` — sheet ini SENGAJA tidak punya Scaffold
-// sendiri (sama seperti ExportSheet), jadi ScaffoldMessenger.of(context)
-// bakal nemu Scaffold HALAMAN DI BALIK sheet ini dan pesannya kegambar
-// ketutup di belakang, gak kelihatan user. Lihat InlineMessageMixin buat
-// penjelasan lengkap.
-class _MonthlyExportSheetState extends State<_MonthlyExportSheet> with InlineMessageMixin<_MonthlyExportSheet> {
+class _MonthlyExportSheetState extends State<_MonthlyExportSheet> {
   bool _loading = false;
   ExportFormat? _loadingFormat;
-  File? _exportedFile;
+  ExportedFile? _exportedFile;
   ExportFormat? _exportedFormat;
 
   String _extFor(ExportFormat f) => switch (f) {
@@ -214,7 +140,7 @@ class _MonthlyExportSheetState extends State<_MonthlyExportSheet> with InlineMes
 
     try {
       final judul = 'Rekap Bulanan - ${widget.bulanLabel}';
-      File file;
+      ExportedFile file;
       switch (format) {
         case ExportFormat.pdf:
           file = await ExportService.instance.exportMonthlyRecapPdf(
@@ -251,7 +177,9 @@ class _MonthlyExportSheetState extends State<_MonthlyExportSheet> with InlineMes
       });
     } catch (e) {
       if (mounted) {
-        showInlineMessage('Gagal ekspor: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal ekspor: $e')),
+        );
       }
     } finally {
       if (mounted) {
@@ -271,26 +199,21 @@ class _MonthlyExportSheetState extends State<_MonthlyExportSheet> with InlineMes
   Future<void> _saveToDevice() async {
     if (_exportedFile == null || _exportedFormat == null) return;
     try {
-      final ext = _extFor(_exportedFormat!);
-      final filename = 'Rekap Bulanan - ${widget.bulanLabel}';
       await ExportService.instance.saveToDevice(
         _exportedFile!,
-        filename: filename,
-        ext: ext,
-      );
-      // Sama seperti ExportSheet: sekalian munculin notifikasi sistem
-      // "Unduhan selesai" (bisa diketuk buat langsung buka lagi filenya),
-      // bukan cuma pesan sesaat di dalam app.
-      await DownloadNotificationService.instance.notifySaved(
-        fileName: '$filename.$ext',
-        file: _exportedFile!,
+        filename: 'Rekap Bulanan - ${widget.bulanLabel}',
+        ext: _extFor(_exportedFormat!),
       );
       if (mounted) {
-        showInlineMessage('Tersimpan ke Download.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tersimpan ke perangkat.')),
+        );
       }
     } catch (e) {
       if (mounted) {
-        showInlineMessage('Gagal menyimpan: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menyimpan: $e')),
+        );
       }
     }
   }
@@ -320,10 +243,6 @@ class _MonthlyExportSheetState extends State<_MonthlyExportSheet> with InlineMes
                 ),
               ),
             ),
-            if (inlineMessage != null) ...[
-              InlineMessageBanner(message: inlineMessage!),
-              const SizedBox(height: 12),
-            ],
             if (_exportedFile == null) ...[
               Text('Export Rekap Bulanan',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
@@ -416,13 +335,9 @@ class _MonthlyExportSheetState extends State<_MonthlyExportSheet> with InlineMes
   }
 }
 
-/// Tabel scroll horizontal: 1 baris = 1 santri (dalam SATU kelompok
-/// Kelas/Halaqoh — lihat pemanggilnya di [GenerateRekapBulananScreen]),
-/// kolom Pekan 1..N menampilkan ringkasan capaiannya tiap pekan. Santri
-/// yang belum lengkap laporannya di semua Pekan ditandai indikator kuning
-/// di sisi kiri baris. Kolom Kelas/Halaqoh SENGAJA tidak ada lagi di sini
-/// (dulu ada) — sekarang sudah tersirat dari header kelompok di atas
-/// tabel ini, jadi tidak perlu diulang tiap baris.
+/// Tabel scroll horizontal: 1 baris = 1 santri, kolom Pekan 1..N
+/// menampilkan ringkasan capaiannya tiap pekan. Santri yang belum lengkap
+/// laporannya di semua Pekan ditandai indikator kuning di sisi kiri baris.
 class _MonthlyRecapTable extends StatelessWidget {
   final List<SantriMonthlyRecap> recaps;
   final int totalWeeks;
@@ -440,6 +355,7 @@ class _MonthlyRecapTable extends StatelessWidget {
           columnSpacing: 20,
           columns: [
             const DataColumn(label: Text('Nama', style: TextStyle(fontWeight: FontWeight.w800))),
+            const DataColumn(label: Text('Kelas/Halaqoh', style: TextStyle(fontWeight: FontWeight.w800))),
             for (var w = 1; w <= totalWeeks; w++)
               DataColumn(label: Text('Pekan $w', style: const TextStyle(fontWeight: FontWeight.w800))),
             const DataColumn(label: Text('Total Baris', style: TextStyle(fontWeight: FontWeight.w800))),
@@ -466,6 +382,7 @@ class _MonthlyRecapTable extends StatelessWidget {
                       ],
                     ),
                   ),
+                  DataCell(Text('${r.kelas}/${r.halaqoh}')),
                   for (var w = 1; w <= totalWeeks; w++)
                     DataCell(
                       ConstrainedBox(

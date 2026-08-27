@@ -68,20 +68,24 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     final thisMonth = WeekUtils.ownerMonth(now);
     final currentWeek = WeekUtils.weekOfMonth(now);
 
-    final existing = provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
+    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
+    final isCurrentWeek = weekIndex == currentWeek &&
+        !now.isBefore(range.start) &&
+        !now.isAfter(range.end);
+    final presetDate = isCurrentWeek ? now : range.start;
+
+    // Pekan berjalan dicek per-HARI, pekan yang sudah lewat dicek
+    // per-PEKAN seperti semula — lihat catatan di laporan_tab.dart
+    // (_openWeek) & RecordsProvider.recordForSantriOnDate.
+    final existing = isCurrentWeek
+        ? provider.recordForSantriOnDate(card.nama, presetDate)
+        : provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
     if (existing != null) {
       // lockIdentity: true -> samain kek buka form laporan baru dari kartu,
       // identitas santri udah jelas dari kartunya, nggak perlu ditampilin lagi.
       showRecordFormSheet(context, existing: existing, lockIdentity: true);
       return;
     }
-
-    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
-    final presetDate = (weekIndex == currentWeek &&
-            !now.isBefore(range.start) &&
-            !now.isAfter(range.end))
-        ? now
-        : range.start;
 
     showRecordFormSheet(
       context,

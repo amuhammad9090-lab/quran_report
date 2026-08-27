@@ -50,6 +50,9 @@ class AppColors {
   static const izinLomba = Color(0xFF6C5CE7);
   static const izinPelatihan = Color(0xFF2F80B4);
   static const alpa = Color(0xFFD64545);
+  static const tidakSetoran = Color(0xFF8B5E3C);
+  static const tidakTahsin = Color(0xFFA6763D);
+  static const tidakMurojaah = Color(0xFF6B5490);
 
   // --- Keterangan (versi dark) ---
   static const hadirDark = Color(0xFF4FCE85);
@@ -58,6 +61,9 @@ class AppColors {
   static const izinLombaDark = Color(0xFFA79BFF);
   static const izinPelatihanDark = Color(0xFF6FB6EA);
   static const alpaDark = Color(0xFFFF7A7A);
+  static const tidakSetoranDark = Color(0xFFD7A176);
+  static const tidakTahsinDark = Color(0xFFE0BA7D);
+  static const tidakMurojaahDark = Color(0xFFC0AEEA);
 
   static bool _isDark(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
@@ -100,6 +106,9 @@ class AppColors {
       'izinLomba' => dark ? izinLombaDark : izinLomba,
       'izinPelatihan' => dark ? izinPelatihanDark : izinPelatihan,
       'alpa' => dark ? alpaDark : alpa,
+      'tidakSetoran' => dark ? tidakSetoranDark : tidakSetoran,
+      'tidakTahsin' => dark ? tidakTahsinDark : tidakTahsin,
+      'tidakMurojaah' => dark ? tidakMurojaahDark : tidakMurojaah,
       _ => dark ? hadirDark : hadir,
     };
   }
@@ -114,6 +123,9 @@ class AppColors {
         'izinLomba' => izinLomba,
         'izinPelatihan' => izinPelatihan,
         'alpa' => alpa,
+        'tidakSetoran' => tidakSetoran,
+        'tidakTahsin' => tidakTahsin,
+        'tidakMurojaah' => tidakMurojaah,
         _ => hadir,
       };
 

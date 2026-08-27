@@ -1968,8 +1968,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     }
 
     const values = Keterangan.values;
-    final firstRow = values.sublist(0, 3);
-    final secondRow = values.sublist(3);
 
     Widget spacedRow(List<Keterangan> row) => Row(
           children: [
@@ -1980,11 +1978,23 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           ],
         );
 
+    // Dulu cuma 2 baris hardcode (sublist(0,3) + sublist(3)) — pas
+    // Keterangan cuma 6 macam pas 3+3. Sekarang jumlahnya udah 9 (nambah
+    // 3 keterangan sanksi), jadi di-chunk otomatis per 3 biar berapa pun
+    // jumlah keterangan ke depannya nggak perlu ubah kode ini lagi (baris
+    // terakhir yang nggak genap 3 tetap di-render, sisanya dibiarkan
+    // kosong lewat Expanded standar yang sama).
+    final rows = <List<Keterangan>>[];
+    for (var i = 0; i < values.length; i += 3) {
+      rows.add(values.sublist(i, i + 3 > values.length ? values.length : i + 3));
+    }
+
     return Column(
       children: [
-        spacedRow(firstRow),
-        const SizedBox(height: 8),
-        spacedRow(secondRow),
+        for (int i = 0; i < rows.length; i++) ...[
+          if (i > 0) const SizedBox(height: 8),
+          spacedRow(rows[i]),
+        ],
       ],
     );
   }

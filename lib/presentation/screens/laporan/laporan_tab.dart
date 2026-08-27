@@ -181,7 +181,21 @@ class _LaporanTabState extends State<LaporanTab> {
     final thisMonth = DateTime(now.year, now.month);
     final currentWeek = WeekUtils.weekOfMonth(now);
 
-    final existing = provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
+    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
+    final isCurrentWeek = weekIndex == currentWeek &&
+        !now.isBefore(range.start) &&
+        !now.isAfter(range.end);
+    final presetDate = isCurrentWeek ? now : range.start;
+
+    // Pekan BERJALAN dicek per-HARI (biar laporan hari lain di pekan yang
+    // sama, mis. Senin, gak ke-timpa pas isi laporan hari ini — lihat
+    // catatan di RecordsProvider.recordForSantriOnDate). Pekan yang SUDAH
+    // LEWAT (closed) balik dicek per-PEKAN seperti semula — supaya tap
+    // kartu pekan lama langsung buka laporan yang sudah ada di situ
+    // (walau bukan hari Senin persis), bukan malah nongolin form kosong.
+    final existing = isCurrentWeek
+        ? provider.recordForSantriOnDate(card.nama, presetDate)
+        : provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
     if (existing != null) {
       // lockIdentity: true -> samain kek buka form laporan baru dari kartu
       // santri ini (section "Identitas Santri" ikut disembunyikan, karena
@@ -189,13 +203,6 @@ class _LaporanTabState extends State<LaporanTab> {
       showRecordFormSheet(context, existing: existing, lockIdentity: true);
       return;
     }
-
-    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
-    final presetDate = (weekIndex == currentWeek &&
-        !now.isBefore(range.start) &&
-        !now.isAfter(range.end))
-        ? now
-        : range.start;
 
     showRecordFormSheet(
       context,
