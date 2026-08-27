@@ -415,4 +415,5 @@ const List<Map<String, dynamic>> kSeedStudentsJson = [
   {'id': "santri_299", 'nama': "Mahila Fhagea Muazahra", 'kelas': "IX Andalusia", 'halaqoh': "Halaqoh D", 'schoolId': "smpit_al_madinah_tanjungpinang"},
   {'id': "santri_300", 'nama': "Najwa Kimya Muzandi", 'kelas': "IX Andalusia", 'halaqoh': "Halaqoh D", 'schoolId': "smpit_al_madinah_tanjungpinang"},
   {'id': "santri_301", 'nama': "Puan Zahira Naura Hasnah", 'kelas': "IX Andalusia", 'halaqoh': "Halaqoh D", 'schoolId': "smpit_al_madinah_tanjungpinang"},
+  {'id': "santri_302", 'nama': "Raja Hayqal Gestindra", 'kelas': "IX Gazza", 'halaqoh': "Halaqoh D", 'schoolId': "smpit_al_madinah_tanjungpinang"},
 ];
