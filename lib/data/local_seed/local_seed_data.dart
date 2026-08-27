@@ -87,7 +87,7 @@ const List<Map<String, dynamic>> kSeedAccountsJson = [
   {
     'id': "usr_07",
     'username': "fakhri",
-    'displayName': "Fakhri Hamidah Ahmad, S.Ag",
+    'displayName': "Fakhri Hamidah Ahmad, S.Sos",
     'passwordHash': "735ecb6878851826",
     'role': "guru_pembimbing",
     'assignments': [{'kelas': "VII Aleksandria", 'halaqoh': "Halaqoh B"}, {'kelas': "VIII Cordova", 'halaqoh': "Halaqoh B"}, {'kelas': "VIII Damaskus", 'halaqoh': "Halaqoh A"}, {'kelas': "IX Mekkah", 'halaqoh': "Halaqoh D"}],
