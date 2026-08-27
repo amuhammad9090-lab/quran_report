@@ -132,12 +132,10 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
         !now.isAfter(range.end);
     final presetDate = isCurrentWeek ? now : range.start;
 
-    // Pekan berjalan dicek per-HARI, pekan yang sudah lewat dicek
-    // per-PEKAN seperti semula — lihat catatan di laporan_tab.dart
-    // (_openWeek) & RecordsProvider.recordForSantriOnDate.
-    final existing = isCurrentWeek
-        ? provider.recordForSantriOnDate(card.nama, presetDate)
-        : provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
+    // Dicek per-HARI PERSIS di semua pekan (current maupun lewat) —
+    // konsisten dengan Rekap Harian. Lihat catatan lengkap di
+    // laporan_tab.dart (_openWeek) & RecordsProvider.recordForSantriOnDate.
+    final existing = provider.recordForSantriOnDate(card.nama, presetDate);
     if (existing != null) {
       // lockIdentity: true -> samain kek buka form laporan baru dari kartu,
       // identitas santri udah jelas dari kartunya, nggak perlu ditampilin lagi.

@@ -18,6 +18,7 @@ Future<void> showExportSheet(
       String? periode,
       String? guruPembimbing,
       bool includeTanggal = false,
+      String? fixedTanggalLabel,
     }) {
   return showModalBottomSheet(
     context: context,
@@ -32,6 +33,7 @@ Future<void> showExportSheet(
       periode: periode,
       guruPembimbing: guruPembimbing,
       includeTanggal: includeTanggal,
+      fixedTanggalLabel: fixedTanggalLabel,
     ),
   );
 }
@@ -53,6 +55,10 @@ class ExportSheet extends StatefulWidget {
   // hari/tanggal (mis. rekap pekanan per kelompok) -> tabel export
   // menyertakan kolom Hari & Tanggal per baris.
   final bool includeTanggal;
+  // Kalau diisi, dipakai buat kolom "Hari/Tanggal" di SEMUA baris export
+  // (menggantikan tanggal masing-masing record) — dipakai Generate
+  // Laporan Pekanan, lihat ExportService._rowsWithTanggal.
+  final String? fixedTanggalLabel;
 
   const ExportSheet({
     super.key,
@@ -61,6 +67,7 @@ class ExportSheet extends StatefulWidget {
     this.periode,
     this.guruPembimbing,
     this.includeTanggal = false,
+    this.fixedTanggalLabel,
   });
 
   @override
@@ -149,6 +156,7 @@ class _ExportSheetState extends State<ExportSheet> {
             periode: widget.periode,
             guruPembimbing: widget.guruPembimbing,
             includeTanggal: widget.includeTanggal,
+            fixedTanggalLabel: widget.fixedTanggalLabel,
           );
           break;
         case ExportFormat.word:
@@ -158,6 +166,7 @@ class _ExportSheetState extends State<ExportSheet> {
             periode: widget.periode,
             guruPembimbing: widget.guruPembimbing,
             includeTanggal: widget.includeTanggal,
+            fixedTanggalLabel: widget.fixedTanggalLabel,
           );
           break;
         case ExportFormat.excel:
@@ -167,6 +176,7 @@ class _ExportSheetState extends State<ExportSheet> {
             periode: widget.periode,
             guruPembimbing: widget.guruPembimbing,
             includeTanggal: widget.includeTanggal,
+            fixedTanggalLabel: widget.fixedTanggalLabel,
           );
           break;
       }

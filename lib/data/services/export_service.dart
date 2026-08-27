@@ -32,8 +32,9 @@ class ExportService {
     'Catatan',
   ];
 
-  // Dipakai saat [includeTanggal] true (export rekap per Kelas+Halaqoh
-  // yang bisa mencakup lebih dari 1 hari) — lihat KelasHalaqohGroupCard.
+  // Dipakai saat [includeTanggal] true (export rekap yang bisa mencakup
+  // lebih dari 1 hari, mis. Generate Laporan Pekanan atau rekap per
+  // Kelas+Halaqoh sehari di Rekap Harian).
   // Hari & Tanggal SENGAJA digabung jadi 1 kolom ("Senin, 17 Agu 2026")
   // biar tabelnya nggak kelewat lebar — 2 kolom terpisah buat info yang
   // sebenarnya cuma 1 potong data itu boros tempat.
@@ -157,14 +158,19 @@ class ExportService {
     return rows;
   }
 
-  /// Versi [_rows] dengan kolom Hari/Tanggal gabungan
-  List<List<String>> _rowsWithTanggal(List<SantriRecord> records) {
+  /// Versi [_rows] dengan kolom Hari/Tanggal gabungan. Kalau
+  /// [fixedTanggalLabel] diisi, SEMUA baris pakai label itu (bukan tanggal
+  /// masing-masing record) — dipakai Generate Laporan Pekanan, yang
+  /// menampilkan "Hari/Tanggal" sebagai tanggal laporan TERAKHIR dibuat
+  /// dalam pekan itu, bukan tanggal per-baris (lihat
+  /// GenerateRekapPekananScreen).
+  List<List<String>> _rowsWithTanggal(List<SantriRecord> records, {String? fixedTanggalLabel}) {
     final rows = <List<String>>[];
     for (var i = 0; i < records.length; i++) {
       final r = records[i];
       rows.add([
         '${i + 1}',
-        _hariTanggalText(r.tanggal),
+        fixedTanggalLabel ?? _hariTanggalText(r.tanggal),
         r.namaAnak,
         _capaianLabel(r),
         _ayatHalRange(r),
@@ -175,6 +181,17 @@ class ExportService {
     }
     return rows;
   }
+
+  // --- Wrapper publik dari helper private di atas — dipakai widget UI
+  // (bukan cuma proses export) yang butuh nampilin isi kolom PERSIS sama
+  // seperti hasil export, mis. [ExportStyleRecordsTable] di Rekap Harian
+  // & Generate Rekap Pekanan, biar satu-satunya sumber logic tetap di
+  // sini (tidak diduplikasi di layer widget).
+  String capaianLabelFor(SantriRecord r) => _capaianLabel(r);
+  String ayatHalRangeFor(SantriRecord r) => _ayatHalRange(r);
+  String barisTextFor(SantriRecord r) => _barisText(r);
+  String catatanTextFor(SantriRecord r) => _catatanText(r);
+  String hariTanggalTextFor(DateTime d) => _hariTanggalText(d);
 
   /// Ringkasan "Nx <jenis>" per santri untuk semua Keterangan SELAIN Hadir
   /// (Izin Sakit, Izin Lomba, Izin Pelatihan, Alpa)
@@ -212,10 +229,13 @@ class ExportService {
         String? periode,
         String? guruPembimbing,
         bool includeTanggal = false,
+        String? fixedTanggalLabel,
       }) async {
     final doc = pw.Document();
     final headers = includeTanggal ? _headersWithTanggal : _headers;
-    final rows = includeTanggal ? _rowsWithTanggal(records) : _rows(records);
+    final rows = includeTanggal
+        ? _rowsWithTanggal(records, fixedTanggalLabel: fixedTanggalLabel)
+        : _rows(records);
     final kelasValue = kelas ?? _uniqueJoin(records.map((r) => r.kelas));
     final halaqohValue = halaqoh ?? _uniqueJoin(records.map((r) => r.halaqoh));
     final columnWidths = includeTanggal
@@ -344,6 +364,7 @@ class ExportService {
         String? periode,
         String? guruPembimbing,
         bool includeTanggal = false,
+        String? fixedTanggalLabel,
       }) async {
     final book = xls.Excel.createExcel();
     const sheetName = 'Laporan';
@@ -392,7 +413,9 @@ class ExportService {
     }
     row++;
 
-    final rows = includeTanggal ? _rowsWithTanggal(records) : _rows(records);
+    final rows = includeTanggal
+        ? _rowsWithTanggal(records, fixedTanggalLabel: fixedTanggalLabel)
+        : _rows(records);
     for (var r = 0; r < rows.length; r++) {
       for (var c = 0; c < rows[r].length; c++) {
         final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row + r));
@@ -443,6 +466,7 @@ class ExportService {
         String? periode,
         String? guruPembimbing,
         bool includeTanggal = false,
+        String? fixedTanggalLabel,
       }) async {
     final builder = DocxBuilder();
     final headers = includeTanggal ? _headersWithTanggal : _headers;
@@ -459,7 +483,10 @@ class ExportService {
       builder.addParagraph('Guru Pembimbing : $guruPembimbing');
     }
     builder.addSpacer();
-    builder.addTable(headers, includeTanggal ? _rowsWithTanggal(records) : _rows(records));
+    builder.addTable(
+      headers,
+      includeTanggal ? _rowsWithTanggal(records, fixedTanggalLabel: fixedTanggalLabel) : _rows(records),
+    );
     builder.addSpacer();
     builder.addParagraph('Total data: ${records.length}', bold: true);
 

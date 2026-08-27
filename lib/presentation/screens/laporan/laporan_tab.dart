@@ -187,15 +187,19 @@ class _LaporanTabState extends State<LaporanTab> {
         !now.isAfter(range.end);
     final presetDate = isCurrentWeek ? now : range.start;
 
-    // Pekan BERJALAN dicek per-HARI (biar laporan hari lain di pekan yang
-    // sama, mis. Senin, gak ke-timpa pas isi laporan hari ini — lihat
-    // catatan di RecordsProvider.recordForSantriOnDate). Pekan yang SUDAH
-    // LEWAT (closed) balik dicek per-PEKAN seperti semula — supaya tap
-    // kartu pekan lama langsung buka laporan yang sudah ada di situ
-    // (walau bukan hari Senin persis), bukan malah nongolin form kosong.
-    final existing = isCurrentWeek
-        ? provider.recordForSantriOnDate(card.nama, presetDate)
-        : provider.recordForSantriInWeek(card.nama, thisMonth, weekIndex);
+    // Dicek per-HARI PERSIS (presetDate), baik pekan berjalan MAUPUN
+    // pekan yang sudah lewat — konsisten dengan Rekap Harian yang juga
+    // per-hari. Sebelumnya pekan lewat dicek per-PEKAN (ambil laporan
+    // TERBARU di pekan itu buat dibuka sebagai edit), tapi itu logic
+    // yang sama persis yang bikin laporan Senin ke-timpa/pindah tanggal
+    // waktu guru sebenarnya mau isi hari lain di pekan yang sama (lihat
+    // catatan lengkap di RecordsProvider.recordForSantriOnDate) — cuma
+    // dulu cuma dibenerin buat pekan berjalan, sekarang berlaku di semua
+    // pekan. Efeknya: tap kartu pekan LAMA sekarang default ngarah ke
+    // hari Senin pekan itu (range.start) — buat lihat/isi hari lain yang
+    // spesifik di pekan lama, lewat Rekap Harian (tap hari itu di Rekap
+    // Pekan), bukan dari tombol kartu pekan ini.
+    final existing = provider.recordForSantriOnDate(card.nama, presetDate);
     if (existing != null) {
       // lockIdentity: true -> samain kek buka form laporan baru dari kartu
       // santri ini (section "Identitas Santri" ikut disembunyikan, karena

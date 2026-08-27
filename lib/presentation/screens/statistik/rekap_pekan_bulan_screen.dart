@@ -6,11 +6,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/santri_record.dart';
-import '../../../providers/auth_provider.dart';
 import '../../../providers/records_provider.dart';
-import '../../widgets/kelas_halaqoh_group_card.dart';
 import '../../widgets/misc_widgets.dart';
-import '../export/export_sheet.dart';
+import 'generate_rekap_pekanan_screen.dart';
+import 'rekap_harian_detail_screen.dart';
 
 /// Rekap satu Pekan DALAM BULAN (1-6) — dibuka dari Statistik → Rekap
 /// Bulanan → salah satu kartu "Pekan N" (baik dari [_MonthSwitcher] atau
@@ -18,6 +17,13 @@ import '../export/export_sheet.dart';
 /// satu bulan yang sama, tidak pernah lintas bulan (lihat WeekUtils). Ini
 /// SATU-SATUNYA fitur rekap per-pekan di aplikasi — Rekap Pekanan (ISO
 /// Senin-Minggu) yang dulu terpisah sudah dihapus total.
+///
+/// Section "Rekap per Kelas & Halaqoh" yang dulu ada di sini SUDAH
+/// DIPINDAH ke laporan per-hari (tap salah satu baris "Rekap Harian" di
+/// bawah -> [RekapHarianDetailScreen]) — halaman ini sekarang cuma
+/// nampilin ringkasan pekan + daftar hari (tap buat lihat detail hari
+/// itu) + tombol Generate Laporan Pekanan (gabungan semua hari, lihat
+/// [GenerateRekapPekananScreen]).
 class RekapPekanBulanScreen extends StatelessWidget {
   final DateTime month;
   final int weekIndex;
@@ -28,12 +34,11 @@ class RekapPekanBulanScreen extends StatelessWidget {
     final provider = context.watch<RecordsProvider>();
     final range = WeekUtils.monthWeekRange(month, weekIndex);
     final records = provider.recordsInMonthWeek(month, weekIndex);
-    final kelasHalaqohGroups = provider.groupByKelasHalaqoh(records);
 
     final totalTahfizh = records.where((r) =>
         r.status == HafalanStatus.tahfizh || r.status == HafalanStatus.tahsinTahfizh).length;
     final bulanLabel = DateFormat('MMMM yyyy', 'id_ID').format(month);
-    final rangeLabel = _rangeLabel(range);
+    final rangeLabel = WeekUtils.rangeLabel(range);
 
     final tahfizhCount = totalTahfizh;
     final tahsinCount = records.length - tahfizhCount;
@@ -101,32 +106,29 @@ class RekapPekanBulanScreen extends StatelessWidget {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
                 sliver: SliverToBoxAdapter(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: _DailyRekapList(range: range, records: records),
-                    ),
-                  ),
-                ),
-              ),
-              const SliverPadding(
-                padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
-                sliver: SliverToBoxAdapter(
-                  child: SectionLabel('Rekap per Kelas & Halaqoh'),
+                  child: _DailyRekapList(range: range, records: records),
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                sliver: SliverList.list(
-                  children: [
-                    for (final g in kelasHalaqohGroups) ...[
-                      KelasHalaqohGroupCard(
-                        group: g,
-                        onExport: () => _exportGroup(context, g),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                sliver: SliverToBoxAdapter(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => GenerateRekapPekananScreen(
+                            records: records,
+                            weekIndex: weekIndex,
+                            bulanLabel: bulanLabel,
+                            rangeLabel: rangeLabel,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                    ],
-                  ],
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      label: const Text('Generate Laporan Pekanan'),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -135,39 +137,14 @@ class RekapPekanBulanScreen extends StatelessWidget {
       ),
     );
   }
-
-  String _rangeLabel(MonthWeekRange range) => WeekUtils.rangeLabel(range);
-
-  void _exportGroup(BuildContext context, KelasHalaqohGroup g) {
-    final authProvider = context.read<AuthProvider>();
-    String? guru = authProvider.guruPembimbingNameFor(g.kelas, g.halaqoh);
-    if (guru == null) {
-      final counts = <String, int>{};
-      for (final r in g.records) {
-        final id = r.ownerId;
-        if (id == null) continue;
-        counts[id] = (counts[id] ?? 0) + 1;
-      }
-      if (counts.isNotEmpty) {
-        final topId = counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
-        guru = authProvider.displayNameForId(topId);
-      }
-    }
-    final bulanLabel = DateFormat('MMMM yyyy', 'id_ID').format(month);
-    showExportSheet(
-      context,
-      records: g.records,
-      judul: 'Kelas ${g.kelas} Halaqoh ${g.halaqoh} - Pekan $weekIndex $bulanLabel',
-      periode: 'Pekan $weekIndex $bulanLabel',
-      guruPembimbing: guru,
-      includeTanggal: true,
-    );
-  }
 }
 
 /// Rincian jumlah laporan per hari dalam pekan ini — ditampilkan buat
 /// SEMUA pekan (Pekan 1, 2, 3, dst di bulan yang sama), bukan cuma pekan
-/// yang lagi berjalan, di atas section "Rekap per Kelas & Halaqoh".
+/// yang lagi berjalan. Tiap baris hari bisa DI-TAP buat lihat laporan hari
+/// itu (per Kelas & Halaqoh, lihat [RekapHarianDetailScreen]) — makanya
+/// baris dibuat lebih besar/jelas dari sebelumnya (dulu cuma teks
+/// ringkas, sekarang kartu penuh yang jelas kelihatan bisa di-tap).
 class _DailyRekapList extends StatelessWidget {
   final MonthWeekRange range;
   final List<SantriRecord> records;
@@ -182,56 +159,92 @@ class _DailyRekapList extends StatelessWidget {
 
     return Column(
       children: [
-        for (int i = 0; i < dayOrder.length; i++) ...[
-          if (i > 0) Divider(height: 1, color: Theme.of(context).dividerTheme.color),
-          _DayCountRow(
-            date: dayOrder[i],
-            count: records.where((r) => DateUtils.isSameDay(r.tanggal, dayOrder[i])).length,
+        for (final day in dayOrder) ...[
+          _DayCard(
+            date: day,
+            records: records.where((r) => DateUtils.isSameDay(r.tanggal, day)).toList(),
           ),
+          const SizedBox(height: 10),
         ],
       ],
     );
   }
 }
 
-class _DayCountRow extends StatelessWidget {
+class _DayCard extends StatelessWidget {
   final DateTime date;
-  final int count;
-  const _DayCountRow({required this.date, required this.count});
+  final List<SantriRecord> records;
+  const _DayCard({required this.date, required this.records});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isToday = DateUtils.isSameDay(date, DateTime.now());
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(
-              DateFormat('EEEE', 'id_ID').format(date),
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: isToday ? cs.primary : null,
+    final count = records.length;
+    final totalBaris = records.fold<int>(0, (sum, r) => sum + (r.totalBaris ?? 0));
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => RekapHarianDetailScreen(date: date)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isToday ? cs.primary : cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  DateFormat('d', 'id_ID').format(date),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: isToday ? cs.onPrimary : cs.onPrimaryContainer,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('EEEE', 'id_ID').format(date),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14.5,
+                        color: isToday ? cs.primary : null,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      DateFormat('d MMMM yyyy', 'id_ID').format(date),
+                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      count == 0 ? 'Belum ada laporan' : '$count laporan • $totalBaris baris',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: count == 0 ? cs.onSurfaceVariant : cs.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+            ],
           ),
-          Text(
-            DateFormat('d MMM', 'id_ID').format(date),
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-          const Spacer(),
-          Text(
-            count == 0 ? '-' : '$count laporan',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 12.5,
-              color: count == 0 ? cs.onSurfaceVariant : cs.primary,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

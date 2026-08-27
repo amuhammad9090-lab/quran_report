@@ -203,17 +203,29 @@ class _SantriReportCardState extends State<SantriReportCard> {
   }
 
   Widget _buildWeekInfoPanel(BuildContext context, ColorScheme cs, DateTime thisMonth, int weekIndex) {
-    // Ambil laporan pekan ini langsung dari provider (BUKAN dari
-    // info.latestRecord, yang cuma laporan TERBARU keseluruhan, bisa beda
-    // pekan) — biar panel selalu nunjukin isi pekan yang benar-benar
-    // di-tap, bukan pekan lain.
-    final record = context.watch<RecordsProvider>().recordForSantriInWeek(
-          widget.info.nama,
-          thisMonth,
-          weekIndex,
-        );
+    // Tanggal yang beneran bakal disasar kalau tombol di panel ini
+    // ditekan (onTapWeek -> _openWeek di pemanggil) — SAMA PERSIS logic-nya
+    // (pekan berjalan -> hari ini, pekan lewat -> hari Senin pekan itu),
+    // biar info & tombol yang ditampilkan gak menjanjikan laporan yang
+    // ternyata gak kebuka pas ditekan. Makanya dicek per-HARI PERSIS
+    // ([recordForSantriOnDate]) — BUKAN ambil laporan terbaru di pekan itu
+    // (bisa beda hari dari yang akan dibuka) — lihat catatan panjang di
+    // RecordsProvider.recordForSantriOnDate.
+    final now = DateTime.now();
+    final currentWeek = WeekUtils.weekOfMonth(now);
     final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
+    final isCurrentWeek = weekIndex == currentWeek &&
+        !now.isBefore(range.start) &&
+        !now.isAfter(range.end);
+    final targetDate = isCurrentWeek ? now : range.start;
+    final record = context.watch<RecordsProvider>().recordForSantriOnDate(
+          widget.info.nama,
+          targetDate,
+        );
     final rangeStr = WeekUtils.rangeLabel(range);
+    final targetDateLabel = isCurrentWeek
+        ? 'Hari ini, ${DateFormat('d MMM yyyy', 'id_ID').format(targetDate)}'
+        : DateFormat('EEEE, d MMM yyyy', 'id_ID').format(targetDate);
 
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -237,10 +249,15 @@ class _SantriReportCardState extends State<SantriReportCard> {
                 ),
               ],
             ),
+            const SizedBox(height: 4),
+            Text(
+              targetDateLabel,
+              style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+            ),
             const SizedBox(height: 8),
             if (record == null)
               Text(
-                'Belum ada laporan pekan ini.',
+                'Belum ada laporan di hari itu.',
                 style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
               )
             else ...[

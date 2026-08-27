@@ -548,6 +548,16 @@ class RecordsProvider extends ChangeNotifier {
     return list;
   }
 
+  /// Semua laporan tepat pada tanggal [date] (jam diabaikan) — dipakai
+  /// [RekapHarianDetailScreen] buat nampilin laporan SATU HARI tertentu
+  /// (dibuka dari tap baris hari di "Rekap Harian" pada Rekap Pekan).
+  /// Terurut nama (case-insensitive).
+  List<SantriRecord> recordsOnDate(DateTime date) {
+    final list = _scoped.where((r) => DateUtils.isSameDay(r.tanggal, date)).toList()
+      ..sort((a, b) => a.namaAnak.toLowerCase().compareTo(b.namaAnak.toLowerCase()));
+    return list;
+  }
+
   /// Ringkasan tiap Pekan (1..N sesuai jumlah hari bulan itu) dalam
   /// [month] — dipakai daftar "Pekan 1 / Pekan 2 / ..." di Rekap Bulanan.
   List<MonthWeekSummary> monthWeekSummaries(DateTime month) {
@@ -639,33 +649,21 @@ class RecordsProvider extends ChangeNotifier {
   // di-clear lagi begitu selesai supaya tidak nyangkut antar pemanggilan.
   final Map<String, DateTime> _latestSeen = {};
 
-  /// Laporan (kalau ada) milik santri [namaAnak] pada Pekan [weekIndex]
-  /// bulan [month] — dipakai supaya membuka kartu di pekan yang sudah ada
-  /// isinya langsung masuk mode EDIT, bukan bikin laporan duplikat (lihat
-  /// spek bagian 7). Kalau lebih dari satu (semestinya tidak terjadi lewat
-  /// alur normal aplikasi), diambil yang terbaru.
-  SantriRecord? recordForSantriInWeek(String namaAnak, DateTime month, int weekIndex) {
-    final key = namaAnak.trim().toLowerCase();
-    final list = recordsInMonthWeek(month, weekIndex)
-        .where((r) => r.namaAnak.trim().toLowerCase() == key)
-        .toList()
-      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
-    return list.isEmpty ? null : list.first;
-  }
-
   /// Laporan (kalau ada) milik santri [namaAnak] pada tanggal PERSIS [date]
   /// — dipakai buat cek "sudah ada laporan hari ini belum" waktu user tap
   /// kartu pekan buat isi laporan baru.
   ///
-  /// BUG FIX: sebelumnya dicek per-PEKAN lewat [recordForSantriInWeek]
-  /// (niatnya cegah laporan duplikat — spek bagian 7), tapi efeknya
-  /// laporan Senin ikut kebuka mode EDIT waktu user coba isi laporan hari
-  /// Selasa di pekan yang sama, dan begitu tanggalnya diubah ke Selasa,
-  /// laporan Senin yang asli JADI HILANG (record yang sama cuma
-  /// dipindah tanggalnya, bukan dibuatkan record baru). Sekarang dicek
-  /// per-HARI: laporan Senin & Selasa tetap dua record terpisah, cuma
-  /// laporan di TANGGAL YANG SAMA PERSIS yang dianggap "sudah ada" dan
-  /// dibuka sebagai edit (itu baru beneran duplikat).
+  /// BUG FIX: sebelumnya dicek per-PEKAN (niatnya cegah laporan duplikat
+  /// — spek bagian 7), tapi efeknya laporan Senin ikut kebuka mode EDIT
+  /// waktu user coba isi laporan hari Selasa di pekan yang sama, dan
+  /// begitu tanggalnya diubah ke Selasa, laporan Senin yang asli JADI
+  /// HILANG (record yang sama cuma dipindah tanggalnya, bukan dibuatkan
+  /// record baru). Sekarang dicek per-HARI: laporan Senin & Selasa tetap
+  /// dua record terpisah, cuma laporan di TANGGAL YANG SAMA PERSIS yang
+  /// dianggap "sudah ada" dan dibuka sebagai edit (itu baru beneran
+  /// duplikat). Berlaku juga untuk pekan yang sudah lewat (dulu masih
+  /// pakai cek per-pekan, sekarang disamakan — lihat laporan_tab.dart
+  /// _openWeek, search_results_screen.dart, dan folder_detail_screen.dart).
   SantriRecord? recordForSantriOnDate(String namaAnak, DateTime date) {
     final key = namaAnak.trim().toLowerCase();
     for (final r in _scoped) {
