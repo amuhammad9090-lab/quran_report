@@ -15,6 +15,15 @@ import '../../data/services/export_service.dart';
 /// sumber logic yang SAMA dipakai proses export sungguhan
 /// (exportGroupedPdf/Excel/Word), biar tampilan preview & hasil export
 /// identik (pola yang sama seperti [ExportStyleRecordsTable]).
+///
+/// Sengaja PAKAI [Table] bukan [DataTable]: [DataTable] maksa SEMUA
+/// baris punya tinggi yang sama (dataRowMaxHeight berlaku global), jadi
+/// kalau ada 1 santri dengan 3 jenis capaian sekaligus, baris santri lain
+/// yang cuma 1 capaian ikut jadi tinggi juga (atau sebaliknya, kepotong).
+/// [Table] menghitung tinggi tiap TableRow SENDIRI-SENDIRI berdasarkan
+/// konten cell-nya — jadi baris yang capaiannya cuma 1 baris teks tetap
+/// pendek/pas ("fit"), dan baris yang capaiannya 2-3 jenis otomatis
+/// melebar/lebih tinggi mengikuti isinya, tanpa perlu scroll internal.
 class WeeklySantriRecapTable extends StatelessWidget {
   final List<SantriRecord> records;
 
@@ -26,88 +35,97 @@ class WeeklySantriRecapTable extends StatelessWidget {
 
   const WeeklySantriRecapTable({super.key, required this.records, this.fixedTanggalLabel});
 
+  // Lebar tiap kolom (No, Hari/Tanggal, Nama Murid, Capaian, Baris,
+  // Keterangan, Catatan) — tinggal diubah angkanya kalau mau lebih
+  // lebar/sempit. Total = lebar tabel (di dalam horizontal scroll).
+  static const _colWidths = <double>[32, 100, 100, 190, 44, 110, 110];
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final rows = ExportService.instance
         .weeklyRowsGroupedBySantriFor(records, fixedTanggalLabel: fixedTanggalLabel);
+    final totalWidth = _colWidths.reduce((a, b) => a + b);
 
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(cs.primaryContainer.withValues(alpha: 0.5)),
-          columnSpacing: 20,
-          dataRowMinHeight: 48,
-          // Sebelumnya 320 — bikin baris jadi raksasa kalau kolom Capaian
-          // punya banyak baris teks (Tahsin/Tahfizh digabung dengan '\n').
-          // Sekarang di-cap kecil; kolom yang teksnya panjang (Capaian,
-          // Keterangan, Catatan) dibungkus scroll vertical sendiri di
-          // bawah, jadi tinggi baris gak lagi ngikutin panjang teks.
-          dataRowMaxHeight: 96,
-          columns: const [
-            DataColumn(label: Text('No', style: TextStyle(fontWeight: FontWeight.w800))),
-            DataColumn(label: Text('Hari/Tanggal', style: TextStyle(fontWeight: FontWeight.w800))),
-            DataColumn(label: Text('Nama Murid', style: TextStyle(fontWeight: FontWeight.w800))),
-            DataColumn(label: Text('Capaian', style: TextStyle(fontWeight: FontWeight.w800))),
-            DataColumn(label: Text('Baris', style: TextStyle(fontWeight: FontWeight.w800))),
-            DataColumn(label: Text('Keterangan', style: TextStyle(fontWeight: FontWeight.w800))),
-            DataColumn(label: Text('Catatan', style: TextStyle(fontWeight: FontWeight.w800))),
-          ],
-          rows: [
-            for (var i = 0; i < rows.length; i++)
-              DataRow(
-                cells: [
-                  DataCell(Text('${i + 1}')),
-                  DataCell(Text(rows[i].tanggalLabel)),
-                  DataCell(
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 140),
-                      child: Text(
-                        rows[i].namaAnak,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 260, maxHeight: 80),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(rows[i].capaian),
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      '${rows[i].totalBaris}',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  DataCell(
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 160, maxHeight: 80),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(rows[i].keterangan),
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 160, maxHeight: 80),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(rows[i].catatan),
-                      ),
-                    ),
-                  ),
+        child: SizedBox(
+          width: totalWidth,
+          child: Table(
+            columnWidths: {
+              for (var c = 0; c < _colWidths.length; c++) c: FixedColumnWidth(_colWidths[c]),
+            },
+            border: TableBorder(
+              horizontalInside: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+            ),
+            children: [
+              TableRow(
+                decoration: BoxDecoration(color: cs.primaryContainer.withValues(alpha: 0.5)),
+                children: const [
+                  _HeaderCell('No'),
+                  _HeaderCell('Hari/Tanggal'),
+                  _HeaderCell('Nama Murid'),
+                  _HeaderCell('Capaian'),
+                  _HeaderCell('Baris'),
+                  _HeaderCell('Keterangan'),
+                  _HeaderCell('Catatan'),
                 ],
               ),
-          ],
+              for (var i = 0; i < rows.length; i++)
+                TableRow(
+                  children: [
+                    _Cell('${i + 1}'),
+                    _Cell(rows[i].tanggalLabel),
+                    _Cell(rows[i].namaAnak, bold: true),
+                    _Cell(rows[i].capaian),
+                    _Cell('${rows[i].totalBaris}', bold: true),
+                    _Cell(rows[i].keterangan),
+                    _Cell(rows[i].catatan),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Padding & fontSize sel header/isi — gampang diutak-atik kalau masih
+// mau lebih rapat/renggang.
+const _cellPadding = EdgeInsets.symmetric(horizontal: 6, vertical: 8);
+const _fontSize = 12.0;
+
+class _HeaderCell extends StatelessWidget {
+  final String text;
+  const _HeaderCell(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: _cellPadding,
+      child: Text(text, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: _fontSize)),
+    );
+  }
+}
+
+class _Cell extends StatelessWidget {
+  final String text;
+  final bool bold;
+  const _Cell(this.text, {this.bold = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: _cellPadding,
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: _fontSize,
+          fontWeight: bold ? FontWeight.w700 : FontWeight.normal,
         ),
       ),
     );

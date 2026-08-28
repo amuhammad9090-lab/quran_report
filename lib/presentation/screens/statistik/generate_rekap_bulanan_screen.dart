@@ -153,71 +153,132 @@ class GenerateRekapBulananScreen extends StatelessWidget {
 /// lihat pengelompokan di [GenerateRekapBulananScreen]), kolom Pekan 1..N
 /// menampilkan ringkasan capaiannya tiap pekan. Santri yang belum lengkap
 /// laporannya di semua Pekan ditandai indikator kuning di sisi kiri baris.
+///
+/// Sengaja PAKAI [Table] bukan [DataTable] (sama seperti
+/// [WeeklySantriRecapTable] di rekap pekanan): [DataTable] maksa SEMUA
+/// baris & kolom punya tinggi yang sama, jadi kalau capaian 1 pekan
+/// panjang jadinya kepotong "..." atau bikin SEMUA baris ikut tinggi.
+/// [Table] menghitung tinggi tiap baris SENDIRI-SENDIRI ngikutin isinya —
+/// santri yang capaiannya pendek tetap pas, yang panjang otomatis
+/// melebar ke bawah tanpa mempengaruhi baris lain atau kepotong.
 class _MonthlyRecapTable extends StatelessWidget {
   final List<SantriMonthlyRecap> recaps;
   final int totalWeeks;
   const _MonthlyRecapTable({required this.recaps, required this.totalWeeks});
 
+  // Lebar kolom Nama / tiap Pekan / Total Baris / Keterangan — tinggal
+  // diubah angkanya kalau mau lebih lebar/sempit.
+  static const _namaWidth = 130.0;
+  static const _pekanWidth = 150.0;
+  static const _barisWidth = 60.0;
+  static const _keteranganWidth = 110.0;
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final totalWidth = _namaWidth + (_pekanWidth * totalWeeks) + _barisWidth + _keteranganWidth;
+
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(cs.primaryContainer.withValues(alpha: 0.5)),
-          columnSpacing: 20,
-          columns: [
-            const DataColumn(label: Text('Nama', style: TextStyle(fontWeight: FontWeight.w800))),
-            for (var w = 1; w <= totalWeeks; w++)
-              DataColumn(label: Text('Pekan $w', style: const TextStyle(fontWeight: FontWeight.w800))),
-            const DataColumn(label: Text('Total Baris', style: TextStyle(fontWeight: FontWeight.w800))),
-            const DataColumn(label: Text('Keterangan', style: TextStyle(fontWeight: FontWeight.w800))),
-          ],
-          rows: [
-            for (final r in recaps)
-              DataRow(
-                cells: [
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (!r.isCompleteThrough(totalWeeks))
-                          Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: Icon(Icons.circle, size: 8, color: AppColors.orangeOn(context)),
-                          ),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 160),
-                          child: Text(r.nama,
-                              style: const TextStyle(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
-                        ),
-                      ],
-                    ),
-                  ),
-                  for (var w = 1; w <= totalWeeks; w++)
-                    DataCell(
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 220),
-                        child: Text(r.capaianForWeek(w), overflow: TextOverflow.ellipsis),
-                      ),
-                    ),
-                  DataCell(Text('${r.totalBaris}')),
-                  DataCell(
-                    Text(
-                      r.keteranganSummaryText,
-                      style: TextStyle(
-                        color: r.keteranganCounts.isEmpty ? cs.onSurfaceVariant : AppColors.orangeOn(context),
-                        fontWeight: r.keteranganCounts.isEmpty ? FontWeight.normal : FontWeight.w700,
-                      ),
-                    ),
-                  ),
+        child: SizedBox(
+          width: totalWidth,
+          child: Table(
+            columnWidths: {
+              0: const FixedColumnWidth(_namaWidth),
+              for (var w = 1; w <= totalWeeks; w++) w: const FixedColumnWidth(_pekanWidth),
+              totalWeeks + 1: const FixedColumnWidth(_barisWidth),
+              totalWeeks + 2: const FixedColumnWidth(_keteranganWidth),
+            },
+            border: TableBorder(
+              horizontalInside: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+            ),
+            children: [
+              TableRow(
+                decoration: BoxDecoration(color: cs.primaryContainer.withValues(alpha: 0.5)),
+                children: [
+                  const _MonthlyHeaderCell('Nama'),
+                  for (var w = 1; w <= totalWeeks; w++) _MonthlyHeaderCell('Pekan $w'),
+                  const _MonthlyHeaderCell('Total Baris'),
+                  const _MonthlyHeaderCell('Keterangan'),
                 ],
               ),
-          ],
+              for (final r in recaps)
+                TableRow(
+                  children: [
+                    Padding(
+                      padding: _monthlyCellPadding,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!r.isCompleteThrough(totalWeeks))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Icon(Icons.circle, size: 8, color: AppColors.orangeOn(context)),
+                            ),
+                          Flexible(
+                            child: Text(
+                              r.nama,
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: _monthlyFontSize),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    for (var w = 1; w <= totalWeeks; w++) _MonthlyCell(r.capaianForWeek(w)),
+                    _MonthlyCell('${r.totalBaris}', bold: true),
+                    Padding(
+                      padding: _monthlyCellPadding,
+                      child: Text(
+                        r.keteranganSummaryText,
+                        style: TextStyle(
+                          fontSize: _monthlyFontSize,
+                          color: r.keteranganCounts.isEmpty ? cs.onSurfaceVariant : AppColors.orangeOn(context),
+                          fontWeight: r.keteranganCounts.isEmpty ? FontWeight.normal : FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+// Padding & fontSize sel header/isi — sama pola seperti WeeklySantriRecapTable.
+const _monthlyCellPadding = EdgeInsets.symmetric(horizontal: 6, vertical: 8);
+const _monthlyFontSize = 12.0;
+
+class _MonthlyHeaderCell extends StatelessWidget {
+  final String text;
+  const _MonthlyHeaderCell(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: _monthlyCellPadding,
+      child: Text(text, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: _monthlyFontSize)),
+    );
+  }
+}
+
+class _MonthlyCell extends StatelessWidget {
+  final String text;
+  final bool bold;
+  const _MonthlyCell(this.text, {this.bold = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: _monthlyCellPadding,
+      child: Text(
+        text,
+        style: TextStyle(fontSize: _monthlyFontSize, fontWeight: bold ? FontWeight.w700 : FontWeight.normal),
       ),
     );
   }
