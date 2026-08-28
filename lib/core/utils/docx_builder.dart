@@ -80,7 +80,7 @@ class DocxBuilder {
         buffer.write('''
 <w:tc>
   <w:tcPr><w:tcW w:w="$colWidth" w:type="dxa"/><w:shd w:val="clear" w:fill="$fill"/></w:tcPr>
-  <w:p><w:r><w:rPr><w:sz w:val="17"/></w:rPr><w:t xml:space="preserve">${_esc(cell)}</w:t></w:r></w:p>
+  <w:p><w:r><w:rPr><w:sz w:val="17"/></w:rPr>${_runContent(cell)}</w:r></w:p>
 </w:tc>
 ''');
       }
@@ -89,6 +89,21 @@ class DocxBuilder {
 
     buffer.write('</w:tbl>');
     _bodyXmlParts.add(buffer.toString());
+  }
+
+  // Isi 1 <w:r> (run) dari teks cell — kalau ada "\n" (mis. cell Capaian
+  // gabungan di rekap pekanan per-santri, lihat
+  // ExportService.weeklyRowsGroupedBySantriFor), tiap baris dipisah
+  // <w:br/> beneran, BUKAN dibiarkan jadi 1 baris panjang (Word menganggap
+  // "\n" polos di dalam <w:t> cuma whitespace, bukan ganti baris).
+  String _runContent(String cell) {
+    final lines = cell.split('\n');
+    final buf = StringBuffer();
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) buf.write('<w:br/>');
+      buf.write('<w:t xml:space="preserve">${_esc(lines[i])}</w:t>');
+    }
+    return buf.toString();
   }
 
   String _esc(String s) => s

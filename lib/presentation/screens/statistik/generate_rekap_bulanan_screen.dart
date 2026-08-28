@@ -4,28 +4,56 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
-import '../../../data/models/enums.dart';
 import '../../../data/models/santri_monthly_recap.dart';
 import '../../../data/services/export_service.dart';
-import '../../../data/services/platform_file/exported_file.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
+import '../export/export_sheet.dart';
 
 /// Hasil "Generate" dari Rekap Bulanan — menghimpun laporan tiap santri
 /// dari Pekan 1 s/d Pekan terakhir bulan itu jadi SATU baris per santri,
-/// supaya guru pembimbing bisa lihat progres sebulan penuh sekaligus
-/// tanpa bolak-balik buka tiap Pekan. Bisa langsung diekspor lewat tombol
-/// di pojok kanan atas (PDF/Word/Excel, format tabel Nama x Pekan).
+/// dikelompokkan per Kelas+Halaqoh (tiap grup = 1 tabel kecil sendiri)
 class GenerateRekapBulananScreen extends StatelessWidget {
   final DateTime month;
   const GenerateRekapBulananScreen({super.key, required this.month});
 
+  List<ExportKelasHalaqohSection<SantriMonthlyRecap>> _groupByKelasHalaqoh(
+      List<SantriMonthlyRecap> recaps,
+      AuthProvider auth,
+      ) {
+    final map = <String, List<SantriMonthlyRecap>>{};
+    for (final r in recaps) {
+      final key = '${r.kelas}|${r.halaqoh}';
+      map.putIfAbsent(key, () => []).add(r);
+    }
+    final groups = map.entries.map((e) {
+      final parts = e.key.split('|');
+      final list = List<SantriMonthlyRecap>.from(e.value)
+        ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+      return ExportKelasHalaqohSection<SantriMonthlyRecap>(
+        kelas: parts[0],
+        halaqoh: parts[1],
+        guruPembimbing: auth.guruPembimbingNameFor(parts[0], parts[1]),
+        items: list,
+      );
+    }).toList()
+      ..sort((a, b) {
+        final byKelas = a.kelas.compareTo(b.kelas);
+        if (byKelas != 0) return byKelas;
+        return a.halaqoh.compareTo(b.halaqoh);
+      });
+    return groups;
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<RecordsProvider>();
+    final authProvider = context.watch<AuthProvider>();
     final recaps = provider.monthlySantriRecaps(month);
     final totalWeeks = WeekUtils.weeksInMonth(month);
     final bulanLabel = DateFormat('MMMM yyyy', 'id_ID').format(month);
+    final groups = _groupByKelasHalaqoh(recaps, authProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -37,15 +65,16 @@ class GenerateRekapBulananScreen extends StatelessWidget {
               trailing: recaps.isEmpty
                   ? null
                   : IconButton(
-                      onPressed: () => _showMonthlyExportSheet(
-                        context,
-                        recaps: recaps,
-                        totalWeeks: totalWeeks,
-                        bulanLabel: bulanLabel,
-                      ),
-                      icon: const Icon(Icons.ios_share_rounded),
-                      tooltip: 'Export Rekap Bulanan',
-                    ),
+                onPressed: () => showExportSheet(
+                  context,
+                  groupedMonthlySections: groups,
+                  totalWeeks: totalWeeks,
+                  judul: 'Rekap Bulanan - $bulanLabel',
+                  periode: bulanLabel,
+                ),
+                icon: const Icon(Icons.ios_share_rounded),
+                tooltip: 'Export Rekap Bulanan',
+              ),
             ),
             if (recaps.isEmpty)
               const SliverFillRemaining(
@@ -54,7 +83,7 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                   icon: Icons.auto_awesome_rounded,
                   title: 'Belum ada capaian untuk digabung',
                   subtitle:
-                      'Isi dulu laporan santri di salah satu Pekan bulan ini, baru rekap bulanan bisa di-generate.',
+                  'Isi dulu laporan santri di salah satu Pekan bulan ini, baru rekap bulanan bisa di-generate.',
                 ),
               )
             else ...[
@@ -62,7 +91,7 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
                 sliver: SliverToBoxAdapter(
                   child: Text(
-                    '${recaps.length} santri • gabungan Pekan 1-$totalWeeks',
+                    '${recaps.length} santri • ${groups.length} kelompok Kelas/Halaqoh • gabungan Pekan 1-$totalWeeks',
                     style: TextStyle(
                       fontSize: 12.5,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -72,8 +101,44 @@ class GenerateRekapBulananScreen extends StatelessWidget {
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                sliver: SliverToBoxAdapter(
-                  child: _MonthlyRecapTable(recaps: recaps, totalWeeks: totalWeeks),
+                sliver: SliverList.list(
+                  children: [
+                    for (final g in groups) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Kelas ${g.kelas} — Halaqoh ${g.halaqoh}',
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                              ),
+                            ),
+                            // Export per-tabel (1 Kelas+Halaqoh doang) —
+                            // beda dari tombol di header halaman (yang
+                            // export SEMUA kelompok jadi 1 dokumen).
+                            IconButton(
+                              onPressed: () => showExportSheet(
+                                context,
+                                groupedMonthlySections: [g],
+                                totalWeeks: totalWeeks,
+                                judul: 'Rekap Bulanan - Kelas ${g.kelas} '
+                                    'Halaqoh ${g.halaqoh} - $bulanLabel',
+                                periode: bulanLabel,
+                              ),
+                              icon: const Icon(Icons.ios_share_rounded, size: 19),
+                              tooltip: 'Export Kelas ${g.kelas} — Halaqoh ${g.halaqoh}',
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _MonthlyRecapTable(recaps: g.items, totalWeeks: totalWeeks),
+                      const SizedBox(height: 20),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -84,258 +149,8 @@ class GenerateRekapBulananScreen extends StatelessWidget {
   }
 }
 
-Future<void> _showMonthlyExportSheet(
-  BuildContext context, {
-  required List<SantriMonthlyRecap> recaps,
-  required int totalWeeks,
-  required String bulanLabel,
-}) {
-  return showModalBottomSheet(
-    context: context,
-    constraints: const BoxConstraints(maxWidth: 640),
-    useRootNavigator: true,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _MonthlyExportSheet(
-      recaps: recaps,
-      totalWeeks: totalWeeks,
-      bulanLabel: bulanLabel,
-    ),
-  );
-}
-
-class _MonthlyExportSheet extends StatefulWidget {
-  final List<SantriMonthlyRecap> recaps;
-  final int totalWeeks;
-  final String bulanLabel;
-
-  const _MonthlyExportSheet({
-    required this.recaps,
-    required this.totalWeeks,
-    required this.bulanLabel,
-  });
-
-  @override
-  State<_MonthlyExportSheet> createState() => _MonthlyExportSheetState();
-}
-
-class _MonthlyExportSheetState extends State<_MonthlyExportSheet> {
-  bool _loading = false;
-  ExportFormat? _loadingFormat;
-  ExportedFile? _exportedFile;
-  ExportFormat? _exportedFormat;
-
-  String _extFor(ExportFormat f) => switch (f) {
-        ExportFormat.pdf => 'pdf',
-        ExportFormat.word => 'docx',
-        ExportFormat.excel => 'xlsx',
-      };
-
-  Future<void> _doExport(ExportFormat format) async {
-    setState(() {
-      _loading = true;
-      _loadingFormat = format;
-    });
-
-    try {
-      final judul = 'Rekap Bulanan - ${widget.bulanLabel}';
-      ExportedFile file;
-      switch (format) {
-        case ExportFormat.pdf:
-          file = await ExportService.instance.exportMonthlyRecapPdf(
-            widget.recaps,
-            judul: judul,
-            totalWeeks: widget.totalWeeks,
-            periode: widget.bulanLabel,
-          );
-          break;
-        case ExportFormat.word:
-          file = await ExportService.instance.exportMonthlyRecapWord(
-            widget.recaps,
-            judul: judul,
-            totalWeeks: widget.totalWeeks,
-            periode: widget.bulanLabel,
-          );
-          break;
-        case ExportFormat.excel:
-          file = await ExportService.instance.exportMonthlyRecapExcel(
-            widget.recaps,
-            judul: judul,
-            totalWeeks: widget.totalWeeks,
-            periode: widget.bulanLabel,
-          );
-          break;
-      }
-
-      await ExportService.instance.openFile(file);
-
-      if (!mounted) return;
-      setState(() {
-        _exportedFile = file;
-        _exportedFormat = format;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal ekspor: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _loadingFormat = null;
-        });
-      }
-    }
-  }
-
-  Future<void> _share() async {
-    if (_exportedFile == null) return;
-    await ExportService.instance.shareFile(_exportedFile!, subject: 'Rekap Bulanan - ${widget.bulanLabel}');
-  }
-
-  Future<void> _saveToDevice() async {
-    if (_exportedFile == null || _exportedFormat == null) return;
-    try {
-      await ExportService.instance.saveToDevice(
-        _exportedFile!,
-        filename: 'Rekap Bulanan - ${widget.bulanLabel}',
-        ext: _extFor(_exportedFormat!),
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tersimpan ke perangkat.')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan: $e')),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return SafeArea(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).bottomSheetTheme.backgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-            if (_exportedFile == null) ...[
-              Text('Export Rekap Bulanan',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text(
-                '${widget.recaps.length} santri, gabungan Pekan 1-${widget.totalWeeks} akan diekspor',
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-              ),
-              const SizedBox(height: 20),
-              ExportOptionTile(
-                icon: Icons.picture_as_pdf_rounded,
-                color: AppColors.redOn(context),
-                title: 'PDF',
-                subtitle: 'Untuk cetak & bagikan cepat',
-                loading: _loading && _loadingFormat == ExportFormat.pdf,
-                onTap: _loading ? null : () => _doExport(ExportFormat.pdf),
-              ),
-              const SizedBox(height: 10),
-              ExportOptionTile(
-                icon: Icons.description_rounded,
-                color: AppColors.blueOn(context),
-                title: 'Word (.docx)',
-                subtitle: 'Bisa diedit lebih lanjut',
-                loading: _loading && _loadingFormat == ExportFormat.word,
-                onTap: _loading ? null : () => _doExport(ExportFormat.word),
-              ),
-              const SizedBox(height: 10),
-              ExportOptionTile(
-                icon: Icons.grid_on_rounded,
-                color: AppColors.greenOn(context),
-                title: 'Excel (.xlsx)',
-                subtitle: 'Untuk rekap & olah data lanjutan',
-                loading: _loading && _loadingFormat == ExportFormat.excel,
-                onTap: _loading ? null : () => _doExport(ExportFormat.excel),
-              ),
-            ] else ...[
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.12), shape: BoxShape.circle),
-                    child: Icon(Icons.check_rounded, color: cs.primary),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Berhasil diekspor', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                        Text('File sudah dibuka otomatis.',
-                            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _share,
-                      icon: const Icon(Icons.ios_share_rounded, size: 18),
-                      label: const Text('Bagikan'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _saveToDevice,
-                      icon: const Icon(Icons.download_rounded, size: 18),
-                      label: const Text('Simpan'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Tutup'),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Tabel scroll horizontal: 1 baris = 1 santri, kolom Pekan 1..N
+/// Tabel scroll horizontal: 1 baris = 1 santri (dalam SATU Kelas+Halaqoh —
+/// lihat pengelompokan di [GenerateRekapBulananScreen]), kolom Pekan 1..N
 /// menampilkan ringkasan capaiannya tiap pekan. Santri yang belum lengkap
 /// laporannya di semua Pekan ditandai indikator kuning di sisi kiri baris.
 class _MonthlyRecapTable extends StatelessWidget {
@@ -348,6 +163,7 @@ class _MonthlyRecapTable extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Card(
       clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
@@ -355,7 +171,6 @@ class _MonthlyRecapTable extends StatelessWidget {
           columnSpacing: 20,
           columns: [
             const DataColumn(label: Text('Nama', style: TextStyle(fontWeight: FontWeight.w800))),
-            const DataColumn(label: Text('Kelas/Halaqoh', style: TextStyle(fontWeight: FontWeight.w800))),
             for (var w = 1; w <= totalWeeks; w++)
               DataColumn(label: Text('Pekan $w', style: const TextStyle(fontWeight: FontWeight.w800))),
             const DataColumn(label: Text('Total Baris', style: TextStyle(fontWeight: FontWeight.w800))),
@@ -375,14 +190,13 @@ class _MonthlyRecapTable extends StatelessWidget {
                             child: Icon(Icons.circle, size: 8, color: AppColors.orangeOn(context)),
                           ),
                         ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 140),
+                          constraints: const BoxConstraints(maxWidth: 160),
                           child: Text(r.nama,
                               style: const TextStyle(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
                         ),
                       ],
                     ),
                   ),
-                  DataCell(Text('${r.kelas}/${r.halaqoh}')),
                   for (var w = 1; w <= totalWeeks; w++)
                     DataCell(
                       ConstrainedBox(

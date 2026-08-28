@@ -44,9 +44,6 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
     final totalTahfizh = provider.totalTahfizhInMonth(_month);
     final totalTahsin = provider.totalTahsinInMonth(_month);
     final totalBaris = provider.totalBarisInMonth(_month);
-    final totalCapaian = totalTahfizh + totalTahsin;
-    final tahfizhRatio = totalCapaian == 0 ? 0.0 : totalTahfizh / totalCapaian;
-    final tahsinRatio = totalCapaian == 0 ? 0.0 : totalTahsin / totalCapaian;
 
     return Scaffold(
       body: SafeArea(
@@ -131,33 +128,6 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-                sliver: SliverToBoxAdapter(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(
-                        children: [
-                          DistribusiRow(
-                            label: 'Tahfizh',
-                            count: totalTahfizh,
-                            ratio: tahfizhRatio,
-                            color: AppColors.tahfizhOn(context),
-                          ),
-                          const SizedBox(height: 18),
-                          DistribusiRow(
-                            label: 'Tahsin',
-                            count: totalTahsin,
-                            ratio: tahsinRatio,
-                            color: AppColors.tahsinOn(context),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
               ),

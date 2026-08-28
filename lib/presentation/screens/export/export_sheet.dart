@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/enums.dart';
+import '../../../data/models/santri_monthly_recap.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../data/services/download_notification_service.dart';
 import '../../../data/services/export_service.dart';
@@ -14,6 +15,9 @@ import '../../widgets/misc_widgets.dart';
 Future<void> showExportSheet(
     BuildContext context, {
       List<SantriRecord>? records,
+      List<ExportKelasHalaqohSection<SantriRecord>>? groupedSections,
+      List<ExportKelasHalaqohSection<SantriMonthlyRecap>>? groupedMonthlySections,
+      int? totalWeeks,
       String? judul,
       String? periode,
       String? guruPembimbing,
@@ -29,6 +33,9 @@ Future<void> showExportSheet(
     backgroundColor: Colors.transparent,
     builder: (_) => ExportSheet(
       fixedRecords: records,
+      groupedSections: groupedSections,
+      groupedMonthlySections: groupedMonthlySections,
+      totalWeeks: totalWeeks,
       judul: judul,
       periode: periode,
       guruPembimbing: guruPembimbing,
@@ -39,30 +46,22 @@ Future<void> showExportSheet(
 }
 
 class ExportSheet extends StatefulWidget {
-  // Kalau diisi (mis. dari halaman folder), sheet ini export data yang
-  // sudah ditentukan dari luar, dan opsi "filter aktif / semua data"
-  // disembunyikan.
   final List<SantriRecord>? fixedRecords;
+  final List<ExportKelasHalaqohSection<SantriRecord>>? groupedSections;
+  final List<ExportKelasHalaqohSection<SantriMonthlyRecap>>? groupedMonthlySections;
+  final int? totalWeeks;
   final String? judul;
-  // Baris kecil opsional di bawah kop laporan (mis. nama folder atau
-  // bulan rekap) — nggak ditampilkan kalau kosong.
   final String? periode;
-  // Nama guru pembimbing (dicetak sebagai baris tambahan di kop laporan) —
-  // dipakai khusus export rekap per Kelas+Halaqoh (lihat
-  // KelasHalaqohGroupCard). Null = tidak ditampilkan.
   final String? guruPembimbing;
-  // True kalau laporan yang diekspor bisa mencakup lebih dari 1
-  // hari/tanggal (mis. rekap pekanan per kelompok) -> tabel export
-  // menyertakan kolom Hari & Tanggal per baris.
   final bool includeTanggal;
-  // Kalau diisi, dipakai buat kolom "Hari/Tanggal" di SEMUA baris export
-  // (menggantikan tanggal masing-masing record) — dipakai Generate
-  // Laporan Pekanan, lihat ExportService._rowsWithTanggal.
   final String? fixedTanggalLabel;
 
   const ExportSheet({
     super.key,
     this.fixedRecords,
+    this.groupedSections,
+    this.groupedMonthlySections,
+    this.totalWeeks,
     this.judul,
     this.periode,
     this.guruPembimbing,
@@ -79,26 +78,7 @@ class _ExportSheetState extends State<ExportSheet> {
   bool _loading = false;
   ExportFormat? _loadingFormat;
 
-  // Fix snackbar "membelakangi" (v1) -> "nyisain space kosong" (v2):
-  // - v1 (lama banget): pakai ScaffoldMessenger.of(context) punya HALAMAN
-  //   DI BALIK sheet (karena sheet ini sendiri gak punya Scaffold) ->
-  //   SnackBar kegambar di belakang sheet.
-  // - v2 (percobaan sebelumnya): dibungkus Scaffold lokal biar punya
-  //   ScaffoldMessenger sendiri -> SnackBar-nya emang jadi kegambar di
-  //   depan, TAPI widget Scaffold SELALU melebar mengisi constraints
-  //   penuh yang dikasih parent-nya (constraints.biggest), TERLEPAS dari
-  //   seberapa tinggi body-nya sendiri. Karena sheet ini dibuka dengan
-  //   isScrollControlled: true (constraints tinggi maksimalnya = hampir
-  //   1 layar penuh), Scaffold jadi ikut setinggi itu juga, padahal
-  //   konten aslinya (Container di bawah) cuma butuh tinggi secukupnya
-  //   -> nyisa ruang kosong transparan di bawah kartu putihnya.
-  // Fix final: JANGAN pakai Scaffold/ScaffoldMessenger sama sekali di
-  // sini. Pesannya ditampilkan sebagai banner kecil biasa, jadi BAGIAN
-  // dari Column konten sheet ini sendiri (lihat build() -> _InlineBanner)
-  // -- otomatis selalu di depan (karena memang bagian dari layout sheet,
-  // bukan overlay terpisah) dan otomatis nggak nambah tinggi kosong
-  // (karena ukurannya ngikutin isi teksnya doang, sama seperti
-  // widget-widget lain di Column ini).
+  // Fix snackbar "membelakangi" (v1)
   String? _inlineMessage;
   Timer? _inlineMessageTimer;
 
@@ -122,7 +102,9 @@ class _ExportSheetState extends State<ExportSheet> {
   ExportFormat? _exportedFormat;
   String? _exportedJudul;
 
-  bool get _isFixed => widget.fixedRecords != null;
+  bool get _isFixed => widget.fixedRecords != null ||
+      widget.groupedSections != null ||
+      widget.groupedMonthlySections != null;
 
   String _extFor(ExportFormat f) => switch (f) {
     ExportFormat.pdf => 'pdf',
@@ -131,6 +113,80 @@ class _ExportSheetState extends State<ExportSheet> {
   };
 
   Future<void> _doExport(ExportFormat format) async {
+    final groupedMonthly = widget.groupedMonthlySections;
+    final grouped = widget.groupedSections;
+
+    if (groupedMonthly != null) {
+      final totalSantri = groupedMonthly.fold<int>(0, (sum, s) => sum + s.items.length);
+      if (totalSantri == 0) {
+        _showSnack('Tidak ada data untuk diekspor.');
+        return;
+      }
+      await _runExport(format, judulDefault: 'Rekap Bulanan Al Quran', build: (judul) {
+        switch (format) {
+          case ExportFormat.pdf:
+            return ExportService.instance.exportGroupedMonthlyRecapPdf(
+              groupedMonthly,
+              judul: judul,
+              totalWeeks: widget.totalWeeks!,
+              periode: widget.periode,
+            );
+          case ExportFormat.word:
+            return ExportService.instance.exportGroupedMonthlyRecapWord(
+              groupedMonthly,
+              judul: judul,
+              totalWeeks: widget.totalWeeks!,
+              periode: widget.periode,
+            );
+          case ExportFormat.excel:
+            return ExportService.instance.exportGroupedMonthlyRecapExcel(
+              groupedMonthly,
+              judul: judul,
+              totalWeeks: widget.totalWeeks!,
+              periode: widget.periode,
+            );
+        }
+      });
+      return;
+    }
+
+    if (grouped != null) {
+      final total = grouped.fold<int>(0, (sum, s) => sum + s.items.length);
+      if (total == 0) {
+        _showSnack('Tidak ada data untuk diekspor.');
+        return;
+      }
+      await _runExport(format, judulDefault: 'Laporan Pekanan Al Quran', build: (judul) {
+        switch (format) {
+          case ExportFormat.pdf:
+            return ExportService.instance.exportGroupedPdf(
+              grouped,
+              judul: judul,
+              periode: widget.periode,
+              includeTanggal: widget.includeTanggal,
+              fixedTanggalLabel: widget.fixedTanggalLabel,
+            );
+          case ExportFormat.word:
+            return ExportService.instance.exportGroupedWord(
+              grouped,
+              judul: judul,
+              periode: widget.periode,
+              includeTanggal: widget.includeTanggal,
+              fixedTanggalLabel: widget.fixedTanggalLabel,
+            );
+          case ExportFormat.excel:
+            return ExportService.instance.exportGroupedExcel(
+              grouped,
+              judul: judul,
+              periode: widget.periode,
+              includeTanggal: widget.includeTanggal,
+              fixedTanggalLabel: widget.fixedTanggalLabel,
+            );
+        }
+      });
+      return;
+    }
+
     final provider = context.read<RecordsProvider>();
     final List<SantriRecord> records =
         widget.fixedRecords ?? (_useFilteredOnly ? provider.filtered : provider.all);
@@ -140,57 +196,55 @@ class _ExportSheetState extends State<ExportSheet> {
       return;
     }
 
+    await _runExport(format, judulDefault: 'Laporan Pekanan Al Quran', build: (judul) {
+      switch (format) {
+        case ExportFormat.pdf:
+          return ExportService.instance.exportPdf(
+            records,
+            judul: judul,
+            periode: widget.periode,
+            guruPembimbing: widget.guruPembimbing,
+            includeTanggal: widget.includeTanggal,
+            fixedTanggalLabel: widget.fixedTanggalLabel,
+          );
+        case ExportFormat.word:
+          return ExportService.instance.exportWord(
+            records,
+            judul: judul,
+            periode: widget.periode,
+            guruPembimbing: widget.guruPembimbing,
+            includeTanggal: widget.includeTanggal,
+            fixedTanggalLabel: widget.fixedTanggalLabel,
+          );
+        case ExportFormat.excel:
+          return ExportService.instance.exportExcel(
+            records,
+            judul: judul,
+            periode: widget.periode,
+            guruPembimbing: widget.guruPembimbing,
+            includeTanggal: widget.includeTanggal,
+            fixedTanggalLabel: widget.fixedTanggalLabel,
+          );
+      }
+    });
+  }
+
+  /// Inti proses export yang SAMA buat ketiga mode (flat records / grouped
+  /// pekanan / grouped bulanan)
+  Future<void> _runExport(
+    ExportFormat format, {
+    required String judulDefault,
+    required Future<ExportedFile> Function(String judul) build,
+  }) async {
     setState(() {
       _loading = true;
       _loadingFormat = format;
     });
 
     try {
-      final judul = widget.judul ?? 'Laporan Pekanan Al Quran';
-      ExportedFile file;
-      switch (format) {
-        case ExportFormat.pdf:
-          file = await ExportService.instance.exportPdf(
-            records,
-            judul: judul,
-            periode: widget.periode,
-            guruPembimbing: widget.guruPembimbing,
-            includeTanggal: widget.includeTanggal,
-            fixedTanggalLabel: widget.fixedTanggalLabel,
-          );
-          break;
-        case ExportFormat.word:
-          file = await ExportService.instance.exportWord(
-            records,
-            judul: judul,
-            periode: widget.periode,
-            guruPembimbing: widget.guruPembimbing,
-            includeTanggal: widget.includeTanggal,
-            fixedTanggalLabel: widget.fixedTanggalLabel,
-          );
-          break;
-        case ExportFormat.excel:
-          file = await ExportService.instance.exportExcel(
-            records,
-            judul: judul,
-            periode: widget.periode,
-            guruPembimbing: widget.guruPembimbing,
-            includeTanggal: widget.includeTanggal,
-            fixedTanggalLabel: widget.fixedTanggalLabel,
-          );
-          break;
-      }
+      final judul = widget.judul ?? judulDefault;
+      final file = await build(judul);
 
-      // Begitu file jadi, COBA buka otomatis pakai aplikasi bawaan
-      // perangkat. Ini cuma kenyamanan tambahan -- filenya sendiri sudah
-      // berhasil dibuat & tersimpan di penyimpanan internal app duluan
-      // (lihat ExportService._saveBytes di atas), jadi kalau gagal dibuka
-      // otomatis (mis. gak ada app pembuka terpasang, atau device lagi
-      // bermasalah), itu TIDAK BOLEH menggagalkan seluruh proses ekspor.
-      // Sebelumnya kegagalan di sini ketangkep sama catch di bawah dan
-      // bikin user nyangka ekspornya gagal total -- padahal filenya ada,
-      // cuma gak sempat kebuka -- akibatnya user gak pernah nyampe ke
-      // tombol "Bagikan"/"Simpan" sama sekali.
       try {
         await ExportService.instance.openFile(file);
       } catch (_) {
@@ -232,10 +286,7 @@ class _ExportSheetState extends State<ExportSheet> {
         filename: _exportedJudul ?? 'laporan',
         ext: ext,
       );
-      // Bug fix #1: sebelumnya cuma SnackBar di dalam app -- sekarang juga
-      // munculin notifikasi sistem "Unduhan selesai" (lihat
-      // DownloadNotificationService), sama kayak pola download di app lain
-      // pada umumnya, dan bisa diketuk buat langsung buka filenya lagi.
+
       await DownloadNotificationService.instance.notifySaved(
         fileName: fileName,
         file: _exportedFile!,
@@ -254,8 +305,12 @@ class _ExportSheetState extends State<ExportSheet> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final provider = context.watch<RecordsProvider>();
-    final count = widget.fixedRecords?.length ??
-        (_useFilteredOnly ? provider.filtered.length : provider.all.length);
+    final count = widget.groupedMonthlySections != null
+        ? widget.groupedMonthlySections!.fold<int>(0, (sum, s) => sum + s.items.length)
+        : widget.groupedSections != null
+            ? widget.groupedSections!.fold<int>(0, (sum, s) => sum + s.items.length)
+            : widget.fixedRecords?.length ??
+                (_useFilteredOnly ? provider.filtered.length : provider.all.length);
 
     return SafeArea(
       child: Container(

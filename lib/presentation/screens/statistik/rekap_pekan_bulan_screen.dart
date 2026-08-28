@@ -122,6 +122,7 @@ class RekapPekanBulanScreen extends StatelessWidget {
                             weekIndex: weekIndex,
                             bulanLabel: bulanLabel,
                             rangeLabel: rangeLabel,
+                            range: range,
                           ),
                         ),
                       ),

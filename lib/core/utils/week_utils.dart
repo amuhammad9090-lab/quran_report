@@ -135,6 +135,25 @@ class WeekUtils {
     return '${range.start.day} ${_bulanPendek[range.start.month]} – '
         '${range.end.day} ${_bulanPendek[range.end.month]}';
   }
+
+  /// Label periode LENGKAP buat kop dokumen export (PDF/Word/Excel), mis.
+  /// "Pekan ke-4, 24-30 Agustus 2026" (dalam 1 bulan) atau "Pekan ke-5,
+  /// 31 Agustus - 6 September 2026" (pekan yang lintas bulan). SENGAJA
+  /// pakai strip "-" biasa (bukan en dash "–" seperti [rangeLabel]) dan
+  /// nama bulan penuh (bukan disingkat) — font bawaan PDF export
+  /// (Helvetica standar, tidak di-embed) tidak punya glyph en dash,
+  /// jadi kalau dipakai malah muncul kotak-kotak/tofu (lihat catatan
+  /// serupa di ExportService soal karakter "—").
+  static String periodeLabel(int weekIndex, MonthWeekRange range) {
+    final sameMonth =
+        range.start.year == range.end.year && range.start.month == range.end.month;
+    final rangeText = sameMonth
+        ? '${range.start.day}-${range.end.day} '
+            '${DateFormat('MMMM yyyy', 'id_ID').format(range.end)}'
+        : '${DateFormat('d MMMM', 'id_ID').format(range.start)} - '
+            '${DateFormat('d MMMM yyyy', 'id_ID').format(range.end)}';
+    return 'Pekan ke-$weekIndex, $rangeText';
+  }
 }
 
 /// Rentang tanggal sederhana (dipakai [WeekUtils.monthWeekRange]) — bukan
