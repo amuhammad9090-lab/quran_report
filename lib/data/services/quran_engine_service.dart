@@ -93,17 +93,16 @@ const Map<int, String> kSurahNames = {
   114: "An-Nas",
 };
 
-/// Engine baris mushaf — mendukung dua skema dataset sekaligus:
-///
-/// 1. **Legacy** (`{"metadata": {...}, "pages": [...]}`) — tiap baris
-///    punya `segments` berisi `ayah_start`/`ayah_end`. Tidak ada info
-///    continuation, jadi aturan boundary-exclusion tidak pernah trigger
-///    untuk baris dari dataset ini (perilaku identik dengan engine lama).
-/// 2. **Baru** (`{"juzs": {"26": {...}, ...}}`) — tiap baris punya
-///    `ayats: [[surah, ayat, ayat_akhir_atau_0]]`. Angka `0` di posisi
-///    ketiga berarti ayat itu masih nyambung ke baris berikutnya.
-///    Aturan boundary-exclusion mengikuti persis logic
-///    `get_lines_for_range()` di quran_line_ui_juz26_30_COMBINED.py.
+/// Engine baris mushaf — baca SATU file dataset
+/// (`quran_line_dataset_unified_ayats_schema.json`), skema `ayats +
+/// continuation`: tiap baris punya `ayats: [[surah, ayat, ayat_akhir_atau_0]]`.
+/// Angka `0` di posisi ketiga berarti ayat itu masih nyambung ke baris
+/// berikutnya. Juz 1-10 di file ini SUDAH di-expand dari skema `segments`
+/// lama ke bentuk ini (endMarker = ayat itu sendiri, alias "selesai di
+/// baris ini" — makanya boundary-exclusion rule di bawah otomatis tidak
+/// pernah trigger untuk baris-baris itu, identik perilaku lamanya).
+/// Aturan boundary-exclusion sendiri mengikuti persis logic
+/// `get_lines_for_range()` di quran_line_ui_juz26_30_COMBINED.py.
 class QuranEngineService {
   QuranEngineService._();
   static final QuranEngineService instance = QuranEngineService._();
@@ -119,46 +118,40 @@ class QuranEngineService {
   Future<void> load() async {
     if (_loaded) return;
 
-    await _loadLegacy('assets/data/quran_line_dataset_legacy_juz1_10.json');
-    await _loadNewSchema('assets/data/quran_line_dataset_juz26_30.json');
+    await _loadDataset('assets/data/quran_line_dataset_unified_ayats_schema.json');
 
     // Urutkan ulang berdasarkan nomor halaman & baris supaya urutan mushaf
-    // tetap benar walau berasal dari 2 file berbeda (penting untuk aturan
-    // "baris pertama" pada boundary rule).
+    // tetap benar (harusnya sudah terurut dari file-nya, tapi dijaga di
+    // sini juga biar tidak bergantung urutan asli file).
     _lines.sort((a, b) {
       final p = a.pageNumber.compareTo(b.pageNumber);
       if (p != 0) return p;
       return a.lineNumber.compareTo(b.lineNumber);
     });
 
-    juzAvailable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 26, 27, 28, 29, 30];
-    juzMissing = List.generate(15, (i) => i + 11); // 11..25
-
     _loaded = true;
   }
 
-  Future<void> _loadLegacy(String path) async {
+  Future<void> _loadDataset(String path) async {
     try {
       final raw = await rootBundle.loadString(path);
       final data = jsonDecode(raw) as Map<String, dynamic>;
-      final pages = data['pages'] as List<dynamic>;
 
+      juzAvailable = (data['juz_available'] as List).cast<int>();
+      juzMissing = (data['juz_missing'] as List).cast<int>();
+
+      final pages = data['pages'] as List<dynamic>;
       for (final page in pages) {
         final pageNumber = page['page_number'] as int;
         for (final line in (page['lines'] as List)) {
           final marks = <_AyatMark>[];
-          for (final seg in (line['segments'] as List)) {
-            final surah = seg['surah_number'] as int;
-            final start = seg['ayah_start'] as int;
-            final end = seg['ayah_end'] as int;
+          for (final triplet in (line['ayats'] as List? ?? [])) {
+            final t = triplet as List;
+            final surah = t[0] as int;
+            final ayah = t[1] as int;
+            final endMarker = t[2] as int;
             _coveredSurahs.add(surah);
-            // Skema lama tidak punya info continuation → setiap ayat pada
-            // baris ini dianggap "selesai di baris ini" (endMarker == ayah),
-            // sehingga boundary-exclusion rule tidak pernah aktif untuk
-            // baris dari dataset legacy (identik dengan behavior lama).
-            for (var a = start; a <= end; a++) {
-              marks.add(_AyatMark(surah, a, a));
-            }
+            marks.add(_AyatMark(surah, ayah, endMarker));
           }
           _lines.add(_NormalizedLine(
             pageNumber: pageNumber,
@@ -169,44 +162,8 @@ class QuranEngineService {
         }
       }
     } catch (_) {
-      // File belum ada / gagal load — abaikan, cakupan surah terkait
-      // otomatis dianggap tidak tersedia.
-    }
-  }
-
-  Future<void> _loadNewSchema(String path) async {
-    try {
-      final raw = await rootBundle.loadString(path);
-      final data = jsonDecode(raw) as Map<String, dynamic>;
-      final juzs = data['juzs'] as Map<String, dynamic>;
-
-      for (final entry in juzs.entries) {
-        final juzData = entry.value as Map<String, dynamic>;
-        final pages = juzData['pages'] as List<dynamic>;
-
-        for (final page in pages) {
-          final pageNumber = page['page_number'] as int;
-          for (final line in (page['lines'] as List)) {
-            final marks = <_AyatMark>[];
-            for (final triplet in (line['ayats'] as List? ?? [])) {
-              final t = triplet as List;
-              final surah = t[0] as int;
-              final ayah = t[1] as int;
-              final endMarker = t[2] as int;
-              _coveredSurahs.add(surah);
-              marks.add(_AyatMark(surah, ayah, endMarker));
-            }
-            _lines.add(_NormalizedLine(
-              pageNumber: pageNumber,
-              lineNumber: line['line_number'] as int,
-              lineId: line['line_id'] as String,
-              ayats: marks,
-            ));
-          }
-        }
-      }
-    } catch (_) {
-      // ignore
+      // File belum ada / gagal load — abaikan, cakupan surah otomatis
+      // dianggap tidak tersedia (juzAvailable/juzMissing tetap kosong).
     }
   }
 
