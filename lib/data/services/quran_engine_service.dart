@@ -118,7 +118,7 @@ class QuranEngineService {
   Future<void> load() async {
     if (_loaded) return;
 
-    await _loadDataset('assets/data/quran_line_dataset_unified_ayats_schema.json');
+    await _loadDataset('assets/data/quran_line_dataset_juz1-10_juz26-30_schema.json');
 
     // Urutkan ulang berdasarkan nomor halaman & baris supaya urutan mushaf
     // tetap benar (harusnya sudah terurut dari file-nya, tapi dijaga di

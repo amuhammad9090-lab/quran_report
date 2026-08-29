@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'app_prefs_service.dart';
 import 'export_service.dart';
 import 'platform_file/exported_file.dart';
 
@@ -57,12 +60,10 @@ class DownloadNotificationService {
     const initSettings = InitializationSettings(android: androidInit);
     await _plugin.initialize(
       initSettings,
-      onDidReceiveNotificationResponse: (response) {
-        final file = _notifIdToFile[response.id];
-        if (file != null) {
-          ExportService.instance.openFile(file);
-        }
-      },
+      // Ini nangkep tap notifikasi selagi app HIDUP (foreground/background,
+      // proses belum di-kill) — di kondisi ini `_notifIdToFile` in-memory
+      // masih valid, jadi cukup pakai itu.
+      onDidReceiveNotificationResponse: (response) => _openFromNotification(response.id),
     );
     // Android 13+ perlu izin notifikasi runtime -- di versi lama izin ini
     // otomatis granted, jadi aman dipanggil di semua versi.
@@ -70,6 +71,39 @@ class DownloadNotificationService {
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
     _initialized = true;
+
+    // BUG FIX: kalau app di-tap dari notifikasi PAS LAGI KETUTUP TOTAL
+    // (bukan cuma minimize), Flutter/plugin baru nyala ulang dari nol —
+    // `_notifIdToFile` in-memory di atas otomatis KOSONG lagi (state RAM
+    // sebelumnya sudah hilang), dan callback `onDidReceiveNotificationResponse`
+    // di atas TIDAK dipanggil buat tap yang justru MENYALAKAN app ini
+    // (cuma berlaku buat tap selagi app sudah hidup). Makanya sebelumnya
+    // tap notifikasi kelihatan "gak ngapa-ngapain" kalau app-nya sempat
+    // ketutup duluan. Fix: cek [getNotificationAppLaunchDetails] di sini,
+    // dan kalau memang app ini nyala gara-gara tap notifikasi kita, ambil
+    // path file dari penyimpanan PERSISTEN (bukan in-memory — lihat
+    // AppPrefsService.downloadNotifPaths) lalu buka langsung.
+    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp == true) {
+      final id = launchDetails?.notificationResponse?.id;
+      if (id != null) await _openFromNotification(id);
+    }
+  }
+
+  Future<void> _openFromNotification(int? id) async {
+    if (id == null) return;
+    // In-memory dulu (jalur cepat kalau app-nya emang masih hidup dari
+    // tadi), fallback ke penyimpanan persisten kalau kosong (app baru
+    // saja nyala ulang gara-gara tap notifikasi ini).
+    var file = _notifIdToFile[id];
+    if (file == null) {
+      final path = AppPrefsService.instance.downloadNotifPaths['$id'];
+      if (path == null) return;
+      file = ExportedFile(bytes: Uint8List(0), filename: path.split('/').last, path: path);
+    }
+    await ExportService.instance.openFile(file);
+    _notifIdToFile.remove(id);
+    await AppPrefsService.instance.removeDownloadNotifPath(id);
   }
 
   /// Panggil setelah [ExportService.saveToDevice] sukses.
@@ -77,6 +111,9 @@ class DownloadNotificationService {
     if (kIsWeb || !_initialized) return; // Diamkan kalau belum di-init dari main.dart / di Web.
     final id = _nextId++;
     _notifIdToFile[id] = file;
+    if (file.path != null) {
+      await AppPrefsService.instance.setDownloadNotifPath(id, file.path!);
+    }
     const androidDetails = AndroidNotificationDetails(
       _channelId,
       _channelName,

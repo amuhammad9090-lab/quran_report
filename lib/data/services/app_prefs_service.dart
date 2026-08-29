@@ -21,6 +21,7 @@ class AppPrefsService {
   static const _keyActivatedIdentities = 'activated_report_identities';
   static const _keyActivatedIdentityFolders = 'activated_report_identity_folders';
   static const _keyPasswordOverrides = 'password_overrides';
+  static const _keyDownloadNotifPaths = 'download_notif_paths';
 
   late Box<String> _box;
 
@@ -156,5 +157,37 @@ class AppPrefsService {
     final current = passwordOverrides;
     current[userId] = newHash;
     await _box.put(_keyPasswordOverrides, jsonEncode(current));
+  }
+
+  // --- Mapping id notifikasi unduhan -> path file (buat DownloadNotificationService) ---
+  //
+  // BUG FIX: tap notifikasi "Tersimpan ke Download" nggak ngapa-ngapain
+  // kalau app sempat di-tutup total (bukan cuma minimize) sebelum
+  // notifikasinya di-tap — soalnya mapping id->file sebelumnya cuma
+  // disimpan di Map in-memory (`DownloadNotificationService._notifIdToFile`),
+  // yang otomatis kosong lagi tiap app di-launch ulang dari awal. Sekarang
+  // mapping-nya ikut disimpan di sini (persist ke disk) supaya masih ada
+  // walau app-nya sempat mati duluan pas notifikasi di-tap.
+  Map<String, String> get downloadNotifPaths {
+    final raw = _box.get(_keyDownloadNotifPaths);
+    if (raw == null || raw.trim().isEmpty) return {};
+    try {
+      final map = jsonDecode(raw) as Map;
+      return map.map((k, v) => MapEntry(k.toString(), v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setDownloadNotifPath(int notifId, String filePath) async {
+    final current = downloadNotifPaths;
+    current['$notifId'] = filePath;
+    await _box.put(_keyDownloadNotifPaths, jsonEncode(current));
+  }
+
+  Future<void> removeDownloadNotifPath(int notifId) async {
+    final current = downloadNotifPaths;
+    if (current.remove('$notifId') == null) return;
+    await _box.put(_keyDownloadNotifPaths, jsonEncode(current));
   }
 }

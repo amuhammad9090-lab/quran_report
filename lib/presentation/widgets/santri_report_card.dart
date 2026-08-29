@@ -76,6 +76,19 @@ class SantriReportCard extends StatefulWidget {
   /// semuanya sekaligus, bukan cuma kartu yang di-drag.
   final List<String>? selectedIds;
 
+  /// Nomor pekan yang lagi buka panel info-nya DI KARTU INI, null = kartu
+  /// ini tertutup. Accordion-nya sekarang lintas-kartu (bukan cuma dalam
+  /// 1 kartu doang) — dikontrol dari PARENT (LaporanTab/SearchResults/
+  /// FolderDetail), yang cuma nyimpen SATU identityKey+weekIndex yang
+  /// lagi expand buat SELURUH daftar kartu. Jadi buka panel pekan di
+  /// kartu santri lain otomatis nutup punya kartu ini.
+  final int? expandedWeek;
+
+  /// Dipanggil pas kolom pekan manapun di kartu ini di-tap — parent yang
+  /// mutusin mau expand pekan ini (nutup kartu lain kalau ada yang lagi
+  /// kebuka) atau collapse (kalau pekan yang sama ditap lagi).
+  final ValueChanged<int> onToggleWeek;
+
   const SantriReportCard({
     super.key,
     required this.info,
@@ -88,6 +101,8 @@ class SantriReportCard extends StatefulWidget {
     this.selectionMode = false,
     this.selected = false,
     this.onSelectToggle,
+    required this.expandedWeek,
+    required this.onToggleWeek,
   });
 
   @override
@@ -95,26 +110,6 @@ class SantriReportCard extends StatefulWidget {
 }
 
 class _SantriReportCardState extends State<SantriReportCard> {
-  // Nomor pekan yang lagi buka panel info-nya di kartu INI, null = semua
-  // tertutup (tampilan default kartu, ukuran sama seperti biasa).
-  int? _expandedWeek;
-
-  @override
-  void didUpdateWidget(covariant SantriReportCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Masuk mode pilih -> tutup panel pekan yang lagi kebuka, biar kartu
-    // dalam mode pilih selalu tampil ringkas & konsisten tingginya.
-    if (widget.selectionMode && !oldWidget.selectionMode) {
-      _expandedWeek = null;
-    }
-  }
-
-  void _toggleWeek(int weekIndex) {
-    setState(() {
-      _expandedWeek = _expandedWeek == weekIndex ? null : weekIndex;
-    });
-  }
-
   void _showActions(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
@@ -314,7 +309,14 @@ class _SantriReportCardState extends State<SantriReportCard> {
       child: InkWell(
         onTap: widget.selectionMode
             ? widget.onSelectToggle
-            : (canOpenActions ? () => _showActions(context) : null),
+            // Panel pekan lagi kebuka di kartu ini -> tap area kosong
+            // (bukan chip pekan) NUTUP panel itu dulu (accordion juga
+            // buat tap-di-luar-chip), BUKAN langsung buka sheet aksi.
+            // Tap sheet aksi baru jalan lagi di tap berikutnya kalau
+            // panelnya emang udah ketutup.
+            : (widget.expandedWeek != null
+                ? () => widget.onToggleWeek(widget.expandedWeek!)
+                : (canOpenActions ? () => _showActions(context) : null)),
         onLongPress: widget.selectionMode
             ? null
             : (widget.onLongPressStartSelect ?? (canOpenActions ? () => _showActions(context) : null)),
@@ -396,24 +398,24 @@ class _SantriReportCardState extends State<SantriReportCard> {
                         weekIndex: weekIndex,
                         filled: widget.info.weeksWithReportThisMonth.contains(weekIndex),
                         isCurrent: weekIndex == currentWeek,
-                        isExpanded: _expandedWeek == weekIndex,
+                        isExpanded: widget.expandedWeek == weekIndex,
                         range: WeekUtils.monthWeekRange(thisMonth, weekIndex),
-                        onTap: widget.selectionMode ? null : () => _toggleWeek(weekIndex),
+                        onTap: widget.selectionMode ? null : () => widget.onToggleWeek(weekIndex),
                       ),
                     ),
                   );
                 }),
               ),
               // Panel info pekan -- HANYA nongol kalau salah satu kolom
-              // pekan lagi di-tap (_expandedWeek != null). Default-nya
+              // pekan lagi di-tap (widget.expandedWeek != null). Default-nya
               // tertutup, jadi tinggi kartu persis kayak sebelumnya.
               AnimatedSize(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOut,
                 alignment: Alignment.topCenter,
-                child: _expandedWeek == null
+                child: widget.expandedWeek == null
                     ? const SizedBox(width: double.infinity)
-                    : _buildWeekInfoPanel(context, cs, thisMonth, _expandedWeek!),
+                    : _buildWeekInfoPanel(context, cs, thisMonth, widget.expandedWeek!),
               ),
               if (latest != null) ...[
                 const SizedBox(height: 12),

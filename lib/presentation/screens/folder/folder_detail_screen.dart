@@ -33,10 +33,29 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
   bool _selectionMode = false;
   final Set<String> _selected = {};
 
+  // Accordion panel info pekan LINTAS-KARTU — lihat catatan yang sama di
+  // laporan_tab.dart.
+  String? _expandedCardId;
+  int? _expandedWeek;
+
+  void _toggleCardWeek(String identityKey, int weekIndex) {
+    setState(() {
+      if (_expandedCardId == identityKey && _expandedWeek == weekIndex) {
+        _expandedCardId = null;
+        _expandedWeek = null;
+      } else {
+        _expandedCardId = identityKey;
+        _expandedWeek = weekIndex;
+      }
+    });
+  }
+
   void _toggleSelectionMode() {
     setState(() {
       _selectionMode = !_selectionMode;
       _selected.clear();
+      _expandedCardId = null;
+      _expandedWeek = null;
     });
   }
 
@@ -44,6 +63,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     setState(() {
       _selectionMode = true;
       _selected.add(identityKey);
+      _expandedCardId = null;
+      _expandedWeek = null;
     });
   }
 
@@ -260,6 +281,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                           onSelectToggle: () => _toggleSelect(c.identityKey),
                           selectedIds: _selected.toList(),
                           onLongPressStartSelect: () => _startSelectingWith(c.identityKey),
+                          expandedWeek: _expandedCardId == c.identityKey ? _expandedWeek : null,
+                          onToggleWeek: (weekIndex) => _toggleCardWeek(c.identityKey, weekIndex),
                         );
                       },
                     ),

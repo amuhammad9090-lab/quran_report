@@ -32,11 +32,12 @@ class RekapBulananScreen extends StatefulWidget {
 class _RekapBulananScreenState extends State<RekapBulananScreen> {
   late DateTime _month;
 
-  // 1 GlobalKey per Pekan, dibuat ulang tiap kali daftar pekan di-build
-  // (lihat build()) — dipakai [_gotoWeek] buat auto-scroll ke kartu Pekan
-  // yang diketuk dari chip "Pekan N" di [_MonthSwitcher] (dulu chip itu
-  // pindah halaman, sekarang halamannya sudah tidak ada lagi jadi cuma
-  // scroll ke kartunya; expand/collapse tetap manual ketuk kartunya).
+  // Pekan mana yang lagi expand (accordion — cuma 1 yang boleh kebuka
+  // sekaligus). Dulu tiap _PekanCard nyimpen expand-state sendiri2, jadi
+  // bisa kebuka bareng semua; sekarang dinaikin ke sini biar buka pekan
+  // baru otomatis nutup yang sebelumnya.
+  int? _expandedWeek;
+
   final Map<int, GlobalKey> _weekKeys = {};
 
   @override
@@ -46,7 +47,12 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
   }
 
   void _gotoMonth(int monthDelta) {
-    setState(() => _month = DateTime(_month.year, _month.month + monthDelta));
+    setState(() {
+      _month = DateTime(_month.year, _month.month + monthDelta);
+      // Reset biar gak ada pekan yang "nyangkut" ke-render expanded di
+      // bulan baru cuma karena weekIndex-nya kebetulan sama.
+      _expandedWeek = null;
+    });
   }
 
   void _gotoWeek(int weekIndex) {
@@ -58,6 +64,19 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
       curve: Curves.easeInOut,
       alignment: 0.1,
     );
+  }
+
+  void _toggleWeek(int weekIndex) {
+    final expanding = _expandedWeek != weekIndex;
+    setState(() => _expandedWeek = expanding ? weekIndex : null);
+    if (!expanding) return;
+
+    // Auto-scroll pas expand, biar kartu (+ daftar hari yang baru nongol
+    // di bawahnya) langsung ke-bawa ke atas viewport tanpa user harus
+    // scroll manual lagi. Delay dulu ~sesuai durasi AnimatedCrossFade
+    // (200ms) supaya ensureVisible ngitung berdasarkan tinggi kartu yang
+    // udah (hampir) final, bukan tinggi lama pas masih collapsed.
+    Future.delayed(const Duration(milliseconds: 220), () => _gotoWeek(weekIndex));
   }
 
   @override
@@ -172,7 +191,13 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 sliver: SliverToBoxAdapter(
-                  child: _MonthWeekList(month: _month, weeks: weeks, weekKeys: _weekKeys),
+                  child: _MonthWeekList(
+                    month: _month,
+                    weeks: weeks,
+                    weekKeys: _weekKeys,
+                    expandedWeek: _expandedWeek,
+                    onToggleWeek: _toggleWeek,
+                  ),
                 ),
               ),
             ],
@@ -280,14 +305,28 @@ class _MonthWeekList extends StatelessWidget {
   final DateTime month;
   final List<MonthWeekSummary> weeks;
   final Map<int, GlobalKey> weekKeys;
-  const _MonthWeekList({required this.month, required this.weeks, required this.weekKeys});
+  final int? expandedWeek;
+  final ValueChanged<int> onToggleWeek;
+  const _MonthWeekList({
+    required this.month,
+    required this.weeks,
+    required this.weekKeys,
+    required this.expandedWeek,
+    required this.onToggleWeek,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         for (final w in weeks) ...[
-          _PekanCard(key: weekKeys[w.weekIndex], month: month, summary: w),
+          _PekanCard(
+            key: weekKeys[w.weekIndex],
+            month: month,
+            summary: w,
+            expanded: expandedWeek == w.weekIndex,
+            onToggle: () => onToggleWeek(w.weekIndex),
+          ),
           const SizedBox(height: 10),
         ],
       ],
@@ -301,22 +340,27 @@ class _MonthWeekList extends StatelessWidget {
 /// terpisah RekapPekanBulanScreen yang sudah dihapus — isinya sama
 /// (daftar hari + tombol generate), cuma sekarang inline di kartu ini,
 /// bukan pindah halaman.
-class _PekanCard extends StatefulWidget {
+///
+/// Expand-state SEKARANG dikontrol dari luar (accordion — lihat
+/// [_RekapBulananScreenState._expandedWeek]), bukan state lokal lagi,
+/// biar buka 1 pekan otomatis nutup pekan lain yang lagi kebuka.
+class _PekanCard extends StatelessWidget {
   final DateTime month;
   final MonthWeekSummary summary;
-  const _PekanCard({super.key, required this.month, required this.summary});
-
-  @override
-  State<_PekanCard> createState() => _PekanCardState();
-}
-
-class _PekanCardState extends State<_PekanCard> {
-  bool _expanded = false;
+  final bool expanded;
+  final VoidCallback onToggle;
+  const _PekanCard({
+    super.key,
+    required this.month,
+    required this.summary,
+    required this.expanded,
+    required this.onToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final w = widget.summary;
+    final w = summary;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -324,7 +368,7 @@ class _PekanCardState extends State<_PekanCard> {
       child: Column(
         children: [
           InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
+            onTap: onToggle,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
@@ -360,7 +404,7 @@ class _PekanCardState extends State<_PekanCard> {
                     ),
                   ),
                   AnimatedRotation(
-                    turns: _expanded ? 0.5 : 0,
+                    turns: expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
                     child: Icon(Icons.expand_more_rounded, color: cs.onSurfaceVariant),
                   ),
@@ -370,8 +414,8 @@ class _PekanCardState extends State<_PekanCard> {
           ),
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 200),
-            crossFadeState: _expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-            firstChild: _PekanExpandedBody(month: widget.month, weekIndex: w.weekIndex),
+            crossFadeState: expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+            firstChild: _PekanExpandedBody(month: month, weekIndex: w.weekIndex),
             secondChild: const SizedBox(width: double.infinity),
           ),
         ],

@@ -93,9 +93,24 @@ class AuthProvider extends ChangeNotifier {
   /// RecordsProvider.groupByKelasHalaqoh). Null kalau tidak ketemu (mis.
   /// kelas/halaqoh belum/tidak di-assign ke siapa pun).
   String? guruPembimbingNameFor(String kelas, String halaqoh) {
+    // Dulu ada filter `if (acc.role != UserRole.guruPembimbing) continue;`
+    // di sini — niatnya cuma nampilin guru yang emang berperan sbg
+    // pembimbing, TAPI di data sekolah ini ada admin (mis. Muhammad
+    // Hosri) yang juga MERANGKAP jadi guru pembimbing beberapa Kelas+
+    // Halaqoh (assignments-nya keisi persis kayak guru biasa). Filter
+    // role itu bikin admin yang merangkap ini ke-skip TOTAL dari
+    // pencarian, padahal assignments-nya valid — makanya baris "Guru
+    // Pembimbing" hilang di export walau data assignment-nya sudah
+    // benar. Sekarang siapapun (admin ATAU guru_pembimbing) yang punya
+    // assignment cocok ke Kelas+Halaqoh ini dianggap guru pembimbing-nya
+    // — role cuma soal akses fitur admin, bukan penentu siapa yang
+    // membimbing kelas mana.
+    final kelasKey = kelas.trim().toLowerCase();
+    final halaqohKey = halaqoh.trim().toLowerCase();
     for (final acc in _allAccounts) {
-      if (acc.role != UserRole.guruPembimbing) continue;
-      final match = acc.assignments.any((a) => a.kelas == kelas && a.halaqoh == halaqoh);
+      final match = acc.assignments.any((a) =>
+          a.kelas.trim().toLowerCase() == kelasKey &&
+          a.halaqoh.trim().toLowerCase() == halaqohKey);
       if (match) return acc.displayName;
     }
     return null;

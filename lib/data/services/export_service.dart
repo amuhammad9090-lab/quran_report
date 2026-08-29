@@ -736,14 +736,14 @@ class ExportService {
       // di banyak PDF viewer. Dipecah jadi 2 baris teks biasa (sama
       // seperti kop exportPdf) — sekaligus menghilangkan karakter itu.
       body.add(pw.Text('Kelas   : ${section.kelas}',
-          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)));
+          style: const pw.TextStyle(fontSize: 11)));
       body.add(pw.SizedBox(height: 2));
       body.add(pw.Text('Halaqoh : ${section.halaqoh}',
-          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)));
+          style: const pw.TextStyle(fontSize: 11)));
       if (section.guruPembimbing != null && section.guruPembimbing!.trim().isNotEmpty) {
         body.add(pw.SizedBox(height: 2));
         body.add(pw.Text('Guru Pembimbing : ${section.guruPembimbing}',
-            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)));
+            style: const pw.TextStyle(fontSize: 11)));
       }
       body.add(pw.SizedBox(height: 6));
       final rows = includeTanggal
@@ -842,7 +842,7 @@ class ExportService {
     final titleStyle = xls.CellStyle(bold: true, fontSize: 14);
     final subtitleStyle = xls.CellStyle(fontSize: 11, italic: true);
     final labelStyle = xls.CellStyle(fontSize: 10);
-    final sectionStyle = xls.CellStyle(bold: true, fontSize: 12);
+    final sectionStyle = xls.CellStyle(fontSize: 12);
     final headerStyle = xls.CellStyle(
       bold: true,
       fontColorHex: xls.ExcelColor.white,
@@ -869,7 +869,7 @@ class ExportService {
       writeMerged('Kelas   : ${section.kelas}', sectionStyle);
       writeMerged('Halaqoh : ${section.halaqoh}', sectionStyle);
       if (section.guruPembimbing != null && section.guruPembimbing!.trim().isNotEmpty) {
-        writeMerged('Guru Pembimbing : ${section.guruPembimbing}', labelStyle);
+        writeMerged('Guru Pembimbing : ${section.guruPembimbing}', sectionStyle);
       }
       for (var c = 0; c < headers.length; c++) {
         final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row));
@@ -941,8 +941,8 @@ class ExportService {
     for (var s = 0; s < sections.length; s++) {
       final section = sections[s];
       if (s > 0) builder.addSpacer();
-      builder.addParagraph('Kelas   : ${section.kelas}', bold: true);
-      builder.addParagraph('Halaqoh : ${section.halaqoh}', bold: true);
+      builder.addParagraph('Kelas   : ${section.kelas}');
+      builder.addParagraph('Halaqoh : ${section.halaqoh}');
       if (section.guruPembimbing != null && section.guruPembimbing!.trim().isNotEmpty) {
         builder.addParagraph('Guru Pembimbing : ${section.guruPembimbing}');
       }
@@ -1015,14 +1015,14 @@ class ExportService {
       // Lihat catatan di exportGroupedPdf soal kenapa dipecah 2 baris
       // (bukan 1 baris pakai em dash "—") — sama-sama biar gak tofu.
       body.add(pw.Text('Kelas   : ${section.kelas}',
-          style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold)));
+          style: const pw.TextStyle(fontSize: 10.5)));
       body.add(pw.SizedBox(height: 2));
       body.add(pw.Text('Halaqoh : ${section.halaqoh}',
-          style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold)));
+          style: const pw.TextStyle(fontSize: 10.5)));
       if (section.guruPembimbing != null && section.guruPembimbing!.trim().isNotEmpty) {
         body.add(pw.SizedBox(height: 2));
         body.add(pw.Text('Guru Pembimbing : ${section.guruPembimbing}',
-            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)));
+            style: const pw.TextStyle(fontSize: 10.5)));
       }
       body.add(pw.SizedBox(height: 6));
       body.add(pw.TableHelper.fromTextArray(
@@ -1098,7 +1098,7 @@ class ExportService {
     final titleStyle = xls.CellStyle(bold: true, fontSize: 14);
     final subtitleStyle = xls.CellStyle(fontSize: 11, italic: true);
     final labelStyle = xls.CellStyle(fontSize: 10);
-    final sectionStyle = xls.CellStyle(bold: true, fontSize: 12);
+    final sectionStyle = xls.CellStyle(fontSize: 12);
 
     var row = 0;
     void writeMerged(String text, xls.CellStyle style) {
@@ -1126,7 +1126,7 @@ class ExportService {
       writeMerged('Kelas   : ${section.kelas}', sectionStyle);
       writeMerged('Halaqoh : ${section.halaqoh}', sectionStyle);
       if (section.guruPembimbing != null && section.guruPembimbing!.trim().isNotEmpty) {
-        writeMerged('Guru Pembimbing : ${section.guruPembimbing}', labelStyle);
+        writeMerged('Guru Pembimbing : ${section.guruPembimbing}', sectionStyle);
       }
       for (var c = 0; c < headers.length; c++) {
         final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row));
@@ -1173,8 +1173,8 @@ class ExportService {
     for (var s = 0; s < sections.length; s++) {
       final section = sections[s];
       if (s > 0) builder.addSpacer();
-      builder.addParagraph('Kelas   : ${section.kelas}', bold: true);
-      builder.addParagraph('Halaqoh : ${section.halaqoh}', bold: true);
+      builder.addParagraph('Kelas   : ${section.kelas}');
+      builder.addParagraph('Halaqoh : ${section.halaqoh}');
       if (section.guruPembimbing != null && section.guruPembimbing!.trim().isNotEmpty) {
         builder.addParagraph('Guru Pembimbing : ${section.guruPembimbing}');
       }

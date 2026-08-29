@@ -32,6 +32,23 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   late final TextEditingController _searchCtrl =
   TextEditingController(text: context.read<RecordsProvider>().searchQuery);
 
+  // Accordion panel info pekan LINTAS-KARTU (termasuk lintas grup folder
+  // di halaman ini) — lihat catatan yang sama di laporan_tab.dart.
+  String? _expandedCardId;
+  int? _expandedWeek;
+
+  void _toggleCardWeek(String identityKey, int weekIndex) {
+    setState(() {
+      if (_expandedCardId == identityKey && _expandedWeek == weekIndex) {
+        _expandedCardId = null;
+        _expandedWeek = null;
+      } else {
+        _expandedCardId = identityKey;
+        _expandedWeek = weekIndex;
+      }
+    });
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -136,6 +153,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
       onTapWeek: (weekIndex) => _openWeek(context, c, weekIndex),
       onPindahkanKeFolder: () => _pindahkanCard(context, c),
       onHapus: () => _hapusCard(context, c),
+      expandedWeek: _expandedCardId == c.identityKey ? _expandedWeek : null,
+      onToggleWeek: (weekIndex) => _toggleCardWeek(c.identityKey, weekIndex),
     );
   }
 

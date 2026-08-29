@@ -53,6 +53,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/data/quran_line_dataset_unified_ayats_schema.json
+    - assets/data/quran_line_dataset_juz1-10_juz26-30_schema.json
     - assets/images/app_icon.png
     - assets/images/logo_smpit.png

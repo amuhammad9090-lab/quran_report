@@ -33,6 +33,27 @@ class _LaporanTabState extends State<LaporanTab> {
   bool _selectionMode = false;
   final Set<String> _selected = {};
 
+  // Accordion panel info pekan LINTAS-KARTU — cuma 1 (identityKey +
+  // weekIndex) yang boleh expand sekaligus di SELURUH daftar santri.
+  // Sebelumnya expand-state disimpen sendiri2 di tiap SantriReportCard,
+  // jadi bisa kebuka bareng di banyak kartu santri berbeda; sekarang
+  // dinaikin ke sini biar buka panel di 1 santri otomatis nutup punya
+  // santri lain (sama pola kayak accordion Pekan di Rekap Bulanan).
+  String? _expandedCardId;
+  int? _expandedWeek;
+
+  void _toggleCardWeek(String identityKey, int weekIndex) {
+    setState(() {
+      if (_expandedCardId == identityKey && _expandedWeek == weekIndex) {
+        _expandedCardId = null;
+        _expandedWeek = null;
+      } else {
+        _expandedCardId = identityKey;
+        _expandedWeek = weekIndex;
+      }
+    });
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -43,6 +64,8 @@ class _LaporanTabState extends State<LaporanTab> {
     setState(() {
       _selectionMode = !_selectionMode;
       _selected.clear();
+      _expandedCardId = null;
+      _expandedWeek = null;
     });
     widget.onSelectionModeChanged?.call(_selectionMode);
   }
@@ -51,6 +74,8 @@ class _LaporanTabState extends State<LaporanTab> {
     setState(() {
       _selectionMode = true;
       _selected.add(identityKey);
+      _expandedCardId = null;
+      _expandedWeek = null;
     });
     widget.onSelectionModeChanged?.call(true);
   }
@@ -371,6 +396,8 @@ class _LaporanTabState extends State<LaporanTab> {
                           onSelectToggle: () => _toggleSelect(c.identityKey),
                           selectedIds: _selected.toList(),
                           onLongPressStartSelect: () => _startSelectingWith(c.identityKey),
+                          expandedWeek: _expandedCardId == c.identityKey ? _expandedWeek : null,
+                          onToggleWeek: (weekIndex) => _toggleCardWeek(c.identityKey, weekIndex),
                         );
                       },
                     ),
