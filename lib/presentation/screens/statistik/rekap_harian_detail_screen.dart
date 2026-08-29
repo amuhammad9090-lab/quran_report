@@ -7,9 +7,10 @@ import '../../widgets/export_style_records_table.dart';
 import '../../widgets/misc_widgets.dart';
 
 /// Detail laporan SATU HARI (mis. Senin) dalam sebuah Pekan — dibuka dari
-/// tap salah satu baris hari di section "Rekap Harian"
-/// [RekapPekanBulanScreen]. Isinya laporan hari itu dikelompokkan per
-/// Kelas & Halaqoh, ditampilkan sebagai tabel dengan kolom PERSIS sama
+/// tap salah satu baris hari di dalam kartu "Pekan N" yang lagi di-expand
+/// pada RekapBulananScreen (lihat `_DayRow`). Isinya laporan hari itu
+/// dikelompokkan per Kelas & Halaqoh, ditampilkan sebagai tabel dengan
+/// kolom PERSIS sama
 /// seperti hasil export (lihat [ExportStyleRecordsTable]) — TIDAK ada
 /// tombol export di sini (export rekap pekanan gabungan ada di Generate
 /// Laporan Pekanan, lihat GenerateRekapPekananScreen).

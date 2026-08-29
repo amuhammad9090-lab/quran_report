@@ -12,8 +12,9 @@ import '../export/export_sheet.dart';
 
 /// Hasil "Generate Laporan Pekanan" — menghimpun SEMUA laporan sepekan
 /// (semua hari, semua Kelas & Halaqoh), dikelompokkan per Kelas+Halaqoh
-/// (tiap grup = 1 tabel kecil), dibuka dari tombol di bawah "Rekap
-/// Harian" pada [RekapPekanBulanScreen].
+/// (tiap grup = 1 tabel kecil), dibuka dari tombol "Generate Laporan
+/// Pekanan" di dalam kartu "Pekan N" yang lagi di-expand pada
+/// RekapBulananScreen (lihat `_PekanExpandedBody`).
 ///
 /// Beda dari tabel harian (lihat ExportStyleRecordsTable &
 /// RekapHarianDetailScreen, yang 1 baris = 1 laporan): tabel di sini

@@ -59,22 +59,13 @@ class GenerateRekapBulananScreen extends StatelessWidget {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
+            // Tombol export di header (sudut kanan atas) SUDAH DIHAPUS —
+            // export tetap bisa lewat tombol per-tabel (1 Kelas+Halaqoh)
+            // di samping tiap judul grup di bawah, lihat IconButton di
+            // dalam SliverList.list.
             PushedPageHeader(
               title: 'Generate Rekap Bulanan',
               subtitle: bulanLabel,
-              trailing: recaps.isEmpty
-                  ? null
-                  : IconButton(
-                onPressed: () => showExportSheet(
-                  context,
-                  groupedMonthlySections: groups,
-                  totalWeeks: totalWeeks,
-                  judul: 'Rekap Bulanan - $bulanLabel',
-                  periode: bulanLabel,
-                ),
-                icon: const Icon(Icons.ios_share_rounded),
-                tooltip: 'Export Rekap Bulanan',
-              ),
             ),
             if (recaps.isEmpty)
               const SliverFillRemaining(

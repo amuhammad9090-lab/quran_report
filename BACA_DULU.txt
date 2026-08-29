@@ -1,0 +1,54 @@
+PATCH: Restrukturisasi Statistik > Rekap Bulanan
+==================================================
+
+FILE DIUBAH (copy-timpa ke project, path sama persis):
+- lib/presentation/screens/statistik/rekap_bulanan_screen.dart
+  -> Ditulis ulang total. Perubahan:
+     1. Tombol "Generate Rekap Bulanan" dipindah ke BAWAH card
+        Tahfizh/Tahsin/Total Baris (sebelumnya nempel di bawah
+        _MonthSwitcher, di atas card summary).
+     2. Section "Rekap Pekan" sekarang berupa card "Pekan N" yang bisa
+        di-TAP buat expand/collapse (pakai AnimatedCrossFade + panah
+        yang muter). Saat expand, muncul daftar hari (Senin s/d Minggu)
+        pekan itu (row kecil: nama hari, tanggal, jumlah laporan) yang
+        bisa di-tap ke RekapHarianDetailScreen (SAMA seperti dulu di
+        halaman Pekan) + tombol "Generate Laporan Pekanan" di paling
+        bawah.
+     3. Chip "Pekan N" di _MonthSwitcher (atas) sekarang AUTO-SCROLL ke
+        kartu Pekan yang bersangkutan (bukan pindah halaman lagi, karena
+        halamannya sudah dihapus) - tinggal tap kartunya buat expand.
+
+- lib/presentation/screens/statistik/generate_rekap_bulanan_screen.dart
+  -> Tombol export (ikon share) di sudut kanan atas (PushedPageHeader)
+     DIHAPUS. Export tetap bisa lewat tombol export per-tabel (ikon
+     share kecil di samping tiap judul "Kelas X — Halaqoh Y") yang
+     memang sudah ada sebelumnya, tidak diubah.
+
+- lib/presentation/screens/statistik/rekap_harian_detail_screen.dart
+- lib/presentation/screens/statistik/generate_rekap_pekanan_screen.dart
+  -> Cuma update komentar dokumentasi (referensi ke halaman Pekan yang
+     sudah dihapus), tidak ada perubahan logic/behavior.
+
+FILE DIHAPUS (hapus manual dari project, TIDAK ada di dalam zip ini):
+- lib/presentation/screens/statistik/rekap_pekan_bulan_screen.dart
+  -> Halaman "Pekan N" yang berdiri sendiri, sudah tidak dipakai lagi
+     karena isinya (daftar hari + tombol Generate Laporan Pekanan)
+     sudah dipindah jadi inline di dalam card "Pekan N" (lihat
+     rekap_bulanan_screen.dart di atas). Sudah dicek, tidak ada file
+     lain yang masih import/pakai file ini.
+
+CARA PASANG
+1. Copy-timpa 4 file di atas ke folder project (struktur foldernya sama
+   persis kayak yang ada di zip ini).
+2. Hapus manual file lib/presentation/screens/statistik/rekap_pekan_bulan_screen.dart
+   dari project lu.
+3. Run `flutter pub get` kalau perlu, terus jalanin ulang.
+
+CATATAN
+- Provider/service/model TIDAK ada yang berubah (RecordsProvider,
+  WeekUtils, ExportService, dll tetap sama) — murni perubahan di layer
+  UI/screen aja.
+- context.watch<RecordsProvider>() buat daftar hari sengaja ditaruh di
+  widget terpisah (_PekanExpandedBody), bukan langsung di card Pekan-nya
+  — biar pas ada perubahan data, cuma card yang lagi ke-expand aja yang
+  rebuild, bukan semua card Pekan sekaligus.
