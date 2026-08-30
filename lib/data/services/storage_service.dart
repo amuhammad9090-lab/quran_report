@@ -1,11 +1,19 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart'; // <-- BARU
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../core/utils/app_config.dart'; // <-- BARU
 import '../models/santri_record.dart';
 import '../models/folder.dart';
 
 /// Persistensi lokal record laporan & folder menggunakan Hive (Box<String>,
 /// setiap value adalah JSON-encoded object). Sengaja tidak pakai
 /// TypeAdapter/codegen supaya tidak butuh build_runner.
+///
+/// <-- BARU: Hive TETAP sumber utama — app tetap 100% jalan offline sama
+/// seperti sebelumnya. Firestore murni mirror tambahan, dibungkus
+/// try/catch (lewat .catchError) supaya kalau gagal (device offline,
+/// Firestore belum di-setup, dll) upsert/delete yang dipakai UI TIDAK
+/// PERNAH gagal gara-gara Firestore.
 class StorageService {
   StorageService._();
   static final StorageService instance = StorageService._();
@@ -30,11 +38,13 @@ class StorageService {
   }
 
   Future<void> upsert(SantriRecord record) async {
-    await _box.put(record.id, jsonEncode(record.toJson()));
+    await _box.put(record.id, jsonEncode(record.toJson())); // <-- TIDAK BERUBAH, tetap paling depan
+    _mirrorToFirestore(record); // <-- BARU — fire-and-forget
   }
 
   Future<void> delete(String id) async {
     await _box.delete(id);
+    _mirrorDeleteToFirestore(id); // <-- BARU
   }
 
   Future<void> clearAll() async {
@@ -42,7 +52,8 @@ class StorageService {
     await _folderBox.clear();
   }
 
-  // --- Folder ---
+  // --- Folder --- (TIDAK diubah — murni struktur organisasi guru, tidak
+  // relevan buat Portal Orang Tua, jadi tidak di-mirror)
   List<ReportFolder> getAllFolders() {
     return _folderBox.values
         .map((raw) => ReportFolder.fromJson(jsonDecode(raw) as Map<String, dynamic>))
@@ -54,13 +65,35 @@ class StorageService {
     await _folderBox.put(folder.id, jsonEncode(folder.toJson()));
   }
 
-  /// Hapus folder. Laporan yang tadinya ada di dalamnya TIDAK ikut terhapus
-  /// — hanya dikeluarkan dari folder (folderId di-null-kan) supaya tetap
-  /// muncul lagi di section "Laporan".
   Future<void> deleteFolder(String folderId) async {
     await _folderBox.delete(folderId);
     for (final r in getAll().where((r) => r.folderId == folderId)) {
       await upsert(r.copyWith(clearFolder: true));
     }
+  }
+
+  // <-- BARU: 2 method di bawah semuanya baru. Sengaja "fire-and-forget"
+  // (tidak di-await pemanggilnya, tidak melempar exception) supaya guru
+  // simpan laporan TETAP INSTAN walau device offline/Firestore lagi
+  // bermasalah — laporan tetap aman di Hive, sync ke Firestore nyusul
+  // kapan saja koneksi ada.
+  void _mirrorToFirestore(SantriRecord record) {
+    FirebaseFirestore.instance
+        .collection('schools')
+        .doc(kSchoolId)
+        .collection('santriRecords')
+        .doc(record.id)
+        .set(record.toJson())
+        .catchError((_) {}); // diam-diam gagal, Hive tetap sumber kebenaran
+  }
+
+  void _mirrorDeleteToFirestore(String id) {
+    FirebaseFirestore.instance
+        .collection('schools')
+        .doc(kSchoolId)
+        .collection('santriRecords')
+        .doc(id)
+        .delete()
+        .catchError((_) {});
   }
 }
