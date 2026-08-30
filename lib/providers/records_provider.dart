@@ -409,7 +409,7 @@ class RecordsProvider extends ChangeNotifier {
     _totalHadirCache = _scoped
         .where((r) => r.keterangan == Keterangan.hadir || r.keterangan.isSanksiTanpaSetoran)
         .length;
-    _totalBarisSetoranCache = _scoped.fold(0, (sum, r) => sum! + (r.totalBaris ?? 0));
+    _totalBarisSetoranCache = _scoped.fold<int>(0, (sum, r) => sum + (r.totalBaris ?? 0));
     _summaryCacheVersion = _dataVersion;
   }
 
@@ -487,16 +487,19 @@ class RecordsProvider extends ChangeNotifier {
   // Diturunin dari data yang udah pernah diinput (sudah discope) DAN
   // digabung dengan data master santri di layer UI (lihat record_form_sheet)
   // supaya guru pembimbing juga bisa pilih santri yang belum pernah dilaporkan.
+  // Di-trim dulu sebelum di-dedupe (Set) — biar data lama yang kepeleset
+  // spasi (mis. "VII Istanbul " vs "VII Istanbul") gak nongol jadi 2 chip
+  // filter yang keliatan identik.
   List<String> get distinctKelas => _scoped
-      .map((r) => r.kelas)
-      .where((v) => v.trim().isNotEmpty)
+      .map((r) => r.kelas.trim())
+      .where((v) => v.isNotEmpty)
       .toSet()
       .toList()
     ..sort();
 
   List<String> get distinctHalaqoh => _scoped
-      .map((r) => r.halaqoh)
-      .where((v) => v.trim().isNotEmpty)
+      .map((r) => r.halaqoh.trim())
+      .where((v) => v.isNotEmpty)
       .toSet()
       .toList()
     ..sort();
@@ -907,25 +910,43 @@ class RecordsProvider extends ChangeNotifier {
   /// lalu Halaqoh; di dalam tiap grup, record terurut tanggal terlama dulu
   /// (kronologis, enak dibaca) lalu nama.
   List<KelasHalaqohGroup> groupByKelasHalaqoh(List<SantriRecord> records) {
+    // Key dibikin dari kelas+halaqoh yang di-trim & disamakan huruf besar-
+    // kecilnya buat PERBANDINGAN saja (bukan buat ditampilkan) — nutup
+    // celah data lama/typo (mis. ada spasi nyempil "Halaqoh A ", atau beda
+    // kapital "halaqoh a") yang dulu bikin 1 kelas+halaqoh yang SEBENARNYA
+    // SAMA malah kepecah jadi 2 card rekap terpisah, padahal labelnya
+    // keliatan identik di layar — itu penyebab bug "duplicate Halaqoh"
+    // (dua card "Kelas X — Halaqoh A" nongol berturut-turut). Label yang
+    // ditampilkan tetap dari data ASLI (sudah di-trim), bukan versi
+    // lowercase-nya.
     final map = <String, List<SantriRecord>>{};
+    final displayKelas = <String, String>{};
+    final displayHalaqoh = <String, String>{};
     for (final r in records) {
-      final key = '${r.kelas}|${r.halaqoh}';
+      final kelasTrim = r.kelas.trim();
+      final halaqohTrim = r.halaqoh.trim();
+      final key = '${kelasTrim.toLowerCase()}|${halaqohTrim.toLowerCase()}';
       map.putIfAbsent(key, () => []).add(r);
+      displayKelas.putIfAbsent(key, () => kelasTrim);
+      displayHalaqoh.putIfAbsent(key, () => halaqohTrim);
     }
     final groups = map.entries.map((e) {
-      final parts = e.key.split('|');
       final list = List<SantriRecord>.from(e.value)
         ..sort((a, b) {
           final byDate = a.tanggal.compareTo(b.tanggal);
           if (byDate != 0) return byDate;
           return a.namaAnak.toLowerCase().compareTo(b.namaAnak.toLowerCase());
         });
-      return KelasHalaqohGroup(kelas: parts[0], halaqoh: parts[1], records: list);
+      return KelasHalaqohGroup(
+        kelas: displayKelas[e.key]!,
+        halaqoh: displayHalaqoh[e.key]!,
+        records: list,
+      );
     }).toList()
       ..sort((a, b) {
-        final byKelas = a.kelas.compareTo(b.kelas);
+        final byKelas = a.kelas.toLowerCase().compareTo(b.kelas.toLowerCase());
         if (byKelas != 0) return byKelas;
-        return a.halaqoh.compareTo(b.halaqoh);
+        return a.halaqoh.toLowerCase().compareTo(b.halaqoh.toLowerCase());
       });
     return groups;
   }

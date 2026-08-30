@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/utils/week_utils.dart';
 import '../../providers/records_provider.dart';
+import 'misc_widgets.dart' show EditedBadge;
 import 'status_badge.dart';
 
 /// Kartu "1 santri = 1 card laporan utama" di tab Laporan. Nunjukin
@@ -467,6 +468,10 @@ class _SantriReportCardState extends State<SantriReportCard> {
                       DateFormat('d MMM yyyy', 'id_ID').format(latest.tanggal),
                       style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
                     ),
+                    if (latest.isEdited) ...[
+                      const SizedBox(width: 6),
+                      EditedBadge(cs: cs),
+                    ],
                     const Spacer(),
                     KeteranganChip(keterangan: latest.keterangan, compact: true),
                   ],

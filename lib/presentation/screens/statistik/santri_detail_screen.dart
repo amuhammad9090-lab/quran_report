@@ -108,6 +108,7 @@ class SantriDetailScreen extends StatelessWidget {
                                 keteranganChip:
                                     KeteranganChip(keterangan: r.keterangan, compact: true),
                                 onTap: () => showRecordFormSheet(context, existing: r),
+                                isEdited: r.isEdited,
                               ))
                           .toList(),
                     );

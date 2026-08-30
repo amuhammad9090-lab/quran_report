@@ -837,6 +837,9 @@ class RecordSummaryRow extends StatelessWidget {
   final String capaianText;
   final Widget keteranganChip;
   final VoidCallback? onTap;
+  // Nampilin badge kecil "Diedit" di sebelah label status kalau laporan
+  // ini pernah diubah setelah pertama dibuat (lihat SantriRecord.isEdited).
+  final bool isEdited;
 
   const RecordSummaryRow({
     super.key,
@@ -846,10 +849,12 @@ class RecordSummaryRow extends StatelessWidget {
     required this.capaianText,
     required this.keteranganChip,
     this.onTap,
+    this.isEdited = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -863,13 +868,21 @@ class RecordSummaryRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    statusLabel,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: statusColor,
+                        ),
+                      ),
+                      if (isEdited) ...[
+                        const SizedBox(width: 6),
+                        EditedBadge(cs: cs),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 1),
                   Text(
@@ -884,6 +897,41 @@ class RecordSummaryRow extends StatelessWidget {
             keteranganChip,
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Badge kecil "Diedit" — dipakai [RecordSummaryRow] & [SantriReportCard]
+/// (widget publik, dipakai lintas file). Sengaja netral (bukan warna
+/// warning/error) soalnya edit itu wajar, bukan sesuatu yang "salah".
+class EditedBadge extends StatelessWidget {
+  final ColorScheme cs;
+  const EditedBadge({super.key, required this.cs});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.edit_rounded, size: 9, color: cs.onSurfaceVariant),
+          const SizedBox(width: 3),
+          Text(
+            'Diedit',
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -843,6 +843,10 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       id: widget.existing?.id ?? const Uuid().v4(),
       tanggal: _tanggal,
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
+      // Diedit = laporan yang sudah ada (_isEdit) dan barusan disimpan
+      // ulang -> catat waktunya sekarang buat badge "Diedit" di kartu.
+      // Laporan baru (bukan edit): tetap null.
+      editedAt: _isEdit ? DateTime.now() : null,
       kelas: _kelas!.trim(),
       halaqoh: _halaqoh!.trim(),
       namaAnak: _nama!.trim(),

@@ -82,6 +82,7 @@ class SantriRecord {
   final String id;
   final DateTime tanggal;
   final DateTime? createdAt; // waktu laporan ini benar-benar diinput (buat jam di kartu)
+  final DateTime? editedAt; // waktu terakhir laporan ini DIUBAH setelah dibuat (buat badge "Diedit")
   final String kelas; // contoh: "789"
   final String halaqoh; // contoh: "ABCD"
   final String namaAnak;
@@ -147,6 +148,7 @@ class SantriRecord {
     required this.id,
     required this.tanggal,
     this.createdAt,
+    this.editedAt,
     required this.kelas,
     required this.halaqoh,
     required this.namaAnak,
@@ -200,11 +202,16 @@ class SantriRecord {
     bool clearTahsin = false,
     bool clearTilawah = false,
     bool clearFolder = false,
+    // Set true dari record_form_sheet saat nyimpen HASIL EDIT laporan yang
+    // sudah ada (bukan laporan baru) — isi editedAt dengan waktu sekarang
+    // biar badge "Diedit" muncul di kartu laporan.
+    bool markEdited = false,
   }) {
     return SantriRecord(
       id: id,
       tanggal: tanggal ?? this.tanggal,
       createdAt: createdAt,
+      editedAt: markEdited ? DateTime.now() : editedAt,
       ownerId: ownerId,
       kelas: kelas ?? this.kelas,
       halaqoh: halaqoh ?? this.halaqoh,
@@ -232,6 +239,11 @@ class SantriRecord {
       folderId: clearFolder ? null : (folderId ?? this.folderId),
     );
   }
+
+  /// Laporan ini pernah diedit setelah pertama dibuat — dipakai buat
+  /// nampilin badge "Diedit" di kartu laporan (tab Laporan & detail
+  /// santri), biar guru pembimbing/ortu tahu isinya bukan versi asli lagi.
+  bool get isEdited => editedAt != null;
 
   /// Semua segmen Tahfizh laporan ini. Kalau [tahfizhSegments] belum ada
   /// (data lama sebelum fitur multi-surah), otomatis di-generate 1 segmen
@@ -343,6 +355,7 @@ class SantriRecord {
         'id': id,
         'tanggal': tanggal.toIso8601String(),
         'createdAt': createdAt?.toIso8601String(),
+        'editedAt': editedAt?.toIso8601String(),
         'kelas': kelas,
         'halaqoh': halaqoh,
         'namaAnak': namaAnak,
@@ -373,6 +386,12 @@ class SantriRecord {
         tanggal: DateTime.parse(json['tanggal'] as String),
         createdAt: json['createdAt'] != null
             ? DateTime.parse(json['createdAt'] as String)
+            : null,
+        // Field baru — data lama (sebelum fitur badge "Diedit" ada) belum
+        // punya key ini di JSON-nya, otomatis null (dianggap belum pernah
+        // diedit). Backward compatible, gak perlu migrasi data.
+        editedAt: json['editedAt'] != null
+            ? DateTime.parse(json['editedAt'] as String)
             : null,
         kelas: json['kelas'] as String,
         halaqoh: normalizeHalaqoh(json['halaqoh'] as String),
