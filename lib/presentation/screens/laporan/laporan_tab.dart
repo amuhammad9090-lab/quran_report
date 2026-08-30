@@ -203,14 +203,15 @@ class _LaporanTabState extends State<LaporanTab> {
   void _openWeek(BuildContext context, SantriCardInfo card, int weekIndex) {
     final provider = context.read<RecordsProvider>();
     final now = DateTime.now();
-    final thisMonth = DateTime(now.year, now.month);
+    final thisMonth = WeekUtils.ownerMonth(now);
     final currentWeek = WeekUtils.weekOfMonth(now);
 
     final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
+    final today = DateTime(now.year, now.month, now.day);
     final isCurrentWeek = weekIndex == currentWeek &&
-        !now.isBefore(range.start) &&
-        !now.isAfter(range.end);
-    final presetDate = isCurrentWeek ? now : range.start;
+        !today.isBefore(range.start) &&
+        !today.isAfter(range.end);
+    final presetDate = isCurrentWeek ? today : range.start;
 
     // Dicek per-HARI PERSIS (presetDate), baik pekan berjalan MAUPUN
     // pekan yang sudah lewat — konsisten dengan Rekap Harian yang juga
@@ -617,19 +618,28 @@ class _LaporanTabState extends State<LaporanTab> {
   }
 
   void _confirmDeleteFolder(BuildContext context, String folderId) {
+    final recordsProvider = context.read<RecordsProvider>();
+    final jumlahSantri = recordsProvider.countInFolder(folderId);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus folder?'),
-        content: const Text('Laporan di dalamnya tidak ikut terhapus, hanya dikeluarkan dari folder.'),
+        content: Text(
+          jumlahSantri > 0
+              ? 'Folder ini berisi laporan $jumlahSantri santri. Semua laporan di '
+                  'dalamnya akan ikut TERHAPUS PERMANEN dan tidak bisa dikembalikan.'
+              : 'Folder ini kosong dan akan dihapus.',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () {
-              context.read<FoldersProvider>().delete(folderId);
-              Navigator.pop(ctx);
+            onPressed: () async {
+              await recordsProvider.deleteAllInFolder(folderId);
+              if (!ctx.mounted) return;
+              await context.read<FoldersProvider>().delete(folderId);
+              if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Hapus'),
           ),

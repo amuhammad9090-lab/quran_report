@@ -48,7 +48,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _index = 0;
 
   Future<void> _finish() async {
-    await AppPrefsService.instance.setOnboardingComplete();
+    try {
+      await AppPrefsService.instance.setOnboardingComplete();
+    } catch (e, st) {
+      debugPrint('Gagal simpan status onboarding: $e');
+      debugPrint('$st');
+      // Sengaja tetap lanjut walau gagal (mis. Safari yang kadang blokir
+      // IndexedDB) -- daripada tombol "Mulai" macet total tanpa respons.
+    }
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
     Navigator.of(context).pushReplacement(

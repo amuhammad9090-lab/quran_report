@@ -24,12 +24,6 @@ class BerandaTab extends StatelessWidget {
     final provider = context.watch<RecordsProvider>();
     final cs = Theme.of(context).colorScheme;
 
-    // Shortcut kategori di Home SELALU pindah ke tab Laporan setelah
-    // ditekan (bukan toggle in-place) — jadi "aktif/nonaktif" filter yang
-    // sama tidak relevan lagi di sini (user sudah tidak melihat Home saat
-    // itu terjadi). Makanya logic-nya disederhanakan: tekan kategori =
-    // set filter itu lalu pindah, titik. Untuk hapus/ganti filter, itu
-    // dilakukan di tab Laporan sendiri (di mana toggle-nya kelihatan).
     void goToFiltered(HafalanStatus? status) {
       provider.setFilterStatus(status);
       onLihatLaporan();
@@ -37,9 +31,6 @@ class BerandaTab extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: provider.load,
-      // CustomScrollView + SliverAppBar pinned: sapaan "Assalamu'alaikum"
-      // nempel di atas (batas header persis di atas banner hijau), konten
-      // di bawahnya (mulai dari banner) scroll lewat di belakangnya.
       child: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -61,7 +52,7 @@ class BerandaTab extends StatelessWidget {
                 WelcomeHeroCard(
                 title: 'Selamat datang di\nAplikasi Laporan Al Quran!',
                 subtitle:
-                    'Kelola laporan tahsin & tahfizh santri dengan mudah dan terstruktur.',
+                    'Kelola laporan Tahsin & Tahfizh santri dengan mudah dan terstruktur.',
                 actions: Row(
                   children: [
                     Expanded(
@@ -193,10 +184,7 @@ class BerandaTab extends StatelessWidget {
   }
 
   void _openProfile(BuildContext context) {
-    // Satu titik navigasi ke Profile — avatar & sapaan nama dulu masing-
-    // masing manggil push terpisah, sekarang disatukan biar rute yang
-    // ditempuh selalu konsisten (gampang diubah sekali di sini kalau nanti
-    // Profile mau dibuka lewat cara lain, mis. modal sheet).
+    // Satu titik navigasi ke Profile.
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const ProfileScreen()),
     );
@@ -204,8 +192,6 @@ class BerandaTab extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // displayName user yang login dipakai di sini kalau ada — fallback ke
-    // label lama biar tetap masuk akal kalau auth belum termuat.
     final user = context.watch<AuthProvider>().currentUser;
     final nama = user?.displayName ?? 'Pengelola Laporan';
     final initial = nama.isNotEmpty ? nama[0].toUpperCase() : '?';

@@ -207,12 +207,13 @@ class _SantriReportCardState extends State<SantriReportCard> {
     // (bisa beda hari dari yang akan dibuka) — lihat catatan panjang di
     // RecordsProvider.recordForSantriOnDate.
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final currentWeek = WeekUtils.weekOfMonth(now);
     final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
     final isCurrentWeek = weekIndex == currentWeek &&
-        !now.isBefore(range.start) &&
-        !now.isAfter(range.end);
-    final targetDate = isCurrentWeek ? now : range.start;
+        !today.isBefore(range.start) &&
+        !today.isAfter(range.end);
+    final targetDate = isCurrentWeek ? today : range.start;
     final record = context.watch<RecordsProvider>().recordForSantriOnDate(
           widget.info.nama,
           targetDate,
@@ -419,6 +420,16 @@ class _SantriReportCardState extends State<SantriReportCard> {
               ),
               if (latest != null) ...[
                 const SizedBox(height: 12),
+                Text(
+                  'Laporan terakhir diisi',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

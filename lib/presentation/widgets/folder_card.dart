@@ -139,7 +139,7 @@ class FolderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '$recordCount laporan',
+                      '$recordCount santri',
                       style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
                     ),
                   ],

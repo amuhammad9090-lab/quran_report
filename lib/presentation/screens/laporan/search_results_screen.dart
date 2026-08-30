@@ -86,10 +86,11 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     final currentWeek = WeekUtils.weekOfMonth(now);
 
     final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
+    final today = DateTime(now.year, now.month, now.day);
     final isCurrentWeek = weekIndex == currentWeek &&
-        !now.isBefore(range.start) &&
-        !now.isAfter(range.end);
-    final presetDate = isCurrentWeek ? now : range.start;
+        !today.isBefore(range.start) &&
+        !today.isAfter(range.end);
+    final presetDate = isCurrentWeek ? today : range.start;
 
     // Dicek per-HARI PERSIS di semua pekan (current maupun lewat) —
     // konsisten dengan Rekap Harian. Lihat catatan lengkap di

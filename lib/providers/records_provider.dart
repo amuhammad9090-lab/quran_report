@@ -285,7 +285,22 @@ class RecordsProvider extends ChangeNotifier {
 
   // --- Folder ---
 
-  int countInFolder(String folderId) => _scoped.where((r) => r.folderId == folderId).length;
+  int countInFolder(String folderId) {
+    String key(SantriRecord r) =>
+        '${r.namaAnak.trim().toLowerCase()}|${r.kelas}|${r.halaqoh}';
+    return _scoped.where((r) => r.folderId == folderId).map(key).toSet().length;
+  }
+
+  /// Hapus PERMANEN semua laporan yang ada di dalam folder [folderId] —
+  /// dipakai waktu folder itu sendiri dihapus (hapus folder = ikut hapus
+  /// semua laporan di dalamnya, bukan cuma dikeluarkan dari folder).
+  Future<void> deleteAllInFolder(String folderId) async {
+    final ids = _scoped.where((r) => r.folderId == folderId).map((r) => r.id).toList();
+    for (final id in ids) {
+      await StorageService.instance.delete(id);
+    }
+    await load();
+  }
 
   SantriRecord? _findById(String id) {
     for (final r in _scoped) {

@@ -697,6 +697,36 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     }
   }
 
+  Future<void> _confirmDelete(BuildContext context) async {
+    final existing = widget.existing;
+    if (existing == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus laporan ini?'),
+        content: Text(
+          'Laporan ${_nama ?? existing.namaAnak} tanggal '
+          '${DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(existing.tanggal)} '
+          'akan dihapus permanen dan tidak bisa dikembalikan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(ctx).colorScheme.error),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await context.read<RecordsProvider>().delete(existing.id);
+    if (context.mounted) Navigator.of(context).pop();
+  }
+
   Future<void> _submit() async {
     setState(() {
       _kelasError = (_kelas == null || _kelas!.trim().isEmpty) ? 'Wajib dipilih' : null;
@@ -942,6 +972,12 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                             ],
                           ),
                         ),
+                        if (_isEdit)
+                          IconButton(
+                            onPressed: () => _confirmDelete(context),
+                            icon: Icon(Icons.delete_outline_rounded, color: cs.error),
+                            tooltip: 'Hapus laporan ini',
+                          ),
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
                           icon: const Icon(Icons.close_rounded),
