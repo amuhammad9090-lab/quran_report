@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/services.dart' show rootBundle;
 
 /// Satu baris mushaf hasil generate, siap ditampilkan di kolom "Baris".
@@ -62,6 +63,85 @@ class _NormalizedLine {
   });
 }
 
+/// Hasil parsing dataset yang dikerjakan di background isolate lewat
+/// [compute] — semua field-nya data murni (bukan objek Flutter/platform)
+/// biar aman dikirim balik lintas isolate.
+class _ParsedDataset {
+  final List<_NormalizedLine> lines;
+  final Set<int> coveredSurahs;
+  final List<int> juzAvailable;
+  final List<int> juzMissing;
+  const _ParsedDataset({
+    required this.lines,
+    required this.coveredSurahs,
+    required this.juzAvailable,
+    required this.juzMissing,
+  });
+
+  static const empty = _ParsedDataset(
+    lines: [],
+    coveredSurahs: {},
+    juzAvailable: [],
+    juzMissing: [],
+  );
+}
+
+/// Top-level function (syarat wajib buat [compute]) — decode JSON string
+/// mentah + normalisasi ke [_ParsedDataset] SEPENUHNYA di background
+/// isolate, biar main isolate tidak nge-freeze layar splash saat file
+/// dataset (~1MB) di-parse di HP spek menengah ke bawah.
+_ParsedDataset _parseDatasetInBackground(String raw) {
+  try {
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+
+    final juzAvailable = (data['juz_available'] as List).cast<int>();
+    final juzMissing = (data['juz_missing'] as List).cast<int>();
+    final coveredSurahs = <int>{};
+    final lines = <_NormalizedLine>[];
+
+    final pages = data['pages'] as List<dynamic>;
+    for (final page in pages) {
+      final pageNumber = page['page_number'] as int;
+      for (final line in (page['lines'] as List)) {
+        final marks = <_AyatMark>[];
+        for (final triplet in (line['ayats'] as List? ?? [])) {
+          final t = triplet as List;
+          final surah = t[0] as int;
+          final ayah = t[1] as int;
+          final endMarker = t[2] as int;
+          coveredSurahs.add(surah);
+          marks.add(_AyatMark(surah, ayah, endMarker));
+        }
+        lines.add(_NormalizedLine(
+          pageNumber: pageNumber,
+          lineNumber: line['line_number'] as int,
+          lineId: line['line_id'] as String,
+          ayats: marks,
+        ));
+      }
+    }
+
+    // Urutkan di background juga (bukan cuma di main isolate) supaya kerja
+    // beratnya sama-sama tidak numpuk di UI thread.
+    lines.sort((a, b) {
+      final p = a.pageNumber.compareTo(b.pageNumber);
+      if (p != 0) return p;
+      return a.lineNumber.compareTo(b.lineNumber);
+    });
+
+    return _ParsedDataset(
+      lines: lines,
+      coveredSurahs: coveredSurahs,
+      juzAvailable: juzAvailable,
+      juzMissing: juzMissing,
+    );
+  } catch (_) {
+    // File belum ada / gagal parse — abaikan, cakupan surah otomatis
+    // dianggap tidak tersedia (juzAvailable/juzMissing tetap kosong).
+    return _ParsedDataset.empty;
+  }
+}
+
 const Map<int, String> kSurahNames = {
   1: "Al-Fatihah", 2: "Al-Baqarah", 3: "Ali 'Imran", 4: "An-Nisa",
   5: "Al-Ma'idah", 6: "Al-An'am", 7: "Al-A'raf", 8: "Al-Anfal",
@@ -118,53 +198,25 @@ class QuranEngineService {
   Future<void> load() async {
     if (_loaded) return;
 
-    await _loadDataset('assets/data/quran_line_dataset_juz1-10_juz26-30_schema.json');
+    // Baca file-nya tetap di main isolate (I/O ringan, tidak nge-block
+    // frame), tapi JSON DECODE + NORMALISASI-nya (bagian yang berat,
+    // ~1MB) dilempar ke background isolate lewat compute() supaya splash
+    // screen tidak patah-patah di HP spek menengah ke bawah.
+    final raw = await rootBundle.loadString(
+      'assets/data/quran_line_dataset_juz1-10_juz26-30_schema.json',
+    );
+    final parsed = await compute(_parseDatasetInBackground, raw);
 
-    // Urutkan ulang berdasarkan nomor halaman & baris supaya urutan mushaf
-    // tetap benar (harusnya sudah terurut dari file-nya, tapi dijaga di
-    // sini juga biar tidak bergantung urutan asli file).
-    _lines.sort((a, b) {
-      final p = a.pageNumber.compareTo(b.pageNumber);
-      if (p != 0) return p;
-      return a.lineNumber.compareTo(b.lineNumber);
-    });
+    _lines
+      ..clear()
+      ..addAll(parsed.lines);
+    _coveredSurahs
+      ..clear()
+      ..addAll(parsed.coveredSurahs);
+    juzAvailable = parsed.juzAvailable;
+    juzMissing = parsed.juzMissing;
 
     _loaded = true;
-  }
-
-  Future<void> _loadDataset(String path) async {
-    try {
-      final raw = await rootBundle.loadString(path);
-      final data = jsonDecode(raw) as Map<String, dynamic>;
-
-      juzAvailable = (data['juz_available'] as List).cast<int>();
-      juzMissing = (data['juz_missing'] as List).cast<int>();
-
-      final pages = data['pages'] as List<dynamic>;
-      for (final page in pages) {
-        final pageNumber = page['page_number'] as int;
-        for (final line in (page['lines'] as List)) {
-          final marks = <_AyatMark>[];
-          for (final triplet in (line['ayats'] as List? ?? [])) {
-            final t = triplet as List;
-            final surah = t[0] as int;
-            final ayah = t[1] as int;
-            final endMarker = t[2] as int;
-            _coveredSurahs.add(surah);
-            marks.add(_AyatMark(surah, ayah, endMarker));
-          }
-          _lines.add(_NormalizedLine(
-            pageNumber: pageNumber,
-            lineNumber: line['line_number'] as int,
-            lineId: line['line_id'] as String,
-            ayats: marks,
-          ));
-        }
-      }
-    } catch (_) {
-      // File belum ada / gagal load — abaikan, cakupan surah otomatis
-      // dianggap tidak tersedia (juzAvailable/juzMissing tetap kosong).
-    }
   }
 
   bool isSurahCovered(int surahNumber) => _coveredSurahs.contains(surahNumber);

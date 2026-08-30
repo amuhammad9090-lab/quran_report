@@ -3,6 +3,7 @@ import '../../../core/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/enums.dart';
+import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/status_badge.dart';
@@ -17,10 +18,16 @@ class SantriDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<RecordsProvider>();
+    // select, bukan watch<RecordsProvider>() polos: sekarang recordsForSantri
+    // sudah di-cache stabil per _dataVersion, jadi halaman ini cuma rebuild
+    // kalau data SANTRI INI beneran berubah, bukan tiap notifyListeners
+    // provider (mis. filter/search berubah di tab Laporan).
+    final records = context.select<RecordsProvider, List<SantriRecord>>(
+      (p) => p.recordsForSantri(namaAnak),
+    );
+    final provider = context.read<RecordsProvider>();
     Theme.of(context).colorScheme;
 
-    final records = provider.recordsForSantri(namaAnak);
     final grouped = provider.groupByDate(records);
     final dates = grouped.keys.toList();
     final latest = records.isNotEmpty ? records.first : null;

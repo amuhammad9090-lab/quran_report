@@ -48,9 +48,14 @@ class GenerateRekapBulananScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<RecordsProvider>();
+    // select: monthlySantriRecaps sekarang di-cache stabil per bulan (ini
+    // salah satu perhitungan TERBERAT — gabungan semua pekan), jadi
+    // halaman generate ini nggak ikut ngitung ulang tiap notifyListeners
+    // yang gak nyangkut bulan ini.
+    final recaps = context.select<RecordsProvider, List<SantriMonthlyRecap>>(
+      (p) => p.monthlySantriRecaps(month),
+    );
     final authProvider = context.watch<AuthProvider>();
-    final recaps = provider.monthlySantriRecaps(month);
     final totalWeeks = WeekUtils.weeksInMonth(month);
     final bulanLabel = DateFormat('MMMM yyyy', 'id_ID').format(month);
     final groups = _groupByKelasHalaqoh(recaps, authProvider);

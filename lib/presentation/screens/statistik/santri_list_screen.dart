@@ -27,8 +27,14 @@ class _SantriListScreenState extends State<SantriListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<RecordsProvider>();
-    final all = provider.santriList;
+    // Selector, BUKAN context.watch<RecordsProvider>() di top-level build:
+    // widget ini cuma butuh `santriList`, jadi Selector hanya me-rebuild
+    // halaman ini kalau list itu SENDIRI berubah referensinya (lihat cache
+    // di RecordsProvider.santriList) — bukan tiap kali ada notifyListeners
+    // APAPUN dari provider (mis. filter/search di layar lain).
+    final all = context.select<RecordsProvider, List<SantriSummary>>(
+      (p) => p.santriList,
+    );
     final list = _query.trim().isEmpty
         ? all
         : all.where((s) => s.nama.toLowerCase().contains(_query.trim().toLowerCase())).toList();

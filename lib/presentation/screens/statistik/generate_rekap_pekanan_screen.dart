@@ -55,7 +55,12 @@ class GenerateRekapPekananScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final recordsProvider = context.watch<RecordsProvider>();
+    // read, bukan watch: `records` sudah dikirim lewat constructor (bukan
+    // ditarik dari provider), dan groupByKelasHalaqoh() murni fungsi dari
+    // argumennya (tidak baca state RecordsProvider) — jadi widget ini
+    // sebenarnya tidak pernah perlu ikut rebuild waktu RecordsProvider
+    // notifyListeners() (mis. filter/search di layar lain).
+    final recordsProvider = context.read<RecordsProvider>();
     final authProvider = context.watch<AuthProvider>();
 
     final sorted = List<SantriRecord>.from(records)

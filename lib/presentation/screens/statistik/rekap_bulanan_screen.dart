@@ -81,14 +81,19 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<RecordsProvider>();
-
-    final records = provider.recordsInMonth(_month);
+    // select dengan Dart record (tuple): halaman ini rebuild HANYA kalau
+    // recordsInMonth/monthWeekSummaries bulan yang lagi dibuka beneran
+    // berubah (keduanya sekarang di-cache stabil di provider), bukan tiap
+    // notifyListeners APAPUN (mis. search/filter di tab Laporan).
+    final (records, weeks) = context.select<RecordsProvider,
+        (List<SantriRecord>, List<MonthWeekSummary>)>(
+      (p) => (p.recordsInMonth(_month), p.monthWeekSummaries(_month)),
+    );
+    final provider = context.read<RecordsProvider>();
 
     final totalTahfizh = provider.totalTahfizhInMonth(_month);
     final totalTahsin = provider.totalTahsinInMonth(_month);
     final totalBaris = provider.totalBarisInMonth(_month);
-    final weeks = provider.monthWeekSummaries(_month);
 
     _weekKeys
       ..removeWhere((weekIndex, _) => weeks.every((w) => w.weekIndex != weekIndex))
@@ -438,10 +443,11 @@ class _PekanExpandedBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<RecordsProvider>();
+    final records = context.select<RecordsProvider, List<SantriRecord>>(
+      (p) => p.recordsInMonthWeek(month, weekIndex),
+    );
     final cs = Theme.of(context).colorScheme;
     final range = WeekUtils.monthWeekRange(month, weekIndex);
-    final records = provider.recordsInMonthWeek(month, weekIndex);
     final bulanLabel = DateFormat('MMMM yyyy', 'id_ID').format(month);
     final rangeLabel = WeekUtils.rangeLabel(range);
     final dayOrder = List.generate(

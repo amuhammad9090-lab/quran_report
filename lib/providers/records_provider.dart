@@ -98,6 +98,20 @@ String reportIdentityKey(String kelas, String halaqoh, String nama) =>
 class RecordsProvider extends ChangeNotifier {
   List<SantriRecord> _all = [];
 
+  // --- Cache buat getter agregat (santriList, dst) ---
+  // Semua mutasi `_all`/`_scope` SELALU lewat `load()` atau `updateScope()`
+  // (lihat upsert/delete/dst — semuanya diakhiri `await load()`), jadi
+  // versi ini cukup dibump di 2 tempat itu saja buat tahu kapan cache
+  // agregat harus dihitung ulang. Tujuannya: `build()` yang manggil getter
+  // ini berkali-kali (tiap kali ada notifyListeners APAPUN, termasuk yang
+  // cuma ganti filter/search) tidak ikut nge-loop ulang seluruh data kalau
+  // datanya sendiri belum berubah — lihat juga [santriList].
+  int _dataVersion = 0;
+  List<SantriRecord>? _scopedCache;
+  int _scopedCacheVersion = -1;
+  List<SantriSummary>? _santriListCache;
+  int _santriListCacheVersion = -1;
+
   // Access scope user yang sedang login — null = belum ada user (atau
   // provider ini dipakai tanpa auth sama sekali, mis. saat testing).
   // Di-set dari luar (lewat updateScope) setiap kali status login
@@ -131,13 +145,21 @@ class RecordsProvider extends ChangeNotifier {
   /// eksplisit dari flow auth.
   void updateScope(AccessScope? scope) {
     _scope = scope;
+    _dataVersion++;
     notifyListeners();
   }
 
   /// Data laporan yang sudah difilter access scope — ini yang dipakai
   /// SEMUA getter/query di bawah, supaya guru pembimbing tidak pernah kebocoran
   /// data kelas/halaqoh lain walau lewat jalur statistik/search/export.
-  List<SantriRecord> get _scoped => _scope == null ? _all : _scope!.scopeRecords(_all);
+  /// Di-cache per [_dataVersion] (lihat komentar di atas field cache-nya).
+  List<SantriRecord> get _scoped {
+    if (_scopedCacheVersion != _dataVersion) {
+      _scopedCache = _scope == null ? _all : _scope!.scopeRecords(_all);
+      _scopedCacheVersion = _dataVersion;
+    }
+    return _scopedCache!;
+  }
 
   // Kunci identitas ("kelas|halaqoh|nama") santri yang sudah "diaktifkan"
   // lewat "Buat Laporan" tapi belum tentu punya SantriRecord sama sekali —
@@ -154,6 +176,7 @@ class RecordsProvider extends ChangeNotifier {
     _activatedKeys = AppPrefsService.instance.activatedIdentityKeys.toSet();
     _activatedFolders = AppPrefsService.instance.activatedIdentityFolders;
     await _cleanupStaleActivatedFolders();
+    _dataVersion++;
     notifyListeners();
   }
 
@@ -375,7 +398,27 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   // --- Statistik ringkas untuk header ---
-  int get totalSantri => _scoped.map((r) => r.namaAnak).toSet().length;
+  int? _totalSantriCache;
+  int? _totalHadirCache;
+  int? _totalBarisSetoranCache;
+  int _summaryCacheVersion = -1;
+
+  void _refreshSummaryCacheIfStale() {
+    if (_summaryCacheVersion == _dataVersion) return;
+    _totalSantriCache = _scoped.map((r) => r.namaAnak).toSet().length;
+    _totalHadirCache = _scoped
+        .where((r) => r.keterangan == Keterangan.hadir || r.keterangan.isSanksiTanpaSetoran)
+        .length;
+    _totalBarisSetoranCache = _scoped.fold(0, (sum, r) => sum! + (r.totalBaris ?? 0));
+    _summaryCacheVersion = _dataVersion;
+  }
+
+  /// Di-cache per [_dataVersion] — dulu di-scan ulang tiap `build()`
+  /// (dipanggil bareng di dashboard Statistik & Home).
+  int get totalSantri {
+    _refreshSummaryCacheIfStale();
+    return _totalSantriCache!;
+  }
   // Tahsin+Tahfizh dihitung masuk KEDUA total ini juga (punya kedua
   // komponennya sekaligus) — biar "Tahfizh"/"Tahsin" di kartu ringkasan
   // tetap mencerminkan seluruh laporan yang punya komponen itu, bukan
@@ -390,11 +433,14 @@ class RecordsProvider extends ChangeNotifier {
   // tapi nggak setor/tahsin/murojaah (males/ketiduran/dll), BUKAN nggak
   // masuk. Beda dari Izin Sakit/Izin/Izin Lomba/Izin Pelatihan/Alpa yang
   // memang nggak hadir secara fisik.
-  int get totalHadir => _scoped
-      .where((r) => r.keterangan == Keterangan.hadir || r.keterangan.isSanksiTanpaSetoran)
-      .length;
-  int get totalBarisSetoran =>
-      _scoped.fold(0, (sum, r) => sum + (r.totalBaris ?? 0));
+  int get totalHadir {
+    _refreshSummaryCacheIfStale();
+    return _totalHadirCache!;
+  }
+  int get totalBarisSetoran {
+    _refreshSummaryCacheIfStale();
+    return _totalBarisSetoranCache!;
+  }
 
   /// Total ayat tersetor per pekan untuk [weekCount] pekan terakhir
   /// (termasuk pekan berjalan), dipakai chart "Ayat Tersetor/Minggu" di
@@ -477,7 +523,15 @@ class RecordsProvider extends ChangeNotifier {
   // --- Daftar santri unik (buat halaman "Daftar Santri" di Statistik) ---
   // Kelas/halaqoh diambil dari record TERBARU santri itu (bisa berubah
   // seiring waktu), bukan dari record pertama.
+  /// Di-cache per [_dataVersion] — dulu getter ini (loop O(n) + sort) jalan
+  /// ulang SETIAP kali `build()` dipanggil (termasuk saat user cuma ngetik
+  /// di kolom search, yang notifyListeners()-nya sebenarnya tidak
+  /// menyentuh data laporan sama sekali). Sekarang cuma dihitung ulang
+  /// kalau `_all`/`_scope` beneran berubah (lewat load()/updateScope()).
   List<SantriSummary> get santriList {
+    if (_santriListCacheVersion == _dataVersion && _santriListCache != null) {
+      return _santriListCache!;
+    }
     final latestBySantri = <String, SantriRecord>{};
     for (final r in _scoped) {
       final key = r.namaAnak.trim().toLowerCase();
@@ -491,16 +545,27 @@ class RecordsProvider extends ChangeNotifier {
         .map((r) => SantriSummary(nama: r.namaAnak, kelas: r.kelas, halaqoh: r.halaqoh))
         .toList()
       ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+    _santriListCache = list;
+    _santriListCacheVersion = _dataVersion;
     return list;
   }
 
   /// Semua laporan milik satu santri (match nama, case-insensitive),
-  /// terbaru duluan.
+  /// terbaru duluan. Di-cache per (nama, [_dataVersion]) — dipanggil
+  /// berulang dari halaman Detail Santri & tab Laporan.
+  final Map<String, List<SantriRecord>> _recordsForSantriCache = {};
+  int _recordsForSantriCacheVersion = -1;
   List<SantriRecord> recordsForSantri(String namaAnak) {
+    if (_recordsForSantriCacheVersion != _dataVersion) {
+      _recordsForSantriCache.clear();
+      _recordsForSantriCacheVersion = _dataVersion;
+    }
     final key = namaAnak.trim().toLowerCase();
-    final list = _scoped.where((r) => r.namaAnak.trim().toLowerCase() == key).toList()
-      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
-    return list;
+    return _recordsForSantriCache.putIfAbsent(key, () {
+      final list = _scoped.where((r) => r.namaAnak.trim().toLowerCase() == key).toList()
+        ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+      return list;
+    });
   }
 
   /// Kelompokkan [records] per tanggal (jam diabaikan), terbaru duluan.
@@ -516,21 +581,55 @@ class RecordsProvider extends ChangeNotifier {
     return {for (final k in sortedKeys) k: map[k]!};
   }
 
-  /// Semua laporan, terbaru duluan — dipakai halaman Kehadiran.
+  /// Semua laporan, terbaru duluan — dipakai halaman Kehadiran. Di-cache
+  /// per [_dataVersion] (sort O(n log n) tiap build kalau tidak di-cache).
+  List<SantriRecord>? _allSortedByDateDescCache;
+  int _allSortedCacheVersion = -1;
   List<SantriRecord> get allSortedByDateDesc {
-    final list = List<SantriRecord>.from(_scoped)
-      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
-    return list;
+    if (_allSortedCacheVersion != _dataVersion) {
+      _allSortedByDateDescCache = List<SantriRecord>.from(_scoped)
+        ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+      _allSortedCacheVersion = _dataVersion;
+    }
+    return _allSortedByDateDescCache!;
   }
 
   // --- Rekap bulanan (EXISTING — dipertahankan apa adanya) ---
+  // Semua method rekap di bawah (per bulan/pekan/hari) sekarang di-cache
+  // per [_dataVersion] pakai Map biasa (key = string tanggal), soalnya
+  // dipanggil BERULANG dari widget yang sama tiap build (Rekap Bulanan,
+  // Rekap Pekan, Rekap Harian, Generate Rekap Bulanan/Pekanan) — dulu
+  // masing-masing scan+sort ulang `_scoped` tiap kali dipanggil, padahal
+  // datanya belum tentu berubah antar-build (mis. cuma ganti tab bulan
+  // lain lalu balik lagi, atau parent widget rebuild karena alasan lain).
+  final Map<String, List<SantriRecord>> _recordsInMonthCache = {};
+  final Map<String, List<SantriRecord>> _recordsInMonthWeekCache = {};
+  final Map<String, List<SantriRecord>> _recordsOnDateCache = {};
+  final Map<String, List<MonthWeekSummary>> _monthWeekSummariesCache = {};
+  final Map<String, List<SantriMonthlyRecap>> _monthlySantriRecapsCache = {};
+  int _rekapCacheVersion = -1;
+
+  void _clearRekapCacheIfStale() {
+    if (_rekapCacheVersion == _dataVersion) return;
+    _recordsInMonthCache.clear();
+    _recordsInMonthWeekCache.clear();
+    _recordsOnDateCache.clear();
+    _monthWeekSummariesCache.clear();
+    _monthlySantriRecapsCache.clear();
+    _rekapCacheVersion = _dataVersion;
+  }
+
+  String _monthKey(DateTime month) => '${month.year}-${month.month}';
+  String _dateKey(DateTime d) => '${d.year}-${d.month}-${d.day}';
 
   List<SantriRecord> recordsInMonth(DateTime month) {
-    final list = _scoped
-        .where((r) => r.tanggal.year == month.year && r.tanggal.month == month.month)
-        .toList()
-      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
-    return list;
+    _clearRekapCacheIfStale();
+    return _recordsInMonthCache.putIfAbsent(_monthKey(month), () {
+      return _scoped
+          .where((r) => r.tanggal.year == month.year && r.tanggal.month == month.month)
+          .toList()
+        ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+    });
   }
 
   int totalTahfizhInMonth(DateTime month) =>
@@ -548,19 +647,21 @@ class RecordsProvider extends ChangeNotifier {
   // ada di sini SUDAH DIHAPUS — diganti total oleh Rekap Bulanan → Pekan.)
 
   List<SantriRecord> recordsInMonthWeek(DateTime month, int weekIndex) {
-    // Dipakai langsung dari rentang tanggal pekan (BUKAN dari
-    // recordsInMonth(month) + WeekUtils.weekOfMonth lagi) — soalnya pekan
-    // sekarang boleh lintas bulan (lihat WeekUtils), jadi laporan di 1-2
-    // hari ujung bulan yang "dimiliki" pekan bulan tetangga (mis. laporan
-    // tanggal 1 Agustus yang masuk Pekan 5 Juli) tetap ketemu di sini,
-    // walau tanggalnya sendiri bukan bulan [month].
-    final range = WeekUtils.monthWeekRange(month, weekIndex);
-    final list = _scoped.where((r) {
-      final d = DateTime(r.tanggal.year, r.tanggal.month, r.tanggal.day);
-      return !d.isBefore(range.start) && !d.isAfter(range.end);
-    }).toList()
-      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
-    return list;
+    _clearRekapCacheIfStale();
+    return _recordsInMonthWeekCache.putIfAbsent('${_monthKey(month)}-$weekIndex', () {
+      // Dipakai langsung dari rentang tanggal pekan (BUKAN dari
+      // recordsInMonth(month) + WeekUtils.weekOfMonth lagi) — soalnya pekan
+      // sekarang boleh lintas bulan (lihat WeekUtils), jadi laporan di 1-2
+      // hari ujung bulan yang "dimiliki" pekan bulan tetangga (mis. laporan
+      // tanggal 1 Agustus yang masuk Pekan 5 Juli) tetap ketemu di sini,
+      // walau tanggalnya sendiri bukan bulan [month].
+      final range = WeekUtils.monthWeekRange(month, weekIndex);
+      return _scoped.where((r) {
+        final d = DateTime(r.tanggal.year, r.tanggal.month, r.tanggal.day);
+        return !d.isBefore(range.start) && !d.isAfter(range.end);
+      }).toList()
+        ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+    });
   }
 
   /// Semua laporan tepat pada tanggal [date] (jam diabaikan) — dipakai
@@ -568,25 +669,30 @@ class RecordsProvider extends ChangeNotifier {
   /// (dibuka dari tap baris hari di "Rekap Harian" pada Rekap Pekan).
   /// Terurut nama (case-insensitive).
   List<SantriRecord> recordsOnDate(DateTime date) {
-    final list = _scoped.where((r) => DateUtils.isSameDay(r.tanggal, date)).toList()
-      ..sort((a, b) => a.namaAnak.toLowerCase().compareTo(b.namaAnak.toLowerCase()));
-    return list;
+    _clearRekapCacheIfStale();
+    return _recordsOnDateCache.putIfAbsent(_dateKey(date), () {
+      return _scoped.where((r) => DateUtils.isSameDay(r.tanggal, date)).toList()
+        ..sort((a, b) => a.namaAnak.toLowerCase().compareTo(b.namaAnak.toLowerCase()));
+    });
   }
 
   /// Ringkasan tiap Pekan (1..N sesuai jumlah hari bulan itu) dalam
   /// [month] — dipakai daftar "Pekan 1 / Pekan 2 / ..." di Rekap Bulanan.
   List<MonthWeekSummary> monthWeekSummaries(DateTime month) {
-    final total = WeekUtils.weeksInMonth(month);
-    return List.generate(total, (i) {
-      final weekIndex = i + 1;
-      final recs = recordsInMonthWeek(month, weekIndex);
-      return MonthWeekSummary(
-        weekIndex: weekIndex,
-        range: WeekUtils.monthWeekRange(month, weekIndex),
-        santriCount: recs.map((r) => r.namaAnak.trim().toLowerCase()).toSet().length,
-        laporanCount: recs.length,
-        totalBaris: recs.fold(0, (sum, r) => sum + (r.totalBaris ?? 0)),
-      );
+    _clearRekapCacheIfStale();
+    return _monthWeekSummariesCache.putIfAbsent(_monthKey(month), () {
+      final total = WeekUtils.weeksInMonth(month);
+      return List.generate(total, (i) {
+        final weekIndex = i + 1;
+        final recs = recordsInMonthWeek(month, weekIndex);
+        return MonthWeekSummary(
+          weekIndex: weekIndex,
+          range: WeekUtils.monthWeekRange(month, weekIndex),
+          santriCount: recs.map((r) => r.namaAnak.trim().toLowerCase()).toSet().length,
+          laporanCount: recs.length,
+          totalBaris: recs.fold(0, (sum, r) => sum + (r.totalBaris ?? 0)),
+        );
+      });
     });
   }
 
@@ -613,6 +719,10 @@ class RecordsProvider extends ChangeNotifier {
   /// walau tanggalnya sendiri beda bulan (lihat catatan di
   /// [recordsInMonthWeek]). Hasil terurut nama (case-insensitive).
   List<SantriMonthlyRecap> monthlySantriRecaps(DateTime month) {
+    _clearRekapCacheIfStale();
+    final cached = _monthlySantriRecapsCache[_monthKey(month)];
+    if (cached != null) return cached;
+
     final totalWeeks = WeekUtils.weeksInMonth(month);
 
     final recordsByKeyWeek = <String, Map<int, List<SantriRecord>>>{};
@@ -656,6 +766,7 @@ class RecordsProvider extends ChangeNotifier {
       ));
     }
     result.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+    _monthlySantriRecapsCache[_monthKey(month)] = result;
     return result;
   }
 

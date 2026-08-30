@@ -31,9 +31,13 @@ class RekapPekanBulanScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<RecordsProvider>();
+    // select: recordsInMonthWeek sekarang di-cache stabil per (bulan,
+    // pekan), jadi halaman ini nggak ikut rebuild kalau ada
+    // notifyListeners dari pekan/bulan lain atau filter di layar lain.
+    final records = context.select<RecordsProvider, List<SantriRecord>>(
+      (p) => p.recordsInMonthWeek(month, weekIndex),
+    );
     final range = WeekUtils.monthWeekRange(month, weekIndex);
-    final records = provider.recordsInMonthWeek(month, weekIndex);
 
     final totalTahfizh = records.where((r) =>
         r.status == HafalanStatus.tahfizh || r.status == HafalanStatus.tahsinTahfizh).length;

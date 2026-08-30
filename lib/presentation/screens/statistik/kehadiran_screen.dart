@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/enums.dart';
+import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/status_badge.dart';
@@ -23,10 +24,15 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<RecordsProvider>();
+    // select: `allSortedByDateDesc` sekarang di-cache stabil per
+    // _dataVersion, jadi halaman ini nggak ikut rebuild waktu ada
+    // notifyListeners dari filter/search di layar lain.
+    final all = context.select<RecordsProvider, List<SantriRecord>>(
+      (p) => p.allSortedByDateDesc,
+    );
+    final provider = context.read<RecordsProvider>();
     final cs = Theme.of(context).colorScheme;
 
-    final all = provider.allSortedByDateDesc;
     final filtered = _filter == null ? all : all.where((r) => r.keterangan == _filter).toList();
     final grouped = provider.groupByDate(filtered);
     final dates = grouped.keys.toList();

@@ -62,9 +62,17 @@ class _TahfizhSegState {
   final TextEditingController ayatSelesaiCtrl = TextEditingController();
   GeneratedLinesResult? generated;
 
+  // --- Fallback manual buat juz yang belum ada di dataset baris (saat
+  // ini baru Juz 1-10 & 26-30, Juz 11-25 belum). Dipakai HANYA kalau
+  // generate balik `available: false` — user isi sendiri jumlah baris
+  // biar laporan tetap bisa disimpan (lineIds otomatis kosong, jadi
+  // tidak ikut logic exclude-baris-yang-sudah-dihitung).
+  final TextEditingController manualBarisCtrl = TextEditingController();
+
   void dispose() {
     ayatMulaiCtrl.dispose();
     ayatSelesaiCtrl.dispose();
+    manualBarisCtrl.dispose();
   }
 }
 
@@ -199,7 +207,12 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             .map((s) => _TahfizhSegState()
               ..surahNumber = s.surahNumber
               ..ayatMulaiCtrl.text = s.ayatMulai.toString()
-              ..ayatSelesaiCtrl.text = s.ayatSelesai.toString())
+              ..ayatSelesaiCtrl.text = s.ayatSelesai.toString()
+              // Kalau segmen lama ini dulu disimpan tanpa lineIds (berarti
+              // dulu dipakai fallback manual), prefill lagi biar user tidak
+              // perlu ngetik ulang kalau nanti generate ulang gagal lagi.
+              ..manualBarisCtrl.text =
+                  (s.lineIds.isEmpty && s.totalBaris > 0) ? s.totalBaris.toString() : '')
             .toList();
       }
       final tilawahSegs = e.tilawahSegmentsEffective;
@@ -747,13 +760,24 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         _status == HafalanStatus.tahfizh || _status == HafalanStatus.tahsinTahfizh;
 
     if (isiStatusCapaian && needsTahfizhPart) {
-      final allGenerated = _tahfizhSegs.every(
-          (s) => s.surahNumber != null && s.generated != null && s.generated!.available);
-      if (!allGenerated) {
+      // Segmen dianggap siap kalau (a) generate sukses dari dataset, ATAU
+      // (b) dataset belum meng-cover surah itu (mis. Juz 11-25) TAPI user
+      // sudah isi jumlah baris manual sebagai fallback — lihat
+      // `manualBarisCtrl` di `_TahfizhSegState`.
+      final allReady = _tahfizhSegs.every((s) {
+        if (s.surahNumber == null || s.generated == null) return false;
+        if (s.generated!.available) return true;
+        final manual = int.tryParse(s.manualBarisCtrl.text.trim());
+        return manual != null && manual > 0;
+      });
+      if (!allReady) {
+        final anyUnavailable =
+            _tahfizhSegs.any((s) => s.generated != null && !s.generated!.available);
         _localMessengerKey.currentState?.showSnackBar(
-          const SnackBar(
-              content:
-                  Text('Generate baris dulu sebelum simpan (untuk hafalan Tahfizh).')),
+          SnackBar(
+              content: Text(anyUnavailable
+                  ? 'Isi jumlah baris manual dulu untuk surah yang belum ada di dataset.'
+                  : 'Generate baris dulu sebelum simpan (untuk hafalan Tahfizh).')),
         );
         return;
       }
@@ -779,14 +803,25 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     // backward compat.
     final tahfizhSegments = isTahfizhPart
         ? _tahfizhSegs
-            .map((s) => TahfizhSegment(
-                  surahNumber: s.surahNumber!,
-                  surahName: kSurahNames[s.surahNumber!]!,
-                  ayatMulai: int.parse(s.ayatMulaiCtrl.text.trim()),
-                  ayatSelesai: int.parse(s.ayatSelesaiCtrl.text.trim()),
-                  totalBaris: s.generated?.totalBaris ?? 0,
-                  lineIds: s.generated?.newLineIds ?? const [],
-                ))
+            .map((s) {
+              // Fallback manual: dataset belum cover juz-nya (mis. Juz
+              // 11-25), jadi baris dihitung dari input manual user,
+              // bukan dari generate. lineIds sengaja dibiarkan kosong
+              // (tidak ada mapping baris fisik buat di-exclude di
+              // laporan berikutnya).
+              final useManual = s.generated == null || !s.generated!.available;
+              final manualBaris = useManual
+                  ? (int.tryParse(s.manualBarisCtrl.text.trim()) ?? 0)
+                  : 0;
+              return TahfizhSegment(
+                surahNumber: s.surahNumber!,
+                surahName: kSurahNames[s.surahNumber!]!,
+                ayatMulai: int.parse(s.ayatMulaiCtrl.text.trim()),
+                ayatSelesai: int.parse(s.ayatSelesaiCtrl.text.trim()),
+                totalBaris: useManual ? manualBaris : (s.generated?.totalBaris ?? 0),
+                lineIds: useManual ? const [] : (s.generated?.newLineIds ?? const []),
+              );
+            })
             .toList()
         : null;
     final tilawahSegments = isTilawahShaped
@@ -1568,15 +1603,71 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           const SizedBox(height: 14),
           _buildGeneratedPanel(cs, seg.generated!),
         ],
+        if (seg.generated != null && !seg.generated!.available) ...[
+          const SizedBox(height: 14),
+          _buildManualBarisFallback(cs, seg),
+        ],
       ],
     );
   }
 
+  /// Panel fallback saat surah yang dipilih ada di rentang juz yang
+  /// datasetnya belum tersedia (Juz 11-25) — generate otomatis tidak
+  /// bisa jalan, jadi user isi sendiri jumlah baris hafalannya.
+  Widget _buildManualBarisFallback(ColorScheme cs, _TahfizhSegState seg) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.errorContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cs.error.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 16, color: cs.error),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Mapping baris belum tersedia untuk surah ini '
+                  '(${QuranEngineService.instance.missingText()}). '
+                  'Isi jumlah baris secara manual.',
+                  style: TextStyle(fontSize: 12, color: cs.onErrorContainer),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: seg.manualBarisCtrl,
+            keyboardType: TextInputType.number,
+            decoration: fieldDecoration(
+              context,
+              icon: Icons.format_list_numbered_rounded,
+              label: 'Jumlah Baris (manual)',
+              accent: cs.error,
+            ),
+            onChanged: (_) => _markEditedAndScheduleDraftSave(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTahfizhFields(ColorScheme cs) {
-    final totalBarisAll =
-        _tahfizhSegs.fold<int>(0, (a, s) => a + (s.generated?.totalBaris ?? 0));
-    final anyGenerated =
-        _tahfizhSegs.any((s) => s.generated != null && s.generated!.available);
+    final totalBarisAll = _tahfizhSegs.fold<int>(0, (a, s) {
+      if (s.generated != null && !s.generated!.available) {
+        return a + (int.tryParse(s.manualBarisCtrl.text.trim()) ?? 0);
+      }
+      return a + (s.generated?.totalBaris ?? 0);
+    });
+    final anyGenerated = _tahfizhSegs.any((s) =>
+        (s.generated != null && s.generated!.available) ||
+        (s.generated != null &&
+            !s.generated!.available &&
+            (int.tryParse(s.manualBarisCtrl.text.trim()) ?? 0) > 0));
     return Column(
       key: const ValueKey('tahfizh'),
       crossAxisAlignment: CrossAxisAlignment.start,

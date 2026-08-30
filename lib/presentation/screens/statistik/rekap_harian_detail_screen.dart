@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/export_style_records_table.dart';
 import '../../widgets/misc_widgets.dart';
@@ -20,8 +21,13 @@ class RekapHarianDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<RecordsProvider>();
-    final records = provider.recordsOnDate(date);
+    // select: recordsOnDate sekarang di-cache stabil per tanggal, jadi
+    // halaman detail satu-hari ini nggak ikut rebuild kalau ada
+    // notifyListeners dari data hari lain / filter di tab Laporan.
+    final records = context.select<RecordsProvider, List<SantriRecord>>(
+      (p) => p.recordsOnDate(date),
+    );
+    final provider = context.read<RecordsProvider>();
     final groups = provider.groupByKelasHalaqoh(records);
     final hariLabel = DateFormat('EEEE', 'id_ID').format(date);
     final tanggalLabel = DateFormat('d MMMM yyyy', 'id_ID').format(date);
