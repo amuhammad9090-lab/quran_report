@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
   AppTheme._();
+
+  // Nama family sesuai yang didaftarkan di pubspec.yaml (fonts:) — font-nya
+  // sekarang di-bundle lokal di assets/fonts/, BUKAN lewat GoogleFonts.*()
+  // lagi (lihat catatan panjang di pubspec.yaml kenapa).
+  static const _fontFamily = 'PlusJakartaSans';
 
   static ThemeData light() => _base(Brightness.light);
   static ThemeData dark() => _base(Brightness.dark);
@@ -16,9 +20,9 @@ class AppTheme {
       brightness: brightness,
     );
 
-    final baseTextTheme = GoogleFonts.plusJakartaSansTextTheme(
-      isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
-    );
+    final baseTextTheme =
+        (isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme)
+            .apply(fontFamily: _fontFamily);
 
     // Warna dasar surface untuk card, dropdown menu, bottom sheet —
     // disamakan biar dropdown/date-picker nggak "beda dunia" sama input lain.
@@ -35,7 +39,7 @@ class AppTheme {
           isDark ? const Color(0xFF10151A) : const Color(0xFFF6F8F7),
       canvasColor: surfaceElevated,
       textTheme: baseTextTheme,
-      fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+      fontFamily: _fontFamily,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,

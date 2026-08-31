@@ -23,10 +23,7 @@ void main() async {
 
   // <-- BARU: mirror laporan ke Firestore buat Portal Orang Tua. Sign-in
   // ANONIM (bukan akun guru) — cuma buat identitas "ini app guru" di mata
-  // firestore.rules (dibedakan dari santri/admin yang login pakai
-  // email+password). Dibungkus try/catch: kalau device offline atau
-  // Firebase belum sempat di-setup, app TETAP jalan 100% pakai Hive
-  // seperti sebelumnya, tidak ada behaviour yang berubah.
+  // firestore.rules
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     if (FirebaseAuth.instance.currentUser == null) {
