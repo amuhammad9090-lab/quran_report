@@ -21,7 +21,14 @@ class StatistikTab extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     final now = DateTime.now();
-    final thisMonth = DateTime(now.year, now.month);
+    // BUG FIX: dulu pake kalender murni (`DateTime(now.year, now.month)`),
+    // beda sama definisi "bulan berjalan" yang dipakai di tempat lain
+    // (mis. laporanCards di provider) yang udah bener pake
+    // WeekUtils.ownerMonth — akibatnya di 1-2 hari ujung bulan (mis. 31
+    // Agustus, yang "milik" Pekan 1 September), card "Distribusi Capaian"
+    // nunjuk & buka ke Rekap Bulanan bulan yang SALAH (Agustus, padahal
+    // harusnya September). Disamain sekarang.
+    final thisMonth = WeekUtils.ownerMonth(now);
     final totalTahfizhBulanIni = provider.totalTahfizhInMonth(thisMonth);
     final totalTahsinBulanIni = provider.totalTahsinInMonth(thisMonth);
     final totalCapaian = totalTahfizhBulanIni + totalTahsinBulanIni;

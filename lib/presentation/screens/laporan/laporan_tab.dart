@@ -180,7 +180,11 @@ class _LaporanTabState extends State<LaporanTab> {
   /// (dipakai bersama dengan Bottom Sheet Filter yang sudah ada).
   List<SantriCardInfo> _filteredCards(RecordsProvider provider) {
     final q = provider.searchQuery.trim().toLowerCase();
-    final thisMonth = DateTime(DateTime.now().year, DateTime.now().month);
+    // BUG FIX: dulu kalender murni — beda definisi "bulan ini" sama
+    // recordsInMonth() (yang sekarang berbasis kepemilikan pekan), jadi
+    // filter status/keterangan bisa salah nge-cover laporan di 1-2 hari
+    // ujung bulan. Disamain ke WeekUtils.ownerMonth kayak di tempat lain.
+    final thisMonth = WeekUtils.ownerMonth(DateTime.now());
     return provider.laporanCards.where((c) {
       if (c.currentFolderId != null) return false;
       if (q.isNotEmpty && !c.nama.toLowerCase().contains(q)) return false;

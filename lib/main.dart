@@ -22,8 +22,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // <-- BARU: mirror laporan ke Firestore buat Portal Orang Tua. Sign-in
-  // ANONIM (bukan akun guru) — cuma buat identitas "ini app guru" di mata
-  // firestore.rules
+  // ANONIM (bukan akun guru).
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     if (FirebaseAuth.instance.currentUser == null) {

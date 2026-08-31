@@ -60,7 +60,10 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   /// TIDAK dibatasi ke kartu tanpa folder saja (lihat dok kelas di atas).
   List<SantriCardInfo> _filteredCards(RecordsProvider provider) {
     final q = provider.searchQuery.trim().toLowerCase();
-    final thisMonth = DateTime(DateTime.now().year, DateTime.now().month);
+    // BUG FIX: sama seperti LaporanTab._filteredCards — disamain ke
+    // WeekUtils.ownerMonth biar konsisten sama recordsInMonth() yang
+    // sekarang berbasis kepemilikan pekan.
+    final thisMonth = WeekUtils.ownerMonth(DateTime.now());
     return provider.laporanCards.where((c) {
       if (q.isNotEmpty && !c.nama.toLowerCase().contains(q)) return false;
       if (provider.filterKelas != null && c.kelas != provider.filterKelas) return false;

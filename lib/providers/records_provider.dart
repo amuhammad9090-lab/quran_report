@@ -628,10 +628,29 @@ class RecordsProvider extends ChangeNotifier {
   List<SantriRecord> recordsInMonth(DateTime month) {
     _clearRekapCacheIfStale();
     return _recordsInMonthCache.putIfAbsent(_monthKey(month), () {
-      return _scoped
-          .where((r) => r.tanggal.year == month.year && r.tanggal.month == month.month)
-          .toList()
-        ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+      // BUG FIX: dulu di sini cek kalender murni
+      // (`r.tanggal.year == month.year && r.tanggal.month == month.month`),
+      // sedangkan breakdown per-Pekan di bawah ([recordsInMonthWeek] /
+      // [monthWeekSummaries]) pakai "kepemilikan pekan" (WeekUtils) —
+      // yang bikin tanggal 1-2 hari di ujung bulan (mis. 31 Agustus, yang
+      // milik Pekan 1 September) KEHITUNG di total atas sebagai "Agustus"
+      // tapi TIDAK NONGOL di Pekan manapun (baik di Agustus maupun
+      // September), keliatan kayak laporannya "hilang". Sekarang total di
+      // sini dibangun dari GABUNGAN semua Pekan milik bulan ini (definisi
+      // yang SAMA persis dengan breakdown per-Pekan), jadi total atas =
+      // persis penjumlahan semua Pekan, dan tanggal 31 Agustus konsisten
+      // "pindah rumah" ke Pekan 1 September di SEMUA tempat, bukan cuma
+      // di breakdown pekan doang.
+      final totalWeeks = WeekUtils.weeksInMonth(month);
+      final seenIds = <String>{};
+      final list = <SantriRecord>[];
+      for (var weekIndex = 1; weekIndex <= totalWeeks; weekIndex++) {
+        for (final r in recordsInMonthWeek(month, weekIndex)) {
+          if (seenIds.add(r.id)) list.add(r);
+        }
+      }
+      list.sort((a, b) => b.tanggal.compareTo(a.tanggal));
+      return list;
     });
   }
 
