@@ -175,6 +175,15 @@ class RecordsProvider extends ChangeNotifier {
     _all = StorageService.instance.getAll();
     _activatedKeys = AppPrefsService.instance.activatedIdentityKeys.toSet();
     _activatedFolders = AppPrefsService.instance.activatedIdentityFolders;
+    // BUG FIX: kapitalisasi asli identitas kosong sekarang di-restore
+    // dari storage persisten (bukan cuma ngandelin cache in-memory sesi
+    // ini) — lihat detail penyebab bug-nya di komentar
+    // AppPrefsService.activatedIdentityDisplay.
+    for (final entry in AppPrefsService.instance.activatedIdentityDisplay.entries) {
+      final parts = entry.value.split('|');
+      if (parts.length != 3) continue;
+      _lastActivatedDisplay[entry.key] = (kelas: parts[0], halaqoh: parts[1], nama: parts[2]);
+    }
     await _cleanupStaleActivatedFolders();
     _dataVersion++;
     notifyListeners();
@@ -182,18 +191,23 @@ class RecordsProvider extends ChangeNotifier {
 
   /// Begitu identitas yang tadinya kosong dapat laporan asli (SantriRecord
   /// pertamanya tersimpan, entah lewat [initialFolderId] otomatis atau
-  /// dibuat manual), mapping folder sementaranya jadi basi (folder
-  /// "beneran"-nya sekarang mengikuti `record.folderId`) — bersihkan biar
-  /// tidak nyangkut jadi sampah di storage.
+  /// dibuat manual), mapping folder & kapitalisasi-display sementaranya
+  /// jadi basi (sumber "beneran"-nya sekarang mengikuti SantriRecord itu
+  /// sendiri) — bersihkan biar tidak nyangkut jadi sampah di storage.
   Future<void> _cleanupStaleActivatedFolders() async {
-    if (_activatedFolders.isEmpty) return;
+    if (_activatedFolders.isEmpty && _lastActivatedDisplay.isEmpty) return;
     final withRecords = _all
         .map((r) => reportIdentityKey(r.kelas, r.halaqoh, r.namaAnak))
         .toSet();
-    final stale = _activatedFolders.keys.where(withRecords.contains).toList();
-    for (final key in stale) {
+    final staleFolders = _activatedFolders.keys.where(withRecords.contains).toList();
+    for (final key in staleFolders) {
       _activatedFolders.remove(key);
       await AppPrefsService.instance.removeActivatedIdentityFolder(key);
+    }
+    final staleDisplay = _lastActivatedDisplay.keys.where(withRecords.contains).toList();
+    for (final key in staleDisplay) {
+      _lastActivatedDisplay.remove(key);
+      await AppPrefsService.instance.removeActivatedIdentityDisplay(key);
     }
   }
 
@@ -219,6 +233,13 @@ class RecordsProvider extends ChangeNotifier {
     }
     final key = reportIdentityKey(kelas, halaqoh, nama);
     _rememberActivatedDisplay(kelas, halaqoh, nama);
+    // BUG FIX: dulu kapitalisasi asli cuma disimpan di RAM
+    // (_rememberActivatedDisplay), gak di-persist — begitu app di-kill
+    // sebelum identitas ini sempat dibuatkan laporan pertamanya, nama
+    // santri di kartunya balik jadi huruf kecil semua (fallback ke
+    // identityKey yang emang sengaja lowercase). Sekarang ikut disimpan
+    // ke disk juga.
+    await AppPrefsService.instance.setActivatedIdentityDisplay(key, '$kelas|$halaqoh|$nama');
     await AppPrefsService.instance.addActivatedIdentity(key);
     _activatedKeys.add(key);
     if (folderId != null) {
@@ -363,8 +384,10 @@ class RecordsProvider extends ChangeNotifier {
       await StorageService.instance.delete(id);
     }
     await AppPrefsService.instance.removeActivatedIdentity(identityKey);
+    await AppPrefsService.instance.removeActivatedIdentityDisplay(identityKey);
     _activatedKeys.remove(identityKey);
     _activatedFolders.remove(identityKey);
+    _lastActivatedDisplay.remove(identityKey);
     await load();
   }
 

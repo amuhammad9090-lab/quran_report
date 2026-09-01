@@ -96,4 +96,40 @@ class StorageService {
         .delete()
         .catchError((_) {});
   }
+
+  // <-- BARU: seluruh method ini. Dorong SEMUA laporan yang ada di Hive
+  // ke Firestore sekaligus — dipakai tombol "Sinkronkan ke Cloud" di
+  // Pengaturan. Dibutuhkan khusus buat laporan LAMA yang dibuat SEBELUM
+  // mirror otomatis ([_mirrorToFirestore]) aktif, karena mirror itu
+  // cuma nempel di aksi upsert/delete BARU, bukan otomatis jalan buat
+  // data lama yang udah ada duluan di Hive.
+  //
+  // Pakai batched write (max 400 per batch, di bawah limit Firestore
+  // 500) biar aman buat ratusan/ribuan laporan sekaligus tanpa bikin
+  // ratusan network request terpisah. Beda dari mirror biasa, di sini
+  // SENGAJA di-throw kalau gagal (bukan fire-and-forget) — ini aksi
+  // manual yang guru tekan sendiri, jadi guru perlu tau kalau gagal,
+  // bukan diam-diam kayak upsert/delete harian.
+  Future<int> syncAllToFirestore() async {
+    final all = getAll();
+    var success = 0;
+    const batchSize = 400;
+
+    for (var i = 0; i < all.length; i += batchSize) {
+      final end = (i + batchSize > all.length) ? all.length : i + batchSize;
+      final chunk = all.sublist(i, end);
+      final batch = FirebaseFirestore.instance.batch();
+      for (final record in chunk) {
+        final ref = FirebaseFirestore.instance
+            .collection('schools')
+            .doc(kSchoolId)
+            .collection('santriRecords')
+            .doc(record.id);
+        batch.set(ref, record.toJson());
+      }
+      await batch.commit(); // <-- kalau ini throw, caller yang nangkep
+      success += chunk.length;
+    }
+    return success;
+  }
 }

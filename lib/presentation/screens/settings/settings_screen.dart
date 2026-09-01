@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/theme_provider.dart';
 import '../../../providers/records_provider.dart';
+import '../../../data/services/storage_service.dart';
 import '../../widgets/misc_widgets.dart';
 import '../about/about_screen.dart';
 
@@ -71,6 +72,15 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     ListTile(
                       leading: SoftIconBox(
+                        icon: Icons.cloud_upload_outlined,
+                        color: cs.primary,
+                      ),
+                      title: const Text('Sinkronkan ke Cloud'),
+                      subtitle: const Text('Kirim ulang semua laporan ke Portal Orang Tua'),
+                      onTap: () => _syncToCloud(context),
+                    ),
+                    ListTile(
+                      leading: SoftIconBox(
                         icon: Icons.delete_sweep_outlined,
                         color: cs.error,
                       ),
@@ -103,6 +113,41 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // <-- BARU: seluruh method ini. Handler tombol "Sinkronkan ke Cloud".
+  Future<void> _syncToCloud(BuildContext context) async {
+    // Dialog loading tak-tertutup (barrierDismissible: false) — sengaja,
+    // biar guru gak nge-tap-tap lagi selagi proses jalan (bisa makan
+    // beberapa detik kalau laporannya ratusan).
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
+            SizedBox(width: 16),
+            Expanded(child: Text('Menyinkronkan laporan...')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final count = await StorageService.instance.syncAllToFirestore();
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // tutup dialog loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Berhasil! $count laporan tersinkron ke cloud.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal sinkron: $e. Cek koneksi internet, lalu coba lagi.')),
+      );
+    }
   }
 
   void _confirmClearAll(BuildContext context) {

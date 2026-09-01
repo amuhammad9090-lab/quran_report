@@ -20,6 +20,7 @@ class AppPrefsService {
   static const _keyRecordDraft = 'record_form_draft';
   static const _keyActivatedIdentities = 'activated_report_identities';
   static const _keyActivatedIdentityFolders = 'activated_report_identity_folders';
+  static const _keyActivatedIdentityDisplay = 'activated_report_identity_display';
   static const _keyPasswordOverrides = 'password_overrides';
   static const _keyDownloadNotifPaths = 'download_notif_paths';
 
@@ -130,6 +131,44 @@ class AppPrefsService {
     final current = activatedIdentityFolders;
     if (current.remove(key) == null) return;
     await _box.put(_keyActivatedIdentityFolders, jsonEncode(current));
+  }
+
+  // --- Kapitalisasi ASLI (kelas|halaqoh|nama) buat kartu identitas yang
+  // masih KOSONG (belum ada SantriRecord) ---
+  //
+  // BUG FIX: sebelumnya kapitalisasi asli cuma disimpan in-memory
+  // (`RecordsProvider._lastActivatedDisplay`), bukan di-persist ke sini —
+  // begitu app di-kill/restart SEBELUM identitas itu sempat dibuatkan
+  // laporan pertamanya, RAM-nya ikut hilang dan kartu itu fallback
+  // nampilin `identityKey` (yang emang sengaja di-lowercase buat
+  // perbandingan, lihat [reportIdentityKey]) apa adanya — nama santri
+  // keliatan huruf kecil semua. Sekarang kapitalisasi aslinya DISIMPAN di
+  // sini (persist ke disk) tiap kali identitas diaktifkan, jadi selamat
+  // dari restart app juga — sama persis pola fix-nya kayak
+  // [passwordOverrides]/[downloadNotifPaths] di atas.
+  Map<String, String> get activatedIdentityDisplay {
+    final raw = _box.get(_keyActivatedIdentityDisplay);
+    if (raw == null || raw.trim().isEmpty) return {};
+    try {
+      final map = jsonDecode(raw) as Map;
+      return map.map((k, v) => MapEntry(k.toString(), v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// [value] format "kelas|halaqoh|nama" (kapitalisasi ASLI, bukan yang
+  /// di-lowercase) — dipisah lagi pas dibaca di [RecordsProvider.load].
+  Future<void> setActivatedIdentityDisplay(String key, String value) async {
+    final current = activatedIdentityDisplay;
+    current[key] = value;
+    await _box.put(_keyActivatedIdentityDisplay, jsonEncode(current));
+  }
+
+  Future<void> removeActivatedIdentityDisplay(String key) async {
+    final current = activatedIdentityDisplay;
+    if (current.remove(key) == null) return;
+    await _box.put(_keyActivatedIdentityDisplay, jsonEncode(current));
   }
 
   // --- Override password akun lokal ---
