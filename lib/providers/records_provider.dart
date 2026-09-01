@@ -191,11 +191,20 @@ class RecordsProvider extends ChangeNotifier {
 
   /// Begitu identitas yang tadinya kosong dapat laporan asli (SantriRecord
   /// pertamanya tersimpan, entah lewat [initialFolderId] otomatis atau
-  /// dibuat manual), mapping folder & kapitalisasi-display sementaranya
-  /// jadi basi (sumber "beneran"-nya sekarang mengikuti SantriRecord itu
-  /// sendiri) — bersihkan biar tidak nyangkut jadi sampah di storage.
+  /// dibuat manual), mapping folder sementaranya jadi basi (folder
+  /// "beneran"-nya sekarang mengikuti `record.folderId`) — bersihkan biar
+  /// tidak nyangkut jadi sampah di storage.
+  ///
+  /// CATATAN: [_lastActivatedDisplay] SENGAJA TIDAK ikut dibersihkan di
+  /// sini (beda dari _activatedFolders) — BUG FIX: sebelumnya sempat ikut
+  /// dihapus di sini begitu ada laporan, tapi itu keliru: kartu bisa
+  /// balik "kosong" lagi kalau laporan SATU-SATUNYA yang dipunya
+  /// dihapus, dan saat itu kapitalisasi asli ini dibutuhkan LAGI. Jadi
+  /// dibiarkan hidup selama identitasnya masih ada di [_activatedKeys] —
+  /// baru ikut dihapus di [deleteAllForSantri] (identitasnya sendiri
+  /// dihapus total).
   Future<void> _cleanupStaleActivatedFolders() async {
-    if (_activatedFolders.isEmpty && _lastActivatedDisplay.isEmpty) return;
+    if (_activatedFolders.isEmpty) return;
     final withRecords = _all
         .map((r) => reportIdentityKey(r.kelas, r.halaqoh, r.namaAnak))
         .toSet();
@@ -203,11 +212,6 @@ class RecordsProvider extends ChangeNotifier {
     for (final key in staleFolders) {
       _activatedFolders.remove(key);
       await AppPrefsService.instance.removeActivatedIdentityFolder(key);
-    }
-    final staleDisplay = _lastActivatedDisplay.keys.where(withRecords.contains).toList();
-    for (final key in staleDisplay) {
-      _lastActivatedDisplay.remove(key);
-      await AppPrefsService.instance.removeActivatedIdentityDisplay(key);
     }
   }
 
