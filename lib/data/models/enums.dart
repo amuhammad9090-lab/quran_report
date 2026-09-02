@@ -21,6 +21,23 @@ enum HafalanStatus {
         HafalanStatus.tahsinTahfizh => Icons.library_books_rounded,
         HafalanStatus.murojaahTasmi => Icons.repeat_rounded,
       };
+
+  // <-- BARU: dipakai SantriMonthlyRecap.keteranganSummaryText buat nandain
+  // "Nx Tahsin" / "Nx Murojaah" di kolom Keterangan Rekap Bulanan (status
+  // yang baris-nya 0 karena memang bukan hafalan baru) — versi pendek biar
+  // gak makan tempat kolom, beda dari [label] yang dipakai di tempat lain.
+  String get shortLabel => switch (this) {
+        HafalanStatus.tahsin => 'Tahsin',
+        HafalanStatus.tahfizh => 'Tahfizh',
+        HafalanStatus.tahsinTahfizh => 'Tahsin+Tahfizh',
+        HafalanStatus.murojaahTasmi => 'Murojaah',
+      };
+
+  // <-- BARU: true untuk status yang MEMANG TIDAK menghasilkan baris
+  // hafalan baru (Tahsin murni & Muroja'ah/Tasmi' — keduanya bukan hafalan
+  // baru, jadi totalBaris-nya 0 secara desain, bukan berarti "kosong").
+  bool get isZeroBarisByDesign =>
+      this == HafalanStatus.tahsin || this == HafalanStatus.murojaahTasmi;
 }
 
 /// Sub-mode pengisian untuk status Tahsin (dan bagian Tahsin di dalam

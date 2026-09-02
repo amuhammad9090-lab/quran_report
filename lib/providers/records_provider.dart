@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/access/access_scope.dart';
+import '../core/utils/text_utils.dart';
 import '../core/utils/week_utils.dart';
 import '../data/models/enums.dart';
 import '../data/models/santri_monthly_recap.dart';
@@ -709,7 +710,15 @@ class RecordsProvider extends ChangeNotifier {
         final d = DateTime(r.tanggal.year, r.tanggal.month, r.tanggal.day);
         return !d.isBefore(range.start) && !d.isAfter(range.end);
       }).toList()
-        ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+        // BUG FIX: dulu descending (terbaru duluan) — efeknya kolom
+        // "Capaian" gabungan (mis. Pekan N di Rekap Bulanan, lihat
+        // SantriMonthlyRecap.capaianForWeek) urutan hari setorannya
+        // kebalik, kelihatan "dari bawah ke atas". Sekarang ascending
+        // (tanggal lama -> baru) supaya semua tempat yang makan data ini
+        // (Rekap Bulanan, Rekap Pekanan, tabel harian di
+        // _PekanExpandedBody/RekapPekanBulanScreen) selalu urut kronologis
+        // dari atas ke bawah.
+        ..sort((a, b) => a.tanggal.compareTo(b.tanggal));
     });
   }
 
@@ -801,9 +810,19 @@ class RecordsProvider extends ChangeNotifier {
       final byWeek = recordsByKeyWeek[key]!;
       final allRecords = byWeek.values.expand((l) => l).toList();
       final keteranganCounts = <Keterangan, int>{};
+      // <-- BARU: hitung juga berapa kali status-nya "memang 0 baris"
+      // (Tahsin murni / Muroja'ah-Tasmi') — dipakai SantriMonthlyRecap
+      // .keteranganSummaryText supaya kolom Keterangan Rekap Bulanan tidak
+      // cuma nampilin sanksi (Tdk Setoran/Tahsin/Murojaah), tapi juga
+      // status ITU KENAPA baris-nya 0 (bukan berarti bolong laporan).
+      final zeroBarisStatusCounts = <HafalanStatus, int>{};
       for (final r in allRecords) {
-        if (r.keterangan == Keterangan.hadir) continue;
-        keteranganCounts[r.keterangan] = (keteranganCounts[r.keterangan] ?? 0) + 1;
+        if (r.keterangan != Keterangan.hadir) {
+          keteranganCounts[r.keterangan] = (keteranganCounts[r.keterangan] ?? 0) + 1;
+        }
+        if (r.status.isZeroBarisByDesign) {
+          zeroBarisStatusCounts[r.status] = (zeroBarisStatusCounts[r.status] ?? 0) + 1;
+        }
       }
       result.add(SantriMonthlyRecap(
         nama: namaByKey[key] ?? key,
@@ -812,6 +831,7 @@ class RecordsProvider extends ChangeNotifier {
         recordsByWeek: byWeek,
         totalBaris: allRecords.fold(0, (sum, r) => sum + (r.totalBaris ?? 0)),
         keteranganCounts: keteranganCounts,
+        zeroBarisStatusCounts: zeroBarisStatusCounts,
       ));
     }
     result.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
@@ -892,10 +912,19 @@ class RecordsProvider extends ChangeNotifier {
       // untuk kapitalisasi aslinya selain apa yang dipilih user saat
       // aktivasi (disimpan apa adanya lewat [activateIdentity] via
       // [_lastActivatedDisplay]).
+      //
+      // BUG FIX: kalau [display] BENERAN tidak ketemu (mis. data lokal
+      // sempat hilang & belum sempat "Pulihkan dari Cloud", lihat
+      // SettingsScreen & AppPrefsService.restoreActivatedMetaFromFirestore)
+      // fallback-nya DULU langsung pakai [parts] apa adanya (identityKey,
+      // yang emang sengaja lowercase buat perbandingan) — nama santri jadi
+      // kelihatan huruf kecil semua. Sekarang minimal di-title-case dulu
+      // ([toTitleCase]) biar SETIDAKNYA rapi, bukan jaminan 100% sama
+      // persis kapitalisasi asli (lihat catatan di [toTitleCase]).
       final display = _lastActivatedDisplay[key];
       byKey[key] = SantriCardInfo(
         identityKey: key,
-        nama: display?.nama ?? parts[2],
+        nama: display?.nama ?? toTitleCase(parts[2]),
         kelas: display?.kelas ?? parts[0],
         halaqoh: display?.halaqoh ?? parts[1],
         weeksWithReportThisMonth: const {},

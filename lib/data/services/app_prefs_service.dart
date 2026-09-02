@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart'; // <-- BARU
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../core/utils/app_config.dart'; // <-- BARU
 
 /// Persistensi key-value kecil untuk app-level state (status onboarding,
 /// session user yang lagi login). Pakai Hive Box terpisah dari
@@ -87,6 +89,7 @@ class AppPrefsService {
   Future<void> addActivatedIdentity(String key) async {
     final current = activatedIdentityKeys.toSet()..add(key);
     await _box.put(_keyActivatedIdentities, jsonEncode(current.toList()));
+    _mirrorActivatedMetaToFirestore();
   }
 
   Future<void> removeActivatedIdentity(String key) async {
@@ -95,6 +98,7 @@ class AppPrefsService {
     // Kartu identitasnya sendiri dilepas -> mapping folder-nya (kalau ada)
     // ikut jadi tidak relevan, hapus juga biar nggak jadi sampah.
     await removeActivatedIdentityFolder(key);
+    _mirrorActivatedMetaToFirestore();
   }
 
   // --- Folder tujuan untuk kartu identitas yang masih KOSONG (belum ada
@@ -125,12 +129,14 @@ class AppPrefsService {
     final current = activatedIdentityFolders;
     current[key] = folderId;
     await _box.put(_keyActivatedIdentityFolders, jsonEncode(current));
+    _mirrorActivatedMetaToFirestore();
   }
 
   Future<void> removeActivatedIdentityFolder(String key) async {
     final current = activatedIdentityFolders;
     if (current.remove(key) == null) return;
     await _box.put(_keyActivatedIdentityFolders, jsonEncode(current));
+    _mirrorActivatedMetaToFirestore();
   }
 
   // --- Kapitalisasi ASLI (kelas|halaqoh|nama) buat kartu identitas yang
@@ -163,12 +169,77 @@ class AppPrefsService {
     final current = activatedIdentityDisplay;
     current[key] = value;
     await _box.put(_keyActivatedIdentityDisplay, jsonEncode(current));
+    _mirrorActivatedMetaToFirestore();
   }
 
   Future<void> removeActivatedIdentityDisplay(String key) async {
     final current = activatedIdentityDisplay;
     if (current.remove(key) == null) return;
     await _box.put(_keyActivatedIdentityDisplay, jsonEncode(current));
+    _mirrorActivatedMetaToFirestore();
+  }
+
+  // <-- BARU: mirror snapshot LENGKAP 3 data identitas "kartu kosong"
+  // (activated keys + folder tujuan + kapitalisasi asli) ke 1 dokumen
+  // Firestore kecil, fire-and-forget (gagal diam-diam, sama polanya
+  // seperti StorageService._mirrorToFirestore — Hive lokal tetap sumber
+  // kebenaran). Beda dari data laporan yang di-mirror PER RECORD, di sini
+  // cukup 1 dokumen karena ukurannya kecil & jarang berubah.
+  //
+  // Alasan metadata ini juga perlu di-backup (bukan cuma data laporan):
+  // kartu santri yang BELUM PERNAH diisi laporan sama sekali ("kartu
+  // kosong") kapitalisasi namanya CUMA ada di sini — kalau Hive lokal
+  // hilang (app di-uninstall install ulang, atau kalau dipakai sebagai
+  // Web/PWA lalu cache/PWA-nya dibersihkan) dan metadata ini tidak
+  // ke-backup, kartu kosong itu bakal balik nampilin nama huruf kecil
+  // semua (fallback ke identityKey yang emang sengaja lowercase) — lihat
+  // RecordsProvider.laporanCards.
+  void _mirrorActivatedMetaToFirestore() {
+    FirebaseFirestore.instance
+        .collection('schools')
+        .doc(kSchoolId)
+        .collection('appMeta')
+        .doc('activatedIdentities')
+        .set({
+          'keys': activatedIdentityKeys,
+          'folders': activatedIdentityFolders,
+          'display': activatedIdentityDisplay,
+        })
+        .catchError((_) {});
+  }
+
+  /// <-- BARU: kebalikan dari mirror di atas — tarik snapshot metadata
+  /// kartu kosong dari Firestore, di-UNION (bukan ditimpa total) dengan
+  /// yang sudah ada lokal, supaya identitas yang baru diaktifkan di
+  /// device ini setelah restore terakhir tetap aman. Dipanggil bareng
+  /// StorageService.restoreFromFirestore() dari tombol "Pulihkan dari
+  /// Cloud" di Pengaturan (lihat SettingsScreen._restoreFromCloud).
+  Future<void> restoreActivatedMetaFromFirestore() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('schools')
+        .doc(kSchoolId)
+        .collection('appMeta')
+        .doc('activatedIdentities')
+        .get();
+    final data = doc.data();
+    if (data == null) return;
+
+    final cloudKeys = (data['keys'] as List?)?.map((e) => e.toString()).toList() ?? const [];
+    final cloudFolders = (data['folders'] as Map?)
+            ?.map((k, v) => MapEntry(k.toString(), v.toString())) ??
+        const {};
+    final cloudDisplay = (data['display'] as Map?)
+            ?.map((k, v) => MapEntry(k.toString(), v.toString())) ??
+        const {};
+
+    final mergedKeys = activatedIdentityKeys.toSet()..addAll(cloudKeys);
+    await _box.put(_keyActivatedIdentities, jsonEncode(mergedKeys.toList()));
+
+    final mergedFolders = activatedIdentityFolders..addAll(cloudFolders);
+    await _box.put(_keyActivatedIdentityFolders, jsonEncode(mergedFolders));
+
+    final mergedDisplay = activatedIdentityDisplay..addAll(cloudDisplay);
+    await _box.put(_keyActivatedIdentityDisplay, jsonEncode(mergedDisplay));
   }
 
   // --- Override password akun lokal ---

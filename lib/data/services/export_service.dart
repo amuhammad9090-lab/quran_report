@@ -265,25 +265,40 @@ class ExportService {
     return segs.map((s) => '${s.surahName} (${s.ayatMulai}-${s.ayatSelesai})').join(' + ');
   }
 
+  // <-- BARU: helper gabung SEMUA laporan JENIS YANG SAMA dalam 1 pekan
+  // jadi 1 blok "Label: ..." — kalau cuma 1 laporan tetap 1 baris seperti
+  // semula ("Tahsin: xxx"), tapi kalau >1 (santri setor jenis yang sama
+  // lebih dari sekali dalam pekan itu) dipecah per baris (bukan "; " lagi)
+  // — tiap baris = 1 hari setoran, biar kelihatan jelas & rapi kalau
+  // dibuka di Excel (lihat juga SantriMonthlyRecap.capaianForWeek, pola
+  // yang sama persis).
+  String _joinCategoryPerLine(String label, Iterable<String> details) {
+    final list = details.toList();
+    if (list.isEmpty) return '';
+    if (list.length == 1) return '$label: ${list.first}';
+    return '$label:\n${list.join('\n')}';
+  }
+
   String _weeklyCapaianForSantri(List<SantriRecord> recs) {
     final lines = <String>[];
     final tahsin = recs.where((r) => r.status == HafalanStatus.tahsin).toList();
     if (tahsin.isNotEmpty) {
-      lines.add('Tahsin: ${tahsin.map(_tahsinDetailNoLabel).join('; ')}');
+      lines.add(_joinCategoryPerLine('Tahsin', tahsin.map(_tahsinDetailNoLabel)));
     }
     final tahfizh = recs.where((r) => r.status == HafalanStatus.tahfizh).toList();
     if (tahfizh.isNotEmpty) {
-      lines.add('Tahfizh: ${tahfizh.map(_tahfizhDetailNoLabel).join('; ')}');
+      lines.add(_joinCategoryPerLine('Tahfizh', tahfizh.map(_tahfizhDetailNoLabel)));
     }
     final gabungan = recs.where((r) => r.status == HafalanStatus.tahsinTahfizh).toList();
     if (gabungan.isNotEmpty) {
-      lines.add(
-        'Tahsin+Tahfizh: ${gabungan.map((r) => '${_tahsinDetailNoLabel(r)} & ${_tahfizhDetailNoLabel(r)}').join('; ')}',
-      );
+      lines.add(_joinCategoryPerLine(
+        'Tahsin+Tahfizh',
+        gabungan.map((r) => '${_tahsinDetailNoLabel(r)} & ${_tahfizhDetailNoLabel(r)}'),
+      ));
     }
     final murojaah = recs.where((r) => r.status == HafalanStatus.murojaahTasmi).toList();
     if (murojaah.isNotEmpty) {
-      lines.add("Muroja'ah/Tasmi': ${murojaah.map(_murojaahDetailNoLabel).join('; ')}");
+      lines.add(_joinCategoryPerLine("Muroja'ah/Tasmi'", murojaah.map(_murojaahDetailNoLabel)));
     }
     return lines.isEmpty ? '-' : lines.join('\n');
   }
@@ -880,10 +895,20 @@ class ExportService {
       final rows = includeTanggal
           ? _weeklyRowsGroupedBySantriText(section.items, fixedTanggalLabel: fixedTanggalLabel)
           : _rows(section.items);
+      // Kolom "Capaian" (index 3 di versi gabungan-per-santri) sekarang
+      // isinya bisa multi-baris ("\n" per hari setoran, lihat
+      // _weeklyCapaianForSantri) — WAJIB pakai textWrapping.WrapText biar
+      // "\n"-nya beneran kelihatan ganti baris waktu dibuka di Excel
+      // (tanpa ini, Excel nampilin semua digabung 1 baris panjang).
+      final wrapStyle = xls.CellStyle(
+        textWrapping: xls.TextWrapping.WrapText,
+        verticalAlign: xls.VerticalAlign.Top,
+      );
       for (var r = 0; r < rows.length; r++) {
         for (var c = 0; c < rows[r].length; c++) {
           final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row + r));
           cell.value = xls.TextCellValue(rows[r][c]);
+          if (includeTanggal && c == 3) cell.cellStyle = wrapStyle;
         }
       }
       row += rows.length;
@@ -1135,10 +1160,20 @@ class ExportService {
       }
       row++;
       final rows = _monthlyRowsGrouped(section.items, totalWeeks);
+      // Kolom "Pekan 1..N" (index 2..totalWeeks+1) sekarang isinya bisa
+      // multi-baris ("\n" per hari setoran, lihat
+      // SantriMonthlyRecap.capaianForWeek) — sama seperti
+      // exportGroupedExcel, WAJIB textWrapping.WrapText biar "\n"-nya
+      // beneran ganti baris di Excel, bukan digabung 1 baris panjang.
+      final wrapStyle = xls.CellStyle(
+        textWrapping: xls.TextWrapping.WrapText,
+        verticalAlign: xls.VerticalAlign.Top,
+      );
       for (var r = 0; r < rows.length; r++) {
         for (var c = 0; c < rows[r].length; c++) {
           final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row + r));
           cell.value = xls.TextCellValue(rows[r][c]);
+          if (c >= 2 && c <= totalWeeks + 1) cell.cellStyle = wrapStyle;
         }
       }
       row += rows.length;

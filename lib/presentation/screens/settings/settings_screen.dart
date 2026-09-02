@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/theme_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../../data/services/storage_service.dart';
+import '../../../data/services/app_prefs_service.dart'; // <-- BARU
 import '../../widgets/misc_widgets.dart';
 import '../about/about_screen.dart';
 
@@ -75,9 +76,24 @@ class SettingsScreen extends StatelessWidget {
                         icon: Icons.cloud_upload_outlined,
                         color: cs.primary,
                       ),
-                      title: const Text('Sinkronkan ke Cloud'),
+                      title: const Text('Backup ke Cloud'),
                       subtitle: const Text('Kirim ulang semua laporan ke Portal Orang Tua'),
                       onTap: () => _syncToCloud(context),
+                    ),
+                    // <-- BARU: seluruh ListTile ini. Kebalikan dari
+                    // "Backup ke Cloud" — dipakai kalau data lokal di HP
+                    // ini hilang (HP baru, app di-uninstall install
+                    // ulang, atau kalau app ini dipakai sebagai Web/PWA
+                    // lalu cache-nya dibersihkan/PWA-nya dihapus dari
+                    // Home Screen).
+                    ListTile(
+                      leading: SoftIconBox(
+                        icon: Icons.cloud_download_outlined,
+                        color: cs.primary,
+                      ),
+                      title: const Text('Pulihkan dari Cloud'),
+                      subtitle: const Text('Tarik kembali laporan yang pernah di-backup'),
+                      onTap: () => _confirmRestoreFromCloud(context),
                     ),
                     ListTile(
                       leading: SoftIconBox(
@@ -146,6 +162,76 @@ class SettingsScreen extends StatelessWidget {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal sinkron: $e. Cek koneksi internet, lalu coba lagi.')),
+      );
+    }
+  }
+
+  // <-- BARU: seluruh method ini. Konfirmasi dulu sebelum "Pulihkan dari
+  // Cloud" — walau restore-nya sendiri aman (laporan yang diedit lebih
+  // baru di lokal tidak akan ketiban versi cloud yang lebih lama, lihat
+  // StorageService.restoreFromFirestore), tetap butuh koneksi internet &
+  // makan beberapa detik kalau laporannya banyak, jadi guru perlu tahu
+  // dulu sebelum mulai.
+  void _confirmRestoreFromCloud(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Pulihkan dari Cloud?'),
+        content: const Text(
+          'Semua laporan yang pernah ter-backup ke cloud akan ditarik kembali ke HP ini. '
+          'Laporan yang sudah ada & lebih baru di HP ini tidak akan ditimpa. Butuh koneksi internet.',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _restoreFromCloud(context);
+            },
+            child: const Text('Pulihkan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _restoreFromCloud(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
+            SizedBox(width: 16),
+            Expanded(child: Text('Memulihkan laporan...')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final count = await StorageService.instance.restoreFromFirestore();
+      // Metadata kartu kosong (identitas yang diaktifkan tapi belum ada
+      // laporannya) ikut dipulihkan juga — lihat catatan lengkapnya di
+      // AppPrefsService.restoreActivatedMetaFromFirestore soal kenapa ini
+      // perlu, BUKAN cuma data laporan.
+      await AppPrefsService.instance.restoreActivatedMetaFromFirestore();
+      if (!context.mounted) return;
+      // Reload provider supaya seluruh app (tab Laporan, Statistik, dst)
+      // langsung baca data yang baru dipulihkan ini.
+      await context.read<RecordsProvider>().load();
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // tutup dialog loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Berhasil! $count laporan dipulihkan dari cloud.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memulihkan: $e. Cek koneksi internet, lalu coba lagi.')),
       );
     }
   }

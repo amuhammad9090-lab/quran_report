@@ -132,4 +132,52 @@ class StorageService {
     }
     return success;
   }
+
+  // <-- BARU: seluruh method ini. Kebalikan dari [syncAllToFirestore] —
+  // tarik SEMUA laporan dari Firestore lalu tulis ke Hive lokal
+  // ("Pulihkan dari Cloud" di Pengaturan). Dibutuhkan buat kasus data
+  // lokal HILANG (HP/laptop baru, app di-uninstall lalu install ulang,
+  // atau — kalau app ini dipakai sebagai Web/PWA — cache browser/PWA-nya
+  // dibersihkan/di-uninstall dari Home Screen, yang di iOS Safari
+  // otomatis ngosongin local storage-nya).
+  //
+  // Ditulis LANGSUNG ke Hive (bukan lewat [upsert]) supaya tidak
+  // mancing balik _mirrorToFirestore() percuma (datanya kan memang baru
+  // ditarik DARI Firestore, tidak perlu dikirim balik).
+  //
+  // Strategi merge: kalau id yang sama juga ada di lokal, laporan yang
+  // EDITED-nya paling baru yang menang (bukan asal timpa dengan versi
+  // cloud) — supaya laporan yang barusan diedit offline (belum sempat
+  // ke-mirror ke cloud) tidak keburu ketiban versi cloud yang lebih lama.
+  // Laporan yang cuma ada di lokal (belum pernah tersinkron) TIDAK
+  // disentuh/dihapus sama sekali — restore ini murni "tambah/timpa yang
+  // lebih baru", bukan "ganti total".
+  Future<int> restoreFromFirestore() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('schools')
+        .doc(kSchoolId)
+        .collection('santriRecords')
+        .get();
+
+    var restored = 0;
+    for (final doc in snapshot.docs) {
+      try {
+        final cloudRecord = SantriRecord.fromJson(doc.data());
+        final localRaw = _box.get(cloudRecord.id);
+        if (localRaw != null) {
+          final localRecord = SantriRecord.fromJson(jsonDecode(localRaw) as Map<String, dynamic>);
+          final localTime = localRecord.editedAt ?? localRecord.createdAt ?? localRecord.tanggal;
+          final cloudTime = cloudRecord.editedAt ?? cloudRecord.createdAt ?? cloudRecord.tanggal;
+          if (!cloudTime.isAfter(localTime)) continue; // lokal sudah sama/lebih baru, lewati
+        }
+        await _box.put(cloudRecord.id, jsonEncode(cloudRecord.toJson()));
+        restored++;
+      } catch (_) {
+        // 1 dokumen korup/gagal parse tidak boleh gagalin restore
+        // dokumen-dokumen lain — lewati saja, lanjut ke berikutnya.
+        continue;
+      }
+    }
+    return restored;
+  }
 }
