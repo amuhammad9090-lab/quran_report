@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/utils/week_utils.dart';
 import '../../../data/models/folder.dart';
 import '../../../providers/folders_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/santri_report_card.dart';
-import '../record_form/record_form_sheet.dart';
 import '../laporan/buat_laporan_sheet.dart';
+import '../laporan/open_week_action.dart';
 import 'add_recent_records_sheet.dart';
 import 'folder_form_sheet.dart';
 
@@ -142,38 +141,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
 
   /// Buka form laporan untuk pekan [weekIndex] milik kartu [card]
   void _openWeek(BuildContext context, SantriCardInfo card, int weekIndex) {
-    final provider = context.read<RecordsProvider>();
-    final now = DateTime.now();
-    final thisMonth = WeekUtils.ownerMonth(now);
-    final currentWeek = WeekUtils.weekOfMonth(now);
-
-    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
-    final today = DateTime(now.year, now.month, now.day);
-    final isCurrentWeek = weekIndex == currentWeek &&
-        !today.isBefore(range.start) &&
-        !today.isAfter(range.end);
-    final presetDate = isCurrentWeek ? today : range.start;
-
-    // Dicek per-HARI PERSIS di semua pekan (current maupun lewat) —
-    // konsisten dengan Rekap Harian. Lihat catatan lengkap di
-    // laporan_tab.dart (_openWeek) & RecordsProvider.recordForSantriOnDate.
-    final existing = provider.recordForSantriOnDate(card.nama, presetDate);
-    if (existing != null) {
-      // lockIdentity: true -> samain kek buka form laporan baru dari kartu,
-      // identitas santri udah jelas dari kartunya, nggak perlu ditampilin lagi.
-      showRecordFormSheet(context, existing: existing, lockIdentity: true);
-      return;
-    }
-
-    showRecordFormSheet(
-      context,
-      presetKelas: card.kelas,
-      presetHalaqoh: card.halaqoh,
-      presetNama: card.nama,
-      presetTanggal: presetDate,
-      lockIdentity: true,
-      initialFolderId: widget.folderId,
-    );
+    openWeekForSantri(context, card, weekIndex, initialFolderId: widget.folderId);
   }
 
   Future<void> _hapusCard(BuildContext context, SantriCardInfo card) async {

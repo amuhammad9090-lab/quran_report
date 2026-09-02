@@ -869,6 +869,24 @@ class RecordsProvider extends ChangeNotifier {
     return null;
   }
 
+  // <-- BARU: seluruh method ini. Semua laporan santri [namaAnak] dalam
+  // rentang tanggal [start]..[end] (inklusif, kalender biasa bukan
+  // "kepemilikan pekan"), terurut tanggal lama -> baru. Dipakai
+  // openWeekForSantri buat deteksi "santri ini sudah punya laporan di
+  // hari LAIN pekan berjalan yang belum ada follow-up hari ini" — lihat
+  // catatan lengkap soal bug "laporan nambah 1" di
+  // open_week_action.dart.
+  List<SantriRecord> recordsForSantriInRange(String namaAnak, DateTime start, DateTime end) {
+    if (end.isBefore(start)) return const [];
+    final key = namaAnak.trim().toLowerCase();
+    return _scoped.where((r) {
+      if (r.namaAnak.trim().toLowerCase() != key) return false;
+      final d = DateTime(r.tanggal.year, r.tanggal.month, r.tanggal.day);
+      return !d.isBefore(start) && !d.isAfter(end);
+    }).toList()
+      ..sort((a, b) => a.tanggal.compareTo(b.tanggal));
+  }
+
   /// Kartu santri untuk tab Laporan — SATU kartu per santri (bukan per
   /// laporan/pekan), gabungan dari (a) santri yang sudah punya minimal 1
   /// laporan ([santriList], data asli) dan (b) identitas yang baru

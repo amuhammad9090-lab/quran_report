@@ -8,7 +8,7 @@ import '../../widgets/filter_sheet.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/santri_report_card.dart';
 import '../folder/move_to_folder_sheet.dart';
-import '../record_form/record_form_sheet.dart';
+import 'open_week_action.dart';
 
 /// Halaman "Hasil Pencarian" — beda dari list utama di tab Laporan yang
 /// cuma nyari kartu santri yang BELUM masuk folder mana pun, halaman ini
@@ -81,40 +81,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   }
 
   void _openWeek(BuildContext context, SantriCardInfo card, int weekIndex) {
-    final provider = context.read<RecordsProvider>();
-    final now = DateTime.now();
-    // Bulan PEMILIK pekan hari ini (bisa beda dari now.month di 1-2 hari
-    // ujung bulan) — lihat WeekUtils.ownerMonth.
-    final thisMonth = WeekUtils.ownerMonth(now);
-    final currentWeek = WeekUtils.weekOfMonth(now);
-
-    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
-    final today = DateTime(now.year, now.month, now.day);
-    final isCurrentWeek = weekIndex == currentWeek &&
-        !today.isBefore(range.start) &&
-        !today.isAfter(range.end);
-    final presetDate = isCurrentWeek ? today : range.start;
-
-    // Dicek per-HARI PERSIS di semua pekan (current maupun lewat) —
-    // konsisten dengan Rekap Harian. Lihat catatan lengkap di
-    // laporan_tab.dart (_openWeek) & RecordsProvider.recordForSantriOnDate.
-    final existing = provider.recordForSantriOnDate(card.nama, presetDate);
-    if (existing != null) {
-      // lockIdentity: true -> samain kek buka form laporan baru dari kartu,
-      // identitas santri udah jelas dari kartunya, nggak perlu ditampilin lagi.
-      showRecordFormSheet(context, existing: existing, lockIdentity: true);
-      return;
-    }
-
-    showRecordFormSheet(
-      context,
-      presetKelas: card.kelas,
-      presetHalaqoh: card.halaqoh,
-      presetNama: card.nama,
-      presetTanggal: presetDate,
-      lockIdentity: true,
-      initialFolderId: card.emptyCardFolderId,
-    );
+    openWeekForSantri(context, card, weekIndex);
   }
 
   Future<void> _pindahkanCard(BuildContext context, SantriCardInfo card) async {

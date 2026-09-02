@@ -9,7 +9,7 @@ import '../../widgets/misc_widgets.dart';
 import '../../widgets/santri_report_card.dart';
 import '../../widgets/folder_card.dart';
 import '../../widgets/filter_sheet.dart';
-import '../record_form/record_form_sheet.dart';
+import 'open_week_action.dart';
 import '../folder/folder_detail_screen.dart';
 import '../folder/folder_form_sheet.dart';
 import '../folder/move_to_folder_sheet.dart';
@@ -205,48 +205,7 @@ class _LaporanTabState extends State<LaporanTab> {
   /// Buka form laporan untuk pekan [weekIndex] (dalam bulan berjalan) milik
   /// santri [card]
   void _openWeek(BuildContext context, SantriCardInfo card, int weekIndex) {
-    final provider = context.read<RecordsProvider>();
-    final now = DateTime.now();
-    final thisMonth = WeekUtils.ownerMonth(now);
-    final currentWeek = WeekUtils.weekOfMonth(now);
-
-    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
-    final today = DateTime(now.year, now.month, now.day);
-    final isCurrentWeek = weekIndex == currentWeek &&
-        !today.isBefore(range.start) &&
-        !today.isAfter(range.end);
-    final presetDate = isCurrentWeek ? today : range.start;
-
-    // Dicek per-HARI PERSIS (presetDate), baik pekan berjalan MAUPUN
-    // pekan yang sudah lewat — konsisten dengan Rekap Harian yang juga
-    // per-hari. Sebelumnya pekan lewat dicek per-PEKAN (ambil laporan
-    // TERBARU di pekan itu buat dibuka sebagai edit), tapi itu logic
-    // yang sama persis yang bikin laporan Senin ke-timpa/pindah tanggal
-    // waktu guru sebenarnya mau isi hari lain di pekan yang sama (lihat
-    // catatan lengkap di RecordsProvider.recordForSantriOnDate) — cuma
-    // dulu cuma dibenerin buat pekan berjalan, sekarang berlaku di semua
-    // pekan. Efeknya: tap kartu pekan LAMA sekarang default ngarah ke
-    // hari Senin pekan itu (range.start) — buat lihat/isi hari lain yang
-    // spesifik di pekan lama, lewat Rekap Harian (tap hari itu di Rekap
-    // Pekan), bukan dari tombol kartu pekan ini.
-    final existing = provider.recordForSantriOnDate(card.nama, presetDate);
-    if (existing != null) {
-      // lockIdentity: true -> samain kek buka form laporan baru dari kartu
-      // santri ini (section "Identitas Santri" ikut disembunyikan, karena
-      // identitasnya sudah jelas dari konteks kartu yang di-tap).
-      showRecordFormSheet(context, existing: existing, lockIdentity: true);
-      return;
-    }
-
-    showRecordFormSheet(
-      context,
-      presetKelas: card.kelas,
-      presetHalaqoh: card.halaqoh,
-      presetNama: card.nama,
-      presetTanggal: presetDate,
-      lockIdentity: true,
-      initialFolderId: card.emptyCardFolderId,
-    );
+    openWeekForSantri(context, card, weekIndex, initialFolderId: card.emptyCardFolderId);
   }
 
   /// Pindahkan kartu [card] ke folder pilihan user

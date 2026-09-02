@@ -78,6 +78,34 @@ class ExportService {
     'Catatan',
   ];
 
+  // <-- BARU: 3 helper di bawah ini. Font PDF bawaan (Helvetica base14,
+  // TIDAK di-embed — lihat catatan lama soal em dash "—" di
+  // exportGroupedPdf/exportGroupedMonthlyRecapPdf) cuma dukung karakter
+  // ASCII/WinAnsi standar. Karakter yang SERING nongol di teks
+  // dinamis (bukan cuma kop statis yang udah dibenerin) — terutama "–"
+  // (en dash, dipakai [SantriRecord.partText] buat "Ayat 18–24") dan "•"
+  // (bullet, pemisah nama surah & "Ayat") — TIDAK ADA di font itu, jadi
+  // muncul kotak-kotak/tofu di banyak PDF viewer (persis kasus yang sama
+  // kayak em dash dulu, cuma sumbernya beda: ini dari data record, bukan
+  // teks statis kop laporan).
+  //
+  // Sengaja diterapkan HANYA di jalur PDF (dipanggil di
+  // exportPdf/exportGroupedPdf/exportGroupedMonthlyRecapPdf), BUKAN di
+  // [_rows]/[_rowsWithTanggal]/[_weeklyRowsGroupedBySantriText]/
+  // [_monthlyRowsGrouped] itu sendiri — biar tampilan di Excel & Word
+  // (yang fontnya dukung Unicode penuh) tetap pakai "–"/"•" yang lebih
+  // rapi, tidak ikut diturunkan ke "-" cuma gara-gara PDF-nya kurang
+  // mampu.
+  String _pdfSafe(String s) => s
+      .replaceAll('–', '-') // en dash
+      .replaceAll('—', '-') // em dash (jaga-jaga, walau harusnya udah gak kepakai lagi)
+      .replaceAll('•', '-'); // bullet
+
+  List<String> _pdfSafeHeaders(List<String> headers) => headers.map(_pdfSafe).toList();
+
+  List<List<String>> _pdfSafeRows(List<List<String>> rows) =>
+      rows.map((row) => row.map(_pdfSafe).toList()).toList();
+
   /// Teks ringkas bagian Tahsin saja (WAFA atau Tilawah)
   String _tahfizhSurahNames(SantriRecord r) {
     final segs = r.tahfizhSegmentsEffective;
@@ -428,10 +456,10 @@ class ExportService {
         String? fixedTanggalLabel,
       }) async {
     final doc = pw.Document();
-    final headers = includeTanggal ? _headersWithTanggal : _headers;
-    final rows = includeTanggal
+    final headers = _pdfSafeHeaders(includeTanggal ? _headersWithTanggal : _headers);
+    final rows = _pdfSafeRows(includeTanggal
         ? _rowsWithTanggal(records, fixedTanggalLabel: fixedTanggalLabel)
-        : _rows(records);
+        : _rows(records));
     final kelasValue = kelas ?? _uniqueJoin(records.map((r) => r.kelas));
     final halaqohValue = halaqoh ?? _uniqueJoin(records.map((r) => r.halaqoh));
     final columnWidths = includeTanggal
@@ -716,7 +744,7 @@ class ExportService {
     // Laporan Pekanan) -> tabel gabungan PER SANTRI (lihat
     // _weeklyRowsGroupedBySantriText); includeTanggal=false dipertahankan
     // fallback ke tabel per-laporan lama.
-    final headers = includeTanggal ? _weeklyHeadersGrouped : _headers;
+    final headers = _pdfSafeHeaders(includeTanggal ? _weeklyHeadersGrouped : _headers);
     final columnWidths = includeTanggal
         ? const {
       0: pw.FixedColumnWidth(20),
@@ -761,9 +789,9 @@ class ExportService {
             style: const pw.TextStyle(fontSize: 11)));
       }
       body.add(pw.SizedBox(height: 6));
-      final rows = includeTanggal
+      final rows = _pdfSafeRows(includeTanggal
           ? _weeklyRowsGroupedBySantriText(section.items, fixedTanggalLabel: fixedTanggalLabel)
-          : _rows(section.items);
+          : _rows(section.items));
       body.add(pw.TableHelper.fromTextArray(
         headers: headers,
         data: rows,
@@ -1031,7 +1059,7 @@ class ExportService {
         String? periode,
       }) async {
     final doc = pw.Document();
-    final headers = _monthlyHeadersGrouped(totalWeeks);
+    final headers = _pdfSafeHeaders(_monthlyHeadersGrouped(totalWeeks));
 
     final body = <pw.Widget>[];
     for (var s = 0; s < sections.length; s++) {
@@ -1052,7 +1080,7 @@ class ExportService {
       body.add(pw.SizedBox(height: 6));
       body.add(pw.TableHelper.fromTextArray(
         headers: headers,
-        data: _monthlyRowsGrouped(section.items, totalWeeks),
+        data: _pdfSafeRows(_monthlyRowsGrouped(section.items, totalWeeks)),
         headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 8.5),
         headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF0E7C61)),
         cellStyle: const pw.TextStyle(fontSize: 7.5),
