@@ -977,6 +977,28 @@ class RecordsProvider extends ChangeNotifier {
   List<SantriCardInfo> cardsInFolder(String folderId) =>
       laporanCards.where((c) => c.currentFolderId == folderId).toList();
 
+  /// Kartu yang "rumahnya" (currentFolderId) menunjuk ke folderId yang
+  /// SUDAH TIDAK ADA lagi di [FoldersProvider] (folder yatim/hilang) —
+  /// [validFolderIds] adalah kumpulan id folder yang MASIH ADA sekarang
+  /// (diambil dari FoldersProvider.all di layar pemanggil).
+  ///
+  /// Skenario penyebab: laporan ini punya `folderId` yang tersimpan di
+  /// Hive, tapi koleksi `reportFolders` sendiri baru ada belakangan di
+  /// Firestore — kalau "Pulihkan dari Cloud" sempat dijalankan SEBELUM
+  /// folder-nya pernah di-backup, folder-nya nggak ikut balik padahal
+  /// laporan yang menunjuk ke folder itu tetap ada. Kartu begini otomatis
+  /// KETUTUPAN dari tab Laporan biasa (currentFolderId != null -> tidak
+  /// masuk daftar "Tanpa Folder") DAN dari section Folder (folder
+  /// tujuannya sendiri sudah tidak ada buat ditampilkan) -- makanya
+  /// kelihatan macam "hilang" padahal datanya masih utuh. Dipakai
+  /// [OrphanedRecordsScreen] buat nampilin & "menyelamatkan" kartu-kartu
+  /// ini (pindahkan ke folder yang masih ada, atau keluarkan dari folder).
+  List<SantriCardInfo> orphanedFolderCards(Set<String> validFolderIds) {
+    return laporanCards
+        .where((c) => c.currentFolderId != null && !validFolderIds.contains(c.currentFolderId))
+        .toList();
+  }
+
   // Simpan kapitalisasi asli identitas yang baru diaktifkan pada sesi ini
   // (in-memory saja) — supaya kartu kosong yang baru dibuat langsung
   // tampil dengan huruf besar/kecil yang benar tanpa perlu reload app.

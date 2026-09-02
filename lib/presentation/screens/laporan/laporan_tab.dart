@@ -13,6 +13,7 @@ import 'open_week_action.dart';
 import '../folder/folder_detail_screen.dart';
 import '../folder/folder_form_sheet.dart';
 import '../folder/move_to_folder_sheet.dart';
+import '../folder/orphaned_records_screen.dart';
 import 'search_results_screen.dart';
 
 /// Tab "Laporan" — pencarian, filter, section Folder, dan daftar kartu
@@ -269,6 +270,14 @@ class _LaporanTabState extends State<LaporanTab> {
     final foldersProvider = context.watch<FoldersProvider>();
     final cards = _filteredCards(provider);
     final folders = foldersProvider.all;
+    // Kartu yang folder tujuannya sudah tidak ada lagi (mis. restore dari
+    // Cloud dijalankan sebelum folder-nya sempat ikut ke-backup) -- lihat
+    // RecordsProvider.orphanedFolderCards. Kartu begini TIDAK nongol di
+    // `cards` (currentFolderId-nya masih terisi) maupun di section Folder
+    // di bawah (folder tujuannya sendiri sudah tidak ada), jadi perlu
+    // banner terpisah biar tetap ketemu & bisa diselamatkan.
+    final orphanedCount =
+        provider.orphanedFolderCards(folders.map((f) => f.id).toSet()).length;
 
     _autoCloseSelectionIfCardsGone(cards);
 
@@ -315,6 +324,22 @@ class _LaporanTabState extends State<LaporanTab> {
                     child: _buildSearchAndFilter(context, provider),
                   ),
                 ),
+                if (orphanedCount > 0)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: _OrphanedRecordsBanner(
+                        count: orphanedCount,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => OrphanedRecordsScreen(
+                              onFabVisibilityChanged: widget.onFabVisibilityChanged,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
                   sliver: SliverToBoxAdapter(
@@ -607,6 +632,61 @@ class _LaporanTabState extends State<LaporanTab> {
             child: const Text('Hapus'),
           ),
         ],
+      ),
+    );
+  }
+}
+/// Banner peringatan yang tampil di tab Laporan begitu ada kartu santri
+/// yang folder tujuannya sudah tidak ada lagi (lihat
+/// [RecordsProvider.orphanedFolderCards] dan [OrphanedRecordsScreen]) --
+/// tanpa ini kartu-kartu itu tidak kelihatan di mana pun (bukan di daftar
+/// "Laporan" biasa, bukan juga di section Folder), padahal laporannya
+/// sendiri masih aman tersimpan.
+class _OrphanedRecordsBanner extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+  const _OrphanedRecordsBanner({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.errorContainer.withValues(alpha: 0.35),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              SoftIconBox(icon: Icons.folder_off_outlined, color: cs.error),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$count kartu folder-nya hilang',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5,
+                        color: cs.onErrorContainer,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Laporannya masih aman. Tekan untuk pindahkan ke folder lain.',
+                      style: TextStyle(fontSize: 11.5, color: cs.onErrorContainer.withValues(alpha: 0.85)),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: cs.onErrorContainer),
+            ],
+          ),
+        ),
       ),
     );
   }

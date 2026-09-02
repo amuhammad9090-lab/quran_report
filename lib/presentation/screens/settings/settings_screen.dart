@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/theme_provider.dart';
 import '../../../providers/records_provider.dart';
+import '../../../providers/folders_provider.dart'; // <-- BARU
 import '../../../data/services/storage_service.dart';
 import '../../../data/services/app_prefs_service.dart'; // <-- BARU
 import '../../widgets/misc_widgets.dart';
@@ -212,6 +213,13 @@ class SettingsScreen extends StatelessWidget {
     );
 
     try {
+      // <-- BERUBAH: folder dipulihkan DULUAN sebelum laporan. Urutan ini
+      // sengaja — laporan yang balik dari Firestore masih bawa `folderId`
+      // lama, jadi folder tujuannya harus sudah ada di Hive duluan
+      // sebelum RecordsProvider/FoldersProvider di-reload, supaya laporan
+      // itu langsung ketemu folder "rumah"-nya begitu tab Laporan
+      // ke-render (tidak sempat kelihatan "hilang" walau cuma sekejap).
+      await StorageService.instance.restoreFoldersFromFirestore();
       final count = await StorageService.instance.restoreFromFirestore();
       // Metadata kartu kosong (identitas yang diaktifkan tapi belum ada
       // laporannya) ikut dipulihkan juga — lihat catatan lengkapnya di
@@ -220,8 +228,13 @@ class SettingsScreen extends StatelessWidget {
       await AppPrefsService.instance.restoreActivatedMetaFromFirestore();
       if (!context.mounted) return;
       // Reload provider supaya seluruh app (tab Laporan, Statistik, dst)
-      // langsung baca data yang baru dipulihkan ini.
+      // langsung baca data yang baru dipulihkan ini. FoldersProvider juga
+      // ikut di-reload — sebelumnya luput, jadi walau foldernya sudah
+      // masuk ke Hive, tab Laporan/FolderDetail masih nampilin state
+      // folder yang LAMA (sebelum restore) sampai app di-restart manual.
       await context.read<RecordsProvider>().load();
+      if (!context.mounted) return;
+      await context.read<FoldersProvider>().load();
       if (!context.mounted) return;
       Navigator.of(context).pop(); // tutup dialog loading
       ScaffoldMessenger.of(context).showSnackBar(
