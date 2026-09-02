@@ -110,9 +110,6 @@ void _openExact(
 }) {
   final found = existing ?? provider.recordForSantriOnDate(card.nama, date);
   if (found != null) {
-    // lockIdentity: true -> samain kek buka form laporan baru dari kartu
-    // santri ini (section "Identitas Santri" ikut disembunyikan, karena
-    // identitasnya sudah jelas dari konteks kartu yang di-tap).
     showRecordFormSheet(context, existing: found, lockIdentity: true);
     return;
   }
