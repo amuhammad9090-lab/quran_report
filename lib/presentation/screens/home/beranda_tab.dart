@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/enums.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/parent_notes_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
 import '../../widgets/avatar_image_provider.dart';
 import '../../widgets/misc_widgets.dart';
@@ -242,20 +243,54 @@ class BerandaTab extends StatelessWidget {
             ),
           ),
         ),
-        Material(
-          color: Theme.of(context).cardTheme.color,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        // <-- BERUBAH: bell sekarang nampilin badge titik merah kalau ada
+        // catatan orang tua yang belum dibaca — sebelumnya cuma ikon
+        // statis tanpa indikator apapun.
+        Builder(builder: (context) {
+          final unread = context.watch<ParentNotesProvider>().unreadCount;
+          return Material(
+            color: Theme.of(context).cardTheme.color,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(11),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      unread > 0
+                          ? Icons.notifications_rounded
+                          : Icons.notifications_none_rounded,
+                      size: 22,
+                    ),
+                    if (unread > 0)
+                      Positioned(
+                        top: -2,
+                        right: -2,
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).cardTheme.color ??
+                                  Theme.of(context).scaffoldBackgroundColor,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(11),
-              child: Icon(Icons.notifications_none_rounded, size: 22),
-            ),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }

@@ -14,6 +14,7 @@ import 'data/services/storage_service.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/folders_provider.dart';
+import 'providers/parent_notes_provider.dart'; // <-- BARU
 import 'providers/records_provider.dart';
 import 'providers/students_provider.dart';
 import 'providers/theme_provider.dart';
@@ -21,7 +22,7 @@ import 'providers/theme_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // <-- BARU: mirror laporan ke Firestore buat Portal Orang Tua. Sign-in
+  // Mirror laporan ke Firestore buat Portal Orang Tua. Sign-in
   // ANONIM (bukan akun guru).
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -59,6 +60,11 @@ void main() async {
   final studentsProvider = StudentsProvider();
   await studentsProvider.load();
 
+  // Notifikasi "Catatan dari Orang Tua"
+  final parentNotesProvider = ParentNotesProvider();
+  parentNotesProvider.updateScope(authProvider.scope);
+  parentNotesProvider.start();
+
   runApp(
     MultiProvider(
       providers: [
@@ -67,6 +73,7 @@ void main() async {
         ChangeNotifierProvider.value(value: recordsProvider),
         ChangeNotifierProvider.value(value: foldersProvider),
         ChangeNotifierProvider.value(value: studentsProvider),
+        ChangeNotifierProvider.value(value: parentNotesProvider),
       ],
       child: const QuranReportApp(),
     ),

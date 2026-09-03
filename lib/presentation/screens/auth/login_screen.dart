@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/auth_provider.dart';
+import '../../../providers/parent_notes_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../home/main_shell.dart';
@@ -40,6 +41,11 @@ class _LoginScreenState extends State<LoginScreen> {
       // RecordsProvider supaya seluruh data (Home/Laporan/Statistik/
       // Export) langsung ke-scope tanpa perlu restart app.
       context.read<RecordsProvider>().updateScope(auth.scope);
+      // <-- BARU: sama halnya, notifikasi Catatan Orang Tua juga perlu
+      // di-scope ulang begitu ada user baru login (mis. HP dipakai
+      // bergantian oleh beberapa guru) — kalau tidak, badge/list bisa
+      // ketinggalan scope guru SEBELUMnya sampai app di-restart manual.
+      context.read<ParentNotesProvider>().updateScope(auth.scope);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainShell()),
       );

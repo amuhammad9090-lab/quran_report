@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/parent_notes_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/avatar_image_provider.dart';
@@ -40,6 +41,9 @@ class ProfileScreen extends StatelessWidget {
     // Bersihkan scope DULU baru logout, biar nggak ada frame di mana
     // RecordsProvider masih megang scope dari user yang sudah keluar.
     context.read<RecordsProvider>().updateScope(null);
+    // <-- BARU: sama alasannya — badge notifikasi Catatan Orang Tua
+    // jangan sempat kelihatan bawa data guru sebelumnya di layar Login.
+    context.read<ParentNotesProvider>().updateScope(null);
     await context.read<AuthProvider>().logout();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
