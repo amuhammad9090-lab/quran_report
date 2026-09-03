@@ -1,0 +1,136 @@
+// firestore.rules
+//
+// PERUBAHAN DESAIN #1 (login santri): password diverifikasi lewat
+// FIREBASE AUTH (email sintetis `username@quranreport-parent.app`),
+// BUKAN `passwordHash` yang dibaca dari Firestore — supaya password
+// tidak pernah perlu dibuka ke client sebelum auth (lihat README.md).
+//
+// PERUBAHAN DESAIN #2 (admin, versi TANPA Cloud Functions/Blaze):
+// admin login lewat akun Firebase Auth SUNGGUHAN (bukan cuma PIN lokal
+// di client) — emailnya dicek langsung di rules lewat
+// `isAdmin()`. Ini menghindari kebutuhan Cloud Functions generasi-2
+// yang WAJIB plan Blaze — semuanya jalan di plan Spark (gratis).
+// Trade-off: daftar admin di-hardcode di rules (perlu re-deploy rules
+// kalau mau tambah/hapus admin) — untuk 1 sekolah dengan 1-2 admin,
+// ini lebih simpel daripada infra Cloud Functions.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /schools/{schoolId} {
+      function myAccount() {
+        return get(/databases/$(database)/documents/schools/$(schoolId)/santriAccounts/$(request.auth.uid)).data;
+      }
+      function myStudent() {
+        return get(/databases/$(database)/documents/schools/$(schoolId)/students/$(myAccount().studentId)).data;
+      }
+      // GANTI daftar ini kalau mau tambah/hapus admin — harus di-deploy
+      // ulang (`firebase deploy --only firestore:rules`) tiap ubah.
+      function isAdmin() {
+        return request.auth != null &&
+          request.auth.token.email in [
+            'admin@quranreport-admin.app'
+          ];
+      }
+      // Akun santri:
+      //  - santri baca dokumennya sendiri (uid = ID dokumen)
+      //  - admin baca/tulis SEMUA (buat akun baru, nonaktifkan)
+      match /santriAccounts/{accountId} {
+        allow read: if isAdmin() || (request.auth != null && request.auth.uid == accountId);
+        allow write: if isAdmin();
+      }
+      // Data master santri:
+      //  - santri baca datanya sendiri
+      //  - admin baca semua (buat pilih santri saat bikin akun) — TIDAK
+      //    ada write, Student memang read-only total (diisi lewat
+      //    script seed, bukan dari UI ini)
+      match /students/{studentId} {
+        allow read: if isAdmin() || (request.auth != null && myAccount().studentId == studentId);
+        allow write: if false;
+      }
+      // app guru pakai auth lokalnya sendiri (bukan Firebase Auth), jadi
+      // butuh identitas di mata Firestore buat bisa nulis. Sign-in
+      // ANONIM dipakai khusus untuk ini — santri/admin SELALU login
+      // pakai email+password (isAdmin()/myAccount() di atas), jadi
+      // provider anonim = pasti bukan mereka, aman dibedakan.
+      function isGuruApp() {
+        return request.auth != null &&
+          request.auth.token.firebase.sign_in_provider == 'anonymous';
+      }
+      // Laporan — SantriRecord tidak punya studentId (desain existing
+      // app guru), jadi dicek kelas+halaqoh+namaAnak cocok dengan
+      // Student milik si pembaca — genuinely dicek di rules, bukan
+      // cuma filter di query client.
+      match /santriRecords/{recordId} {
+        // <-- DIUBAH: dulu cuma santri (Portal Orang Tua) yang boleh
+        // baca. App guru (anonim) sudah boleh WRITE (mirror-backup) tapi
+        // belum pernah dikasih izin READ, jadi fitur "Pulihkan dari
+        // Cloud" (butuh baca balik semua santriRecords) selalu ditolak
+        // permission-denied. isGuruApp() ditambah di sini SEBELUM
+        // kondisi santri (dicek pertama & lebih murah — nggak perlu
+        // get() ke santriAccounts/students kalau yang baca app guru).
+        allow read: if isGuruApp() || (request.auth != null && !isAdmin() &&
+          myStudent().nama == resource.data.namaAnak &&
+          myStudent().kelas == resource.data.kelas &&
+          myStudent().halaqoh == resource.data.halaqoh);
+        allow write: if isGuruApp(); // mirror-write dari app guru
+      }
+      // Metadata "kartu identitas kosong" (santri yang sudah diaktifkan
+      // di app guru tapi belum ada laporannya) — dipakai fitur
+      // "Pulihkan dari Cloud" biar kartu kosong itu juga ikut balik
+      // nama aslinya (bukan huruf kecil semua) kalau data lokal HP guru
+      // hilang. Cuma app guru yang pernah baca/tulis dokumen ini,
+      // santri/admin tidak pernah butuh ini sama sekali.
+      match /appMeta/{docId} {
+        allow read, write: if isGuruApp();
+      }
+      // <-- BARU: seluruh match ini. Folder laporan (organisasi guru) —
+      // dipakai fitur mirror-backup & "Pulihkan dari Cloud" di app guru
+      // (StorageService.upsertFolder/deleteFolder/restoreFoldersFromFirestore).
+      // Sama persis pola appMeta: cuma app guru (anonim) yang pernah
+      // baca/tulis, santri/admin tidak pernah butuh ini — sebelum block
+      // ini ditambah, collection ini nggak ke-cover rule manapun
+      // sehingga default-deny Firestore bikin restore folder selalu
+      // permission-denied.
+      match /reportFolders/{folderId} {
+        allow read, write: if isGuruApp();
+      }
+      // <-- BARU: seluruh match ini. Sebelumnya TIDAK ADA rule untuk
+      // collection ini sama sekali -> Firestore default-deny bikin DUA
+      // arah gagal total: (1) Portal Ortu tidak bisa CREATE catatan baru
+      // (permission-denied), dan (2) app guru tidak bisa READ untuk
+      // ditampilkan sebagai notifikasi/badge. Skema di bawah ini
+      // mengikuti persis dokumentasi yang sudah ada di
+      // `firestore_parent_note_repository.dart` (Portal Ortu) &
+      // `parent_note_service.dart`/`parent_notes_provider.dart` (app
+      // guru) — cuma menuliskan rule yang sudah lama dijanjikan lewat
+      // komentar itu, belum benar-benar ada sebelumnya.
+      match /parentNotes/{noteId} {
+        // App guru (anonim): baca semua (buat badge/notifikasi live),
+        // dan HANYA boleh update field `isRead` (menandai sudah dibaca)
+        // atau `dismissed` (swipe/"Hapus Semua" di halaman Notifikasi)
+        // -- tidak boleh mengubah field lain sama sekali, sesuai desain
+        // ParentNoteService di app guru yang memang hanya pernah
+        // mengirim {'isRead': ...} atau {'dismissed': ...}, tidak pernah
+        // dua-duanya sekaligus atau field lain.
+        allow read: if isGuruApp();
+        allow update: if isGuruApp() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'dismissed']);
+
+        // Santri (Portal Ortu): boleh baca riwayat catatan MILIKNYA
+        // sendiri (dipakai getRecentForStudent), dan boleh membuat
+        // catatan baru selama studentId-nya cocok akun yang sedang
+        // login (tidak bisa mengatasnamakan santri lain) serta isRead
+        // dikirim false (tidak bisa langsung menandai "sudah dibaca"
+        // sendiri) -- persis syarat yang sudah didokumentasikan di
+        // FirestoreParentNoteRepository.
+        allow read: if request.auth != null && !isAdmin() && !isGuruApp() &&
+          resource.data.studentId == myAccount().studentId;
+        allow create: if request.auth != null && !isAdmin() && !isGuruApp() &&
+          request.resource.data.studentId == myAccount().studentId &&
+          request.resource.data.isRead == false;
+
+        allow write: if isAdmin();
+      }
+    }
+  }
+}

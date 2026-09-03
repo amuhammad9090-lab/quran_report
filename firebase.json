@@ -1,16 +1,1 @@
-{
-  "hosting": {
-    "public": "build/web",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  }
-}
+{"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"hosting":{"public":"build/web","ignore":["firebase.json","**/.*","**/node_modules/**"],"rewrites":[{"source":"**","destination":"/index.html"}],"headers":[{"source":"/index.html","headers":[{"key":"Cache-Control","value":"no-cache, no-store, must-revalidate"}]},{"source":"/flutter_service_worker.js","headers":[{"key":"Cache-Control","value":"no-cache, no-store, must-revalidate"}]},{"source":"/flutter_bootstrap.js","headers":[{"key":"Cache-Control","value":"no-cache, no-store, must-revalidate"}]},{"source":"/main.dart.js","headers":[{"key":"Cache-Control","value":"no-cache, no-store, must-revalidate"}]},{"source":"/manifest.json","headers":[{"key":"Cache-Control","value":"no-cache, no-store, must-revalidate"}]},{"source":"/version.json","headers":[{"key":"Cache-Control","value":"no-cache, no-store, must-revalidate"}]},{"source":"/assets/**","headers":[{"key":"Cache-Control","value":"public, max-age=86400, must-revalidate"}]},{"source":"/icons/**","headers":[{"key":"Cache-Control","value":"public, max-age=86400, must-revalidate"}]},{"source":"/canvaskit/**","headers":[{"key":"Cache-Control","value":"public, max-age=604800, must-revalidate"}]}]},"flutter":{"platforms":{"android":{"default":{"projectId":"quran-reportweb","appId":"1:110737865436:android:e4264999f8f45e1bdb9219","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"quran-reportweb","configurations":{"android":"1:110737865436:android:e4264999f8f45e1bdb9219","ios":"1:110737865436:ios:36570d41f5a8d3fcdb9219","macos":"1:110737865436:ios:36570d41f5a8d3fcdb9219","web":"1:110737865436:web:ca09856908c942ffdb9219","windows":"1:110737865436:web:4a0cfeeead97bd53db9219"}}}}}}

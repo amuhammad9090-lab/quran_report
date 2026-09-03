@@ -25,7 +25,6 @@ class AppPrefsService {
   static const _keyActivatedIdentityDisplay = 'activated_report_identity_display';
   static const _keyPasswordOverrides = 'password_overrides';
   static const _keyDownloadNotifPaths = 'download_notif_paths';
-  static const _keyDismissedParentNoteIds = 'dismissed_parent_note_ids';
 
   late Box<String> _box;
 
@@ -300,41 +299,5 @@ class AppPrefsService {
     final current = downloadNotifPaths;
     if (current.remove('$notifId') == null) return;
     await _box.put(_keyDownloadNotifPaths, jsonEncode(current));
-  }
-
-  // --- Catatan Orang Tua yang sudah "dismiss" (swipe/hapus) oleh guru
-  // ini secara lokal ---
-  //
-  // Catatan orang tua bersifat BERSAMA per kelas+halaqoh (lihat
-  // ParentNotesProvider) -- kalau guru A menghapusnya, guru B yang juga
-  // mengampu kelas sama tidak boleh ikut kehilangan catatan itu. Makanya
-  // "hapus" di sisi guru ini SENGAJA cuma dismiss lokal (disembunyikan
-  // dari daftar di HP guru ini saja), BUKAN delete dokumen Firestore --
-  // mirip notification tray Android: swipe notifikasi cuma bersihkan
-  // tray-nya, pesan aslinya (chat WhatsApp dst) tetap ada.
-  Set<String> get dismissedParentNoteIds {
-    final raw = _box.get(_keyDismissedParentNoteIds);
-    if (raw == null || raw.trim().isEmpty) return {};
-    try {
-      return (jsonDecode(raw) as List).map((e) => e.toString()).toSet();
-    } catch (_) {
-      return {};
-    }
-  }
-
-  Future<void> dismissParentNote(String noteId) async {
-    final current = dismissedParentNoteIds..add(noteId);
-    await _box.put(_keyDismissedParentNoteIds, jsonEncode(current.toList()));
-  }
-
-  Future<void> dismissParentNotes(Iterable<String> noteIds) async {
-    final current = dismissedParentNoteIds..addAll(noteIds);
-    await _box.put(_keyDismissedParentNoteIds, jsonEncode(current.toList()));
-  }
-
-  /// Buat tombol "Undo" abis swipe-dismiss.
-  Future<void> undismissParentNote(String noteId) async {
-    final current = dismissedParentNoteIds..remove(noteId);
-    await _box.put(_keyDismissedParentNoteIds, jsonEncode(current.toList()));
   }
 }

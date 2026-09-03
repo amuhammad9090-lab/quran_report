@@ -1,11 +1,11 @@
 {
-    "name": "quran_report",
-    "short_name": "quran_report",
+    "name": "Quran Report - Guru",
+    "short_name": "Quran Report",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Laporan Capaian Hafalan & Tahsin Al-Qur'an untuk Guru",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -38,6 +38,17 @@ class ParentNote {
   /// "sudah dibaca" untuk guru lain yang juga mengampu kelas+halaqoh sama.
   final bool isRead;
 
+  /// True setelah salah satu guru "menghapus" (swipe/Hapus Semua) catatan
+  /// ini dari daftar Notifikasi -- BUKAN delete dokumen Firestore beneran
+  /// (pesan asli orang tua tetap ada, cuma disembunyikan dari tampilan).
+  /// Sama seperti [isRead], status ini BERSAMA per kelas+halaqoh (app
+  /// guru login pakai auth lokal sendiri, bukan akun Firebase Auth
+  /// per-guru, jadi Firestore rules memang tidak bisa membedakan "guru
+  /// mana" yang dismiss -- lihat ParentNoteService.dismiss). Disimpan di
+  /// Firestore (bukan cuma lokal per-HP) supaya status dismiss ikut
+  /// sinkron kalau guru yang sama pakai lebih dari satu device.
+  final bool dismissed;
+
   const ParentNote({
     required this.id,
     required this.studentId,
@@ -48,6 +59,7 @@ class ParentNote {
     this.guruOwnerId,
     this.createdAt,
     this.isRead = false,
+    this.dismissed = false,
   });
 
   /// [data] adalah hasil `doc.data()` Firestore MENTAH (Timestamp belum
@@ -69,6 +81,7 @@ class ParentNote {
       message: data['message'] as String? ?? '',
       createdAt: createdAt,
       isRead: data['isRead'] as bool? ?? false,
+      dismissed: data['dismissed'] as bool? ?? false,
     );
   }
 }

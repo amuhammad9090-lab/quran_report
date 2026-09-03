@@ -51,4 +51,13 @@ class ParentNoteService {
   Future<void> markAsRead(String noteId) {
     return _col.doc(noteId).update({'isRead': true}).catchError((_) {});
   }
+
+  /// Sembunyikan (swipe/"Hapus Semua") atau kembalikan (Undo) satu
+  /// catatan dari daftar Notifikasi -- update field `dismissed` doang,
+  /// TIDAK pernah delete dokumennya. Sama fire-and-forget seperti
+  /// [markAsRead] -- kalau gagal, catatan cukup nongol lagi nanti,
+  /// bukan error fatal.
+  Future<void> setDismissed(String noteId, bool value) {
+    return _col.doc(noteId).update({'dismissed': value}).catchError((_) {});
+  }
 }

@@ -5,41 +5,21 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
+
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -57,6 +37,41 @@ class DefaultFirebaseOptions {
     appId: '1:110737865436:android:e4264999f8f45e1bdb9219',
     messagingSenderId: '110737865436',
     projectId: 'quran-reportweb',
+    storageBucket: 'quran-reportweb.firebasestorage.app',
+  );
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBB0uR2q8_nfldRT6_yYnqR1m-ZUdqCFbw',
+    appId: '1:110737865436:web:ca09856908c942ffdb9219',
+    messagingSenderId: '110737865436',
+    projectId: 'quran-reportweb',
+    authDomain: 'quran-reportweb.firebaseapp.com',
+    storageBucket: 'quran-reportweb.firebasestorage.app',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyBp_8BTMyJHbbeHNlrxCcwmYwvevUmEV_I',
+    appId: '1:110737865436:ios:36570d41f5a8d3fcdb9219',
+    messagingSenderId: '110737865436',
+    projectId: 'quran-reportweb',
+    storageBucket: 'quran-reportweb.firebasestorage.app',
+    iosBundleId: 'com.mirailabs.quranReport',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyBp_8BTMyJHbbeHNlrxCcwmYwvevUmEV_I',
+    appId: '1:110737865436:ios:36570d41f5a8d3fcdb9219',
+    messagingSenderId: '110737865436',
+    projectId: 'quran-reportweb',
+    storageBucket: 'quran-reportweb.firebasestorage.app',
+    iosBundleId: 'com.mirailabs.quranReport',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBB0uR2q8_nfldRT6_yYnqR1m-ZUdqCFbw',
+    appId: '1:110737865436:web:4a0cfeeead97bd53db9219',
+    messagingSenderId: '110737865436',
+    projectId: 'quran-reportweb',
+    authDomain: 'quran-reportweb.firebaseapp.com',
     storageBucket: 'quran-reportweb.firebasestorage.app',
   );
 }

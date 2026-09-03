@@ -1,50 +1,59 @@
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart'; // <-- BARU
-import 'package:hive_flutter/hive_flutter.dart';
-import '../../core/utils/app_config.dart'; // <-- BARU
-import '../models/santri_record.dart';
-import '../models/folder.dart';
 
-/// Persistensi lokal record laporan & folder menggunakan Hive (Box<String>,
-/// setiap value adalah JSON-encoded object). Sengaja tidak pakai
-/// TypeAdapter/codegen supaya tidak butuh build_runner.
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+import '../../core/utils/app_config.dart';
+import '../models/folder.dart';
+import '../models/santri_record.dart';
+
+/// Persistensi lokal record laporan & folder menggunakan Hive.
+/// Hive tetap menjadi sumber utama data.
 ///
-/// <-- BARU: Hive TETAP sumber utama — app tetap 100% jalan offline sama
-/// seperti sebelumnya. Firestore murni mirror tambahan, dibungkus
-/// try/catch (lewat .catchError) supaya kalau gagal (device offline,
-/// Firestore belum di-setup, dll) upsert/delete yang dipakai UI TIDAK
-/// PERNAH gagal gara-gara Firestore.
+/// Firestore digunakan sebagai mirror / cloud backup.
 class StorageService {
   StorageService._();
+
   static final StorageService instance = StorageService._();
 
   static const _boxName = 'santri_records';
   static const _folderBoxName = 'report_folders';
+
   late Box<String> _box;
   late Box<String> _folderBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
+
     _box = await Hive.openBox<String>(_boxName);
     _folderBox = await Hive.openBox<String>(_folderBoxName);
   }
 
-  // --- Laporan ---
+  // LAPORAN
   List<SantriRecord> getAll() {
     return _box.values
-        .map((raw) => SantriRecord.fromJson(jsonDecode(raw) as Map<String, dynamic>))
+        .map(
+          (raw) => SantriRecord.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      ),
+    )
         .toList()
       ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
   }
 
   Future<void> upsert(SantriRecord record) async {
-    await _box.put(record.id, jsonEncode(record.toJson())); // <-- TIDAK BERUBAH, tetap paling depan
-    _mirrorToFirestore(record); // <-- BARU — fire-and-forget
+    await _box.put(
+      record.id,
+      jsonEncode(record.toJson()),
+    );
+
+    _mirrorToFirestore(record);
   }
 
   Future<void> delete(String id) async {
     await _box.delete(id);
-    _mirrorDeleteToFirestore(id); // <-- BARU
+
+    _mirrorDeleteToFirestore(id);
   }
 
   Future<void> clearAll() async {
@@ -52,46 +61,51 @@ class StorageService {
     await _folderBox.clear();
   }
 
-  // --- Folder ---
-  // <-- BERUBAH: folder SEKARANG ikut di-mirror ke Firestore, sama
-  // pola-nya kayak SantriRecord (fire-and-forget, Hive tetap sumber
-  // kebenaran). Sebelumnya folder SENGAJA tidak di-mirror ("murni
-  // struktur organisasi guru, tidak relevan buat Portal Orang Tua") —
-  // tapi itu keliru: laporan (SantriRecord) tetap nyimpen `folderId`
-  // yang nunjuk ke folder ini, jadi kalau folder-nya sendiri tidak ikut
-  // ke-backup/restore, begitu data lokal hilang & dipulihkan dari
-  // Firestore, laporan lama balik dengan `folderId` yang nunjuk ke
-  // folder yang SUDAH TIDAK ADA lagi di HP. Efeknya: laporan itu
-  // disembunyikan dari daftar utama tab Laporan (dianggap "punya
-  // folder", lihat LaporanTab._filteredCards) TAPI juga tidak nongol di
-  // folder manapun (foldernya sendiri hilang) — laporan jadi kelihatan
-  // "hilang" padahal datanya aman di Hive (makanya Rekap Bulanan/
-  // Pekanan tetap rapi, karena baca semua record tanpa peduli folder).
+  // FOLDER
   List<ReportFolder> getAllFolders() {
     return _folderBox.values
-        .map((raw) => ReportFolder.fromJson(jsonDecode(raw) as Map<String, dynamic>))
+        .map(
+          (raw) => ReportFolder.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      ),
+    )
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
-  Future<void> upsertFolder(ReportFolder folder) async {
-    await _folderBox.put(folder.id, jsonEncode(folder.toJson()));
-    _mirrorFolderToFirestore(folder); // <-- BARU — fire-and-forget
+  Future<void> upsertFolder(
+      ReportFolder folder,
+      ) async {
+    await _folderBox.put(
+      folder.id,
+      jsonEncode(folder.toJson()),
+    );
+
+    _mirrorFolderToFirestore(folder);
   }
 
-  Future<void> deleteFolder(String folderId) async {
+  Future<void> deleteFolder(
+      String folderId,
+      ) async {
     await _folderBox.delete(folderId);
-    _mirrorFolderDeleteToFirestore(folderId); // <-- BARU
-    for (final r in getAll().where((r) => r.folderId == folderId)) {
-      await upsert(r.copyWith(clearFolder: true));
+
+    _mirrorFolderDeleteToFirestore(folderId);
+
+    for (final r in getAll().where(
+          (r) => r.folderId == folderId,
+    )) {
+      await upsert(
+        r.copyWith(
+          clearFolder: true,
+        ),
+      );
     }
   }
 
-  // <-- BARU: 2 method di bawah — mirror folder ke Firestore, pola sama
-  // persis dengan _mirrorToFirestore/_mirrorDeleteToFirestore milik
-  // SantriRecord (diam-diam gagal, Hive tetap sumber kebenaran, guru
-  // simpan/hapus folder tetap instan walau offline).
-  void _mirrorFolderToFirestore(ReportFolder folder) {
+  // FIRESTORE MIRROR FOLDER
+  void _mirrorFolderToFirestore(
+      ReportFolder folder,
+      ) {
     FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
@@ -101,7 +115,9 @@ class StorageService {
         .catchError((_) {});
   }
 
-  void _mirrorFolderDeleteToFirestore(String folderId) {
+  void _mirrorFolderDeleteToFirestore(
+      String folderId,
+      ) {
     FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
@@ -111,22 +127,22 @@ class StorageService {
         .catchError((_) {});
   }
 
-  // <-- BARU: 2 method di bawah semuanya baru. Sengaja "fire-and-forget"
-  // (tidak di-await pemanggilnya, tidak melempar exception) supaya guru
-  // simpan laporan TETAP INSTAN walau device offline/Firestore lagi
-  // bermasalah — laporan tetap aman di Hive, sync ke Firestore nyusul
-  // kapan saja koneksi ada.
-  void _mirrorToFirestore(SantriRecord record) {
+  // FIRESTORE MIRROR LAPORAN
+  void _mirrorToFirestore(
+      SantriRecord record,
+      ) {
     FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
         .collection('santriRecords')
         .doc(record.id)
         .set(record.toJson())
-        .catchError((_) {}); // diam-diam gagal, Hive tetap sumber kebenaran
+        .catchError((_) {});
   }
 
-  void _mirrorDeleteToFirestore(String id) {
+  void _mirrorDeleteToFirestore(
+      String id,
+      ) {
     FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
@@ -136,143 +152,174 @@ class StorageService {
         .catchError((_) {});
   }
 
-  // <-- BARU: seluruh method ini. Dorong SEMUA laporan yang ada di Hive
-  // ke Firestore sekaligus — dipakai tombol "Sinkronkan ke Cloud" di
-  // Pengaturan. Dibutuhkan khusus buat laporan LAMA yang dibuat SEBELUM
-  // mirror otomatis ([_mirrorToFirestore]) aktif, karena mirror itu
-  // cuma nempel di aksi upsert/delete BARU, bukan otomatis jalan buat
-  // data lama yang udah ada duluan di Hive.
-  //
-  // Pakai batched write (max 400 per batch, di bawah limit Firestore
-  // 500) biar aman buat ratusan/ribuan laporan sekaligus tanpa bikin
-  // ratusan network request terpisah. Beda dari mirror biasa, di sini
-  // SENGAJA di-throw kalau gagal (bukan fire-and-forget) — ini aksi
-  // manual yang guru tekan sendiri, jadi guru perlu tau kalau gagal,
-  // bukan diam-diam kayak upsert/delete harian.
+  // SINKRONKAN SEMUA KE FIRESTORE
   Future<int> syncAllToFirestore() async {
     final all = getAll();
+
     var success = 0;
+
     const batchSize = 400;
 
-    for (var i = 0; i < all.length; i += batchSize) {
-      final end = (i + batchSize > all.length) ? all.length : i + batchSize;
-      final chunk = all.sublist(i, end);
+    for (
+    var i = 0;
+    i < all.length;
+    i += batchSize
+    ) {
+      final end = (i + batchSize > all.length)
+          ? all.length
+          : i + batchSize;
+
+      final chunk = all.sublist(
+        i,
+        end,
+      );
+
       final batch = FirebaseFirestore.instance.batch();
+
       for (final record in chunk) {
         final ref = FirebaseFirestore.instance
             .collection('schools')
             .doc(kSchoolId)
             .collection('santriRecords')
             .doc(record.id);
-        batch.set(ref, record.toJson());
+
+        batch.set(
+          ref,
+          record.toJson(),
+        );
       }
-      await batch.commit(); // <-- kalau ini throw, caller yang nangkep
+
+      await batch.commit().timeout(
+        const Duration(seconds: 20),
+      );
+
       success += chunk.length;
     }
 
-    // <-- BARU: dorong juga SEMUA folder yang ada di Hive ke Firestore,
-    // dibutuhkan khusus buat folder LAMA yang dibuat SEBELUM mirror
-    // otomatis ([_mirrorFolderToFirestore]) aktif — sama alasannya kayak
-    // laporan lama di atas. Ditulis satu batch terpisah (jumlah folder
-    // biasanya jauh di bawah 400, jadi tidak perlu di-chunk).
+    // SINKRONKAN FOLDER
     final folders = getAllFolders();
+
     if (folders.isNotEmpty) {
-      final folderBatch = FirebaseFirestore.instance.batch();
+      final folderBatch =
+      FirebaseFirestore.instance.batch();
+
       for (final folder in folders) {
         final ref = FirebaseFirestore.instance
             .collection('schools')
             .doc(kSchoolId)
             .collection('reportFolders')
             .doc(folder.id);
-        folderBatch.set(ref, folder.toJson());
+
+        folderBatch.set(
+          ref,
+          folder.toJson(),
+        );
       }
-      await folderBatch.commit();
+
+      await folderBatch.commit().timeout(
+        const Duration(seconds: 20),
+      );
     }
 
     return success;
   }
 
-  // <-- BARU: seluruh method ini. Kebalikan dari [syncAllToFirestore] —
-  // tarik SEMUA laporan dari Firestore lalu tulis ke Hive lokal
-  // ("Pulihkan dari Cloud" di Pengaturan). Dibutuhkan buat kasus data
-  // lokal HILANG (HP/laptop baru, app di-uninstall lalu install ulang,
-  // atau — kalau app ini dipakai sebagai Web/PWA — cache browser/PWA-nya
-  // dibersihkan/di-uninstall dari Home Screen, yang di iOS Safari
-  // otomatis ngosongin local storage-nya).
-  //
-  // Ditulis LANGSUNG ke Hive (bukan lewat [upsert]) supaya tidak
-  // mancing balik _mirrorToFirestore() percuma (datanya kan memang baru
-  // ditarik DARI Firestore, tidak perlu dikirim balik).
-  //
-  // Strategi merge: kalau id yang sama juga ada di lokal, laporan yang
-  // EDITED-nya paling baru yang menang (bukan asal timpa dengan versi
-  // cloud) — supaya laporan yang barusan diedit offline (belum sempat
-  // ke-mirror ke cloud) tidak keburu ketiban versi cloud yang lebih lama.
-  // Laporan yang cuma ada di lokal (belum pernah tersinkron) TIDAK
-  // disentuh/dihapus sama sekali — restore ini murni "tambah/timpa yang
-  // lebih baru", bukan "ganti total".
+  // PULIHKAN LAPORAN DARI FIRESTORE
   Future<int> restoreFromFirestore() async {
     final snapshot = await FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
         .collection('santriRecords')
-        .get();
+        .get()
+        .timeout(
+      const Duration(seconds: 20),
+    );
 
     var restored = 0;
+
     for (final doc in snapshot.docs) {
       try {
-        final cloudRecord = SantriRecord.fromJson(doc.data());
-        final localRaw = _box.get(cloudRecord.id);
+        final cloudRecord =
+        SantriRecord.fromJson(doc.data());
+
+        final localRaw =
+        _box.get(cloudRecord.id);
+
         if (localRaw != null) {
-          final localRecord = SantriRecord.fromJson(jsonDecode(localRaw) as Map<String, dynamic>);
-          final localTime = localRecord.editedAt ?? localRecord.createdAt ?? localRecord.tanggal;
-          final cloudTime = cloudRecord.editedAt ?? cloudRecord.createdAt ?? cloudRecord.tanggal;
-          if (!cloudTime.isAfter(localTime)) continue; // lokal sudah sama/lebih baru, lewati
+          final localRecord =
+          SantriRecord.fromJson(
+            jsonDecode(localRaw)
+            as Map<String, dynamic>,
+          );
+
+          final localTime =
+              localRecord.editedAt ??
+                  localRecord.createdAt ??
+                  localRecord.tanggal;
+
+          final cloudTime =
+              cloudRecord.editedAt ??
+                  cloudRecord.createdAt ??
+                  cloudRecord.tanggal;
+
+          if (!cloudTime.isAfter(localTime)) {
+            continue;
+          }
         }
-        await _box.put(cloudRecord.id, jsonEncode(cloudRecord.toJson()));
+
+        await _box.put(
+          cloudRecord.id,
+          jsonEncode(
+            cloudRecord.toJson(),
+          ),
+        );
+
         restored++;
       } catch (_) {
-        // 1 dokumen korup/gagal parse tidak boleh gagalin restore
-        // dokumen-dokumen lain — lewati saja, lanjut ke berikutnya.
         continue;
       }
     }
+
     return restored;
   }
 
-  // <-- BARU: seluruh method ini. Kebalikan dari mirror folder —
-  // pulihkan semua folder dari Firestore ke Hive lokal. WAJIB dipanggil
-  // BARENGAN [restoreFromFirestore] (lihat SettingsScreen._restoreFromCloud)
-  // supaya laporan yang balik dari cloud punya folder "rumah" yang juga
-  // ikut balik — kalau cuma laporannya yang dipulihkan tanpa foldernya,
-  // laporan itu jadi nyangkut ke folderId yang tidak ada di HP (lihat
-  // catatan panjang di [getAllFolders]).
-  //
-  // Strategi merge: [ReportFolder] tidak punya `editedAt` (cuma
-  // `createdAt`, yang tidak berubah walau folder di-rename), jadi tidak
-  // ada cara aman untuk tahu versi mana yang "lebih baru" seperti pada
-  // SantriRecord. Supaya rename yang baru saja dilakukan offline (belum
-  // sempat ke-mirror) tidak keburu ketiban nama lama dari cloud, folder
-  // yang ID-nya SUDAH ADA di lokal TIDAK disentuh sama sekali — restore
-  // ini murni menambahkan folder yang hilang/belum ada, bukan menimpa.
+  // PULIHKAN FOLDER DARI FIRESTORE
   Future<int> restoreFoldersFromFirestore() async {
     final snapshot = await FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
         .collection('reportFolders')
-        .get();
+        .get()
+        .timeout(
+      const Duration(seconds: 20),
+    );
 
     var restored = 0;
+
     for (final doc in snapshot.docs) {
       try {
-        if (_folderBox.containsKey(doc.id)) continue; // lokal sudah ada, lewati
-        final cloudFolder = ReportFolder.fromJson(doc.data());
-        await _folderBox.put(cloudFolder.id, jsonEncode(cloudFolder.toJson()));
+        if (_folderBox.containsKey(doc.id)) {
+          continue;
+        }
+
+        final cloudFolder =
+        ReportFolder.fromJson(
+          doc.data(),
+        );
+
+        await _folderBox.put(
+          cloudFolder.id,
+          jsonEncode(
+            cloudFolder.toJson(),
+          ),
+        );
+
         restored++;
       } catch (_) {
         continue;
       }
     }
+
     return restored;
   }
 }

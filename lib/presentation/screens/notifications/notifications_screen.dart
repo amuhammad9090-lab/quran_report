@@ -10,10 +10,10 @@ import '../../widgets/misc_widgets.dart';
 /// lewat Portal Ortu secara live lewat [ParentNotesProvider], dan
 /// menandainya "sudah dibaca" begitu guru membuka/tap catatan itu.
 ///
-/// Swipe satu catatan atau tombol "Hapus semua" di header cuma
-/// nyembunyiin dari daftar guru INI secara lokal (lihat dokumentasi di
-/// AppPrefsService.dismissedParentNoteIds soal kenapa bukan delete
-/// beneran dari Firestore) -- persis notification tray Android: swipe
+/// Swipe satu catatan atau tombol "Hapus semua" di header cuma nandain
+/// field `dismissed` di Firestore (lihat dokumentasi lengkap di
+/// ParentNote.dismissed soal kenapa bukan delete dokumen beneran) --
+/// persis notification tray Android: swipe
 /// notif cuma bersihkan tray, chat aslinya tetap ada.
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});

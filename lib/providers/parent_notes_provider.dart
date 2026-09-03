@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import '../core/access/access_scope.dart';
 import '../core/utils/text_utils.dart';
 import '../data/models/parent_note.dart';
-import '../data/services/app_prefs_service.dart';
 import '../data/services/parent_note_service.dart';
 
 /// State notifikasi "Catatan dari Orang Tua" (bell icon di Home + halaman
@@ -31,36 +30,60 @@ class ParentNotesProvider extends ChangeNotifier {
 
   List<ParentNote> get notes {
     if (_scope == null) return const [];
-    final dismissed = AppPrefsService.instance.dismissedParentNoteIds;
     return _all
         .where((n) => _scope!.canAccessKelasHalaqoh(n.kelas, normalizeHalaqoh(n.halaqoh)))
-        .where((n) => !dismissed.contains(n.id))
+        .where((n) => !n.dismissed)
         .toList();
   }
 
   int get unreadCount => notes.where((n) => !n.isRead).length;
 
-  /// Sembunyikan satu catatan dari daftar (lokal doang, lihat dokumentasi
-  /// lengkap di [AppPrefsService.dismissedParentNoteIds]) -- dipakai
+  ParentNote _withFlags(ParentNote n, {bool? isRead, bool? dismissed}) => ParentNote(
+        id: n.id,
+        studentId: n.studentId,
+        namaAnak: n.namaAnak,
+        kelas: n.kelas,
+        halaqoh: n.halaqoh,
+        guruOwnerId: n.guruOwnerId,
+        message: n.message,
+        createdAt: n.createdAt,
+        isRead: isRead ?? n.isRead,
+        dismissed: dismissed ?? n.dismissed,
+      );
+
+  void _optimisticUpdate(String noteId, {bool? isRead, bool? dismissed}) {
+    _all = [
+      for (final n in _all)
+        if (n.id == noteId) _withFlags(n, isRead: isRead, dismissed: dismissed) else n,
+    ];
+    notifyListeners();
+  }
+
+  /// Sembunyikan satu catatan dari daftar Notifikasi -- update field
+  /// `dismissed` di Firestore (lihat dokumentasi lengkap di
+  /// [ParentNote.dismissed]), BUKAN delete dokumennya. Dipakai
   /// swipe-to-dismiss di [NotificationsScreen].
   Future<void> dismissNote(String noteId) async {
-    await AppPrefsService.instance.dismissParentNote(noteId);
-    notifyListeners();
+    _optimisticUpdate(noteId, dismissed: true);
+    await ParentNoteService.instance.setDismissed(noteId, true);
   }
 
   /// Kebalikan [dismissNote] -- dipakai tombol "Undo" di SnackBar abis
   /// swipe, biar swipe kepencet gak sengaja gampang dibatalkan.
   Future<void> undismissNote(String noteId) async {
-    await AppPrefsService.instance.undismissParentNote(noteId);
-    notifyListeners();
+    _optimisticUpdate(noteId, dismissed: false);
+    await ParentNoteService.instance.setDismissed(noteId, false);
   }
 
   /// "Hapus semua" -- sembunyikan seluruh catatan yang lagi tampil
-  /// (sudah discope) dari daftar guru ini sekaligus. Dipakai tombol
-  /// "Hapus semua" di header [NotificationsScreen].
+  /// (sudah discope) sekaligus. Dipakai tombol "Hapus semua" di header
+  /// [NotificationsScreen].
   Future<void> dismissAll() async {
-    await AppPrefsService.instance.dismissParentNotes(notes.map((n) => n.id));
-    notifyListeners();
+    final ids = notes.map((n) => n.id).toList();
+    for (final id in ids) {
+      _optimisticUpdate(id, dismissed: true);
+    }
+    await Future.wait(ids.map((id) => ParentNoteService.instance.setDismissed(id, true)));
   }
 
   /// Dipanggil sekali di startup (main.dart) — mulai dengar stream
@@ -99,24 +122,7 @@ class ParentNotesProvider extends ChangeNotifier {
     // nunggu round-trip Firestore — begitu stream `watchAll()` dapat
     // konfirmasi baliknya, list ini akan ketiban ulang otomatis dengan
     // data server (yang seharusnya sama).
-    _all = [
-      for (final n in _all)
-        if (n.id == note.id)
-          ParentNote(
-            id: n.id,
-            studentId: n.studentId,
-            namaAnak: n.namaAnak,
-            kelas: n.kelas,
-            halaqoh: n.halaqoh,
-            guruOwnerId: n.guruOwnerId,
-            message: n.message,
-            createdAt: n.createdAt,
-            isRead: true,
-          )
-        else
-          n,
-    ];
-    notifyListeners();
+    _optimisticUpdate(note.id, isRead: true);
     await ParentNoteService.instance.markAsRead(note.id);
   }
 
