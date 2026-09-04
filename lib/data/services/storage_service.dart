@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../core/access/access_scope.dart';
 import '../../core/utils/app_config.dart';
 import '../models/folder.dart';
 import '../models/santri_record.dart';
@@ -225,7 +226,17 @@ class StorageService {
   }
 
   // PULIHKAN LAPORAN DARI FIRESTORE
-  Future<int> restoreFromFirestore() async {
+  // <-- BERUBAH: nambah parameter [scope]. Sebelumnya fungsi ini narik
+  // SEMUA santriRecords satu sekolah tanpa filter, jadi device guru
+  // pembimbing X ikut nyimpen lokal punya guru Y/Z juga (cuma disembunyiin
+  // di level tampilan lewat AccessScope.scopeRecords() pas render list) —
+  // akibatnya notifikasi/snackbar yang baca langsung dari local box tanpa
+  // lewat scopeRecords() bisa "nyampur" nunjukin punya guru lain. Sekarang
+  // record yang kelas+halaqoh-nya bukan tanggung jawab [scope] di-skip
+  // dari SUMBERNYA, gak pernah nyampe ditulis ke local storage device ini
+  // sama sekali. [scope] null (mis. gagal load user) -> fallback ke
+  // perilaku lama (semua record) daripada restore diam-diam kosong.
+  Future<int> restoreFromFirestore({AccessScope? scope}) async {
     final snapshot = await FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
@@ -241,6 +252,10 @@ class StorageService {
       try {
         final cloudRecord =
         SantriRecord.fromJson(doc.data());
+
+        if (scope != null && !scope.canAccessRecord(cloudRecord)) {
+          continue;
+        }
 
         final localRaw =
         _box.get(cloudRecord.id);

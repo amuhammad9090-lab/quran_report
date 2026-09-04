@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/theme_provider.dart';
+import '../../../providers/auth_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
 import '../../../providers/folders_provider.dart'; // <-- BARU
 import '../../../data/services/storage_service.dart';
@@ -219,8 +220,13 @@ class SettingsScreen extends StatelessWidget {
       // sebelum RecordsProvider/FoldersProvider di-reload, supaya laporan
       // itu langsung ketemu folder "rumah"-nya begitu tab Laporan
       // ke-render (tidak sempat kelihatan "hilang" walau cuma sekejap).
+      // <-- BERUBAH: pass scope guru yang lagi login, biar restore cuma
+      // narik record kelas+halaqoh yang emang tanggung jawabnya (lihat
+      // catatan lengkap di StorageService.restoreFromFirestore).
+      final scope = context.read<AuthProvider>().scope;
       await StorageService.instance.restoreFoldersFromFirestore();
-      final count = await StorageService.instance.restoreFromFirestore();
+      final count =
+          await StorageService.instance.restoreFromFirestore(scope: scope);
       // Metadata kartu kosong (identitas yang diaktifkan tapi belum ada
       // laporannya) ikut dipulihkan juga — lihat catatan lengkapnya di
       // AppPrefsService.restoreActivatedMetaFromFirestore soal kenapa ini
