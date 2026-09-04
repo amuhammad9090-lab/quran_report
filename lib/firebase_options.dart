@@ -39,6 +39,7 @@ class DefaultFirebaseOptions {
     projectId: 'quran-reportweb',
     storageBucket: 'quran-reportweb.firebasestorage.app',
   );
+
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBB0uR2q8_nfldRT6_yYnqR1m-ZUdqCFbw',
     appId: '1:110737865436:web:ca09856908c942ffdb9219',
