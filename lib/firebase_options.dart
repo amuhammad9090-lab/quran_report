@@ -33,46 +33,46 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDs1M0fxMZLh0hL2sLXsSicgHzohHbe344',
-    appId: '1:110737865436:android:e4264999f8f45e1bdb9219',
-    messagingSenderId: '110737865436',
-    projectId: 'quran-reportweb',
-    storageBucket: 'quran-reportweb.firebasestorage.app',
+    apiKey: 'AIzaSyBConv1P4QyHxEYNij4AkgYmA7kI63ma7g',
+    appId: '1:665962415231:android:7096f42eea903da972ab4a',
+    messagingSenderId: '665962415231',
+    projectId: 'quran-report',
+    storageBucket: 'quran-report.firebasestorage.app',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBB0uR2q8_nfldRT6_yYnqR1m-ZUdqCFbw',
-    appId: '1:110737865436:web:ca09856908c942ffdb9219',
-    messagingSenderId: '110737865436',
-    projectId: 'quran-reportweb',
-    authDomain: 'quran-reportweb.firebaseapp.com',
-    storageBucket: 'quran-reportweb.firebasestorage.app',
+    apiKey: 'AIzaSyCF6B7XiuLVgdN9sAXseD2V6VGUe1Ep1Rw',
+    appId: '1:665962415231:web:2d25b7857107294472ab4a',
+    messagingSenderId: '665962415231',
+    projectId: 'quran-report',
+    authDomain: 'quran-report.firebaseapp.com',
+    storageBucket: 'quran-report.firebasestorage.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBp_8BTMyJHbbeHNlrxCcwmYwvevUmEV_I',
-    appId: '1:110737865436:ios:36570d41f5a8d3fcdb9219',
-    messagingSenderId: '110737865436',
-    projectId: 'quran-reportweb',
-    storageBucket: 'quran-reportweb.firebasestorage.app',
+    apiKey: 'AIzaSyArAfIbTJnvpb5W0sQBxS_GyqypHEKIBE4',
+    appId: '1:665962415231:ios:3d4420668a72459272ab4a',
+    messagingSenderId: '665962415231',
+    projectId: 'quran-report',
+    storageBucket: 'quran-report.firebasestorage.app',
     iosBundleId: 'com.mirailabs.quranReport',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBp_8BTMyJHbbeHNlrxCcwmYwvevUmEV_I',
-    appId: '1:110737865436:ios:36570d41f5a8d3fcdb9219',
-    messagingSenderId: '110737865436',
-    projectId: 'quran-reportweb',
-    storageBucket: 'quran-reportweb.firebasestorage.app',
+    apiKey: 'AIzaSyArAfIbTJnvpb5W0sQBxS_GyqypHEKIBE4',
+    appId: '1:665962415231:ios:3d4420668a72459272ab4a',
+    messagingSenderId: '665962415231',
+    projectId: 'quran-report',
+    storageBucket: 'quran-report.firebasestorage.app',
     iosBundleId: 'com.mirailabs.quranReport',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBB0uR2q8_nfldRT6_yYnqR1m-ZUdqCFbw',
-    appId: '1:110737865436:web:4a0cfeeead97bd53db9219',
-    messagingSenderId: '110737865436',
-    projectId: 'quran-reportweb',
-    authDomain: 'quran-reportweb.firebaseapp.com',
-    storageBucket: 'quran-reportweb.firebasestorage.app',
+    apiKey: 'AIzaSyCF6B7XiuLVgdN9sAXseD2V6VGUe1Ep1Rw',
+    appId: '1:665962415231:web:09e8ca222834bcd872ab4a',
+    messagingSenderId: '665962415231',
+    projectId: 'quran-report',
+    authDomain: 'quran-report.firebaseapp.com',
+    storageBucket: 'quran-report.firebasestorage.app',
   );
 }

@@ -616,7 +616,7 @@ class _LaporanTabState extends State<LaporanTab> {
         content: Text(
           jumlahSantri > 0
               ? 'Folder ini berisi laporan $jumlahSantri santri. Semua laporan di '
-              'dalamnya akan ikut TERHAPUS PERMANEN dan tidak bisa dikembalikan.'
+                  'dalamnya akan ikut TERHAPUS PERMANEN dan tidak bisa dikembalikan.'
               : 'Folder ini kosong dan akan dihapus.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),

@@ -50,10 +50,10 @@ Future<void> shareExportedFile(ExportedFile file, {String? subject}) async {
 }
 
 Future<void> saveExportedFileToDevice(
-    ExportedFile file, {
-      required String filename,
-      required String ext,
-    }) async {
+  ExportedFile file, {
+  required String filename,
+  required String ext,
+}) async {
   _downloadBlob(file.bytes, '$filename.$ext');
 }
 

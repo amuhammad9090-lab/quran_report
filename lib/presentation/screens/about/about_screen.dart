@@ -27,10 +27,6 @@ class AboutScreen extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Sengaja TANPA kotak/latar tambahan — aset app_icon.png
-                        // sendiri sudah squircle hijau lengkap, dibungkus kartu
-                        // putih lagi cuma bikin kelihatan double-box (lihat juga
-                        // Login/Splash/Onboarding yang sudah polos begini).
                         const AppIconMark(size: 76, borderRadius: 18),
                         const SizedBox(width: 14),
                         Container(height: 44, width: 1, color: cs.outlineVariant),
@@ -111,7 +107,7 @@ class AboutScreen extends StatelessWidget {
                         const _InfoRow(
                           icon: Icons.memory_rounded,
                           label: 'Technology',
-                          value: 'Flutter • Dart • Provider • Hive',
+                          value: 'Flutter • Dart • Provider • Hive • Firebase',
                         ),
                         _rowDivider(context),
                         const _InfoRow(
@@ -131,9 +127,6 @@ class AboutScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  // Footer penutup — dirapikan jadi satu grup dengan ritme spacing
-                  // presisi (10 / 6 / 6 / 14), baris copyright & credit digabung
-                  // satu baris biar nggak dempet dan nggak dobel-center.
                   Center(
                     child: Column(
                       children: [

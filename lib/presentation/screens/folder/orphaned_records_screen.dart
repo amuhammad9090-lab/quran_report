@@ -224,12 +224,12 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
                   trailing: cards.isEmpty
                       ? null
                       : IconButton(
-                    onPressed: _toggleSelectionMode,
-                    icon: Icon(
-                      _selectionMode ? Icons.close_rounded : Icons.checklist_rounded,
-                    ),
-                    tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa kartu',
-                  ),
+                          onPressed: _toggleSelectionMode,
+                          icon: Icon(
+                            _selectionMode ? Icons.close_rounded : Icons.checklist_rounded,
+                          ),
+                          tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa kartu',
+                        ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
@@ -249,8 +249,8 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
                           Expanded(
                             child: Text(
                               'Laporan kartu-kartu ini masih aman tersimpan, tapi folder '
-                                  'tujuannya sudah tidak ada lagi. Pindahkan ke folder lain, '
-                                  'atau keluarkan dari folder supaya muncul lagi di daftar Laporan.',
+                              'tujuannya sudah tidak ada lagi. Pindahkan ke folder lain, '
+                              'atau keluarkan dari folder supaya muncul lagi di daftar Laporan.',
                               style: TextStyle(
                                 fontSize: 12.5,
                                 height: 1.4,
