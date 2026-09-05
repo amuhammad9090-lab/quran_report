@@ -101,9 +101,10 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
       if (!context.mounted) return;
     }
     if (!context.mounted) return;
+    final ctx = context;
     _exitSelectionMode();
     showAppSnackbar(
-      context,
+      ctx,
       '$count kartu dikeluarkan dari folder',
       icon: Icons.folder_off_outlined,
       onFabVisibilityChanged: widget.onFabVisibilityChanged,

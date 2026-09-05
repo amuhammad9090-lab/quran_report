@@ -1,6 +1,10 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
 // dart:html dipakai dengan sengaja di sini (bukan lupa migrasi) — lihat
 // catatan di file_actions.dart soal kapan ini perlu diganti package:web.
+// File ini HANYA pernah dikompilasi untuk target web (lewat conditional
+// import `file_actions_web.dart` di file_actions.dart, pola yang sama
+// dengan profile_photo_backend_*.dart) — linter tidak tahu itu, makanya
+// warning `avoid_web_libraries_in_flutter` di sini false-positive.
 import 'dart:html' as html;
 import 'dart:typed_data';
 
@@ -46,10 +50,10 @@ Future<void> shareExportedFile(ExportedFile file, {String? subject}) async {
 }
 
 Future<void> saveExportedFileToDevice(
-  ExportedFile file, {
-  required String filename,
-  required String ext,
-}) async {
+    ExportedFile file, {
+      required String filename,
+      required String ext,
+    }) async {
   _downloadBlob(file.bytes, '$filename.$ext');
 }
 
