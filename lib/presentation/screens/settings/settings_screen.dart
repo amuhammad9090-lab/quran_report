@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/theme_provider.dart';
-import '../../../providers/auth_provider.dart'; //
+import '../../../providers/auth_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
-import '../../../providers/folders_provider.dart';
+import '../../../providers/folders_provider.dart'; // <-- BARU
 import '../../../data/services/storage_service.dart';
-import '../../../data/services/app_prefs_service.dart';
+import '../../../data/services/app_prefs_service.dart'; // <-- BARU
 import '../../widgets/misc_widgets.dart';
 import '../about/about_screen.dart';
 
@@ -138,16 +138,26 @@ class SettingsScreen extends StatelessWidget {
     // Dialog loading tak-tertutup (barrierDismissible: false) — sengaja,
     // biar guru gak nge-tap-tap lagi selagi proses jalan (bisa makan
     // beberapa detik kalau laporannya ratusan).
+    // <-- BERUBAH: dibungkus PopScope(canPop: false) — barrierDismissible:
+    // false SEBELUMNYA cuma nyegah tap di luar dialog, TIDAK nyegah
+    // tombol back Android. Kalau koneksi lambat & user pencet back
+    // sambil nunggu, dialog ini ke-dismiss duluan; begitu proses akhirnya
+    // selesai, `Navigator.pop()` di bawah malah nutup LAYAR SETTINGS
+    // (karena dialognya udah gak ada), bikin layar jadi blank. PopScope
+    // ini yang nutup celah itu.
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
-            SizedBox(width: 16),
-            Expanded(child: Text('Menyinkronkan laporan...')),
-          ],
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
+              SizedBox(width: 16),
+              Expanded(child: Text('Menyinkronkan laporan...')),
+            ],
+          ),
         ),
       ),
     );
@@ -199,16 +209,22 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _restoreFromCloud(BuildContext context) async {
+    // <-- BERUBAH: sama seperti _syncToCloud — PopScope(canPop: false)
+    // biar tombol back Android gak bisa dismiss dialog ini di tengah
+    // proses (lihat catatan lengkap di _syncToCloud).
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
-            SizedBox(width: 16),
-            Expanded(child: Text('Memulihkan laporan...')),
-          ],
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
+              SizedBox(width: 16),
+              Expanded(child: Text('Memulihkan laporan...')),
+            ],
+          ),
         ),
       ),
     );

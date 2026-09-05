@@ -105,8 +105,8 @@ class NotificationsScreen extends StatelessWidget {
                           child: Dismissible(
                             key: ValueKey(n.id),
                             direction: DismissDirection.horizontal,
-                            background: _SwipeBackground(alignment: Alignment.centerLeft),
-                            secondaryBackground: _SwipeBackground(alignment: Alignment.centerRight),
+                            background: const _SwipeBackground(alignment: Alignment.centerLeft),
+                            secondaryBackground: const _SwipeBackground(alignment: Alignment.centerRight),
                             onDismissed: (_) => _dismissWithUndo(context, n),
                             child: _ParentNoteTile(note: n),
                           ),
