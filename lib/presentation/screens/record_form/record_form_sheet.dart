@@ -163,13 +163,13 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
 
   final _catatanCtrl = TextEditingController();
 
-  // Admin yang JUGA guru pembimbing (punya assignment sendiri): defaultnya
-  // dibatasi ke kelas/halaqoh miliknya sendiri (sama seperti guru
-  // pembimbing biasa) — toggle ini yang membuka opsi "lihat semua kelas"
-  // kalau memang perlu input laporan di luar kelasnya sendiri sebagai
-  // admin. Cuma relevan/ditampilkan kalau scope.isAdmin && punya
-  // assignment sendiri.
-  bool _adminBrowseAll = false;
+  // <-- BERUBAH: dulu ada toggle LOKAL "_adminBrowseAll" di sheet ini
+  // (admin yang JUGA guru pembimbing defaultnya dibatasi ke assignment
+  // sendiri kecuali toggle ini diaktifkan). Sekarang diganti pakai toggle
+  // GLOBAL "Mode Admin" di Profil (lihat AccessScope.adminModeActive &
+  // AuthProvider.setAdminModeActive) — satu switch yang sama ngatur form
+  // ini, folder, DAN statistik sekaligus, bukan per-sheet lagi. Lihat
+  // `_restrictToOwn` di bawah: sekarang langsung baca `scope.isAdmin`.
 
   // Dipakai supaya warning "bukan kelas/halaqoh Anda sendiri" nggak
   // nongol berulang-ulang tiap rebuild buat kombinasi kelas+halaqoh yang
@@ -302,23 +302,19 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
 
   bool get _hasOwnAssignments => (_scope?.user.assignments ?? const []).isNotEmpty;
 
-  /// Admin yang JUGA punya assignment sendiri: default dibatasi ke
-  /// assignment-nya sendiri (sama seperti guru pembimbing biasa), kecuali
-  /// mode "lihat semua kelas" diaktifkan. Admin TANPA assignment sendiri
-  /// (murni admin) selalu nggak dibatasi (karena nggak ada "kelas
-  /// sendiri" yang bisa jadi default). Guru pembimbing biasa (bukan
-  /// admin) selalu dibatasi.
+  /// <-- BERUBAH: dulu admin-dengan-assignment-sendiri defaultnya
+  /// dibatasi (perlu toggle LOKAL "_adminBrowseAll" buat buka semua
+  /// kelas). Sekarang `scope.isAdmin` SUDAH mempertimbangkan toggle
+  /// GLOBAL "Mode Admin" di Profil (lihat AccessScope.adminModeActive) —
+  /// jadi begitu Mode Admin aktif, form ini otomatis nggak dibatasi,
+  /// gak perlu toggle terpisah lagi di sini. Guru pembimbing biasa
+  /// (bukan admin) & admin yang Mode Admin-nya lagi nonaktif tetap
+  /// selalu dibatasi ke assignment sendiri.
   bool get _restrictToOwn {
     final scope = _scope;
     if (scope == null) return false;
     if (!_hasOwnAssignments) return false;
-    if (scope.isAdmin) return !_adminBrowseAll;
-    return true;
-  }
-
-  bool get _showAdminBrowseToggle {
-    final scope = _scope;
-    return scope != null && scope.isAdmin && _hasOwnAssignments;
+    return !scope.isAdmin;
   }
 
   List<String> _kelasOptions() {
@@ -422,21 +418,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     if (_nama != null && !validNama.contains(_nama)) {
       setState(() => _nama = null);
     }
-  }
-
-  void _setAdminBrowseAll(bool value) {
-    setState(() => _adminBrowseAll = value);
-    final validKelas = _kelasOptions();
-    if (_kelas != null && !validKelas.contains(_kelas)) {
-      setState(() => _kelas = null);
-    }
-    final validHalaqoh = _halaqohOptions();
-    if (_halaqoh != null && !validHalaqoh.contains(_halaqoh)) {
-      setState(() => _halaqoh = null);
-    }
-    _resyncNamaIfInvalid();
-    _maybeWarnOwnership();
-    _markEditedAndScheduleDraftSave();
   }
 
   /// Kalau kelas+halaqoh yang lagi dipilih BUKAN salah satu assignment
@@ -1068,10 +1049,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                               icon: Icons.badge_outlined,
                               child: Column(
                                 children: [
-                                  if (_showAdminBrowseToggle) ...[
-                                    _buildAdminBrowseToggle(cs),
-                                    const SizedBox(height: 12),
-                                  ],
                                   Row(
                                     children: [
                                       Expanded(
@@ -1277,46 +1254,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAdminBrowseToggle(ColorScheme cs) {
-    final active = _adminBrowseAll;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => _setAdminBrowseAll(!active),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: active
-              ? cs.primary.withValues(alpha: 0.12)
-              : cs.surfaceContainerHighest.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.admin_panel_settings_outlined,
-                size: 18, color: active ? cs.primary : cs.onSurfaceVariant),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                active
-                    ? 'Mode Admin aktif — semua kelas & halaqoh bisa dipilih'
-                    : 'Default: kelas & halaqoh Anda sendiri saja',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: active ? cs.primary : cs.onSurfaceVariant,
-                ),
-              ),
-            ),
-            Switch(
-              value: active,
-              onChanged: _setAdminBrowseAll,
-            ),
-          ],
-        ),
       ),
     );
   }

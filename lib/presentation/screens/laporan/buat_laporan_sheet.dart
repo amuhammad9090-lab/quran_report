@@ -57,9 +57,10 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
   String? _namaError;
   bool _saving = false;
 
-  // Sama seperti RecordFormSheet: admin yang JUGA punya assignment sendiri
-  // defaultnya dibatasi ke assignment-nya sendiri dulu.
-  bool _adminBrowseAll = false;
+  // <-- BERUBAH: dulu toggle LOKAL "_adminBrowseAll" di sheet ini. Sekarang
+  // pakai toggle GLOBAL "Mode Admin" di Profil (lihat
+  // AccessScope.adminModeActive & AuthProvider.setAdminModeActive) — lihat
+  // catatan lengkap di RecordFormSheet._restrictToOwn (pola sama persis).
 
   AccessScope? get _scope => context.read<RecordsProvider>().scope;
   bool get _hasOwnAssignments => (_scope?.user.assignments ?? const []).isNotEmpty;
@@ -68,13 +69,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
     final scope = _scope;
     if (scope == null) return false;
     if (!_hasOwnAssignments) return false;
-    if (scope.isAdmin) return !_adminBrowseAll;
-    return true;
-  }
-
-  bool get _showAdminBrowseToggle {
-    final scope = _scope;
-    return scope != null && scope.isAdmin && _hasOwnAssignments;
+    return !scope.isAdmin;
   }
 
   List<String> _kelasOptions() {
@@ -152,19 +147,6 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
     if (_nama != null && !validNama.contains(_nama)) {
       setState(() => _nama = null);
     }
-  }
-
-  void _setAdminBrowseAll(bool value) {
-    setState(() => _adminBrowseAll = value);
-    final validKelas = _kelasOptions();
-    if (_kelas != null && !validKelas.contains(_kelas)) {
-      setState(() => _kelas = null);
-    }
-    final validHalaqoh = _halaqohOptions();
-    if (_halaqoh != null && !validHalaqoh.contains(_halaqoh)) {
-      setState(() => _halaqoh = null);
-    }
-    _resyncNamaIfInvalid();
   }
 
   Future<void> _submit() async {
@@ -273,18 +255,6 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5),
             ),
             const SizedBox(height: 18),
-            if (_showAdminBrowseToggle) ...[
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Lihat semua kelas', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                subtitle: const Text('Sebagai admin, tidak dibatasi ke kelas/halaqoh sendiri',
-                    style: TextStyle(fontSize: 11.5)),
-                value: _adminBrowseAll,
-                onChanged: _setAdminBrowseAll,
-              ),
-              const SizedBox(height: 6),
-            ],
             Row(
               children: [
                 Expanded(

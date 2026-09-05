@@ -66,12 +66,21 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
 
   bool get _hasOwnAssignments => (_scope?.user.assignments ?? const []).isNotEmpty;
 
-  /// Sama seperti di form laporan: kalau user (guru pembimbing, atau admin
-  /// yang juga punya assignment sendiri) punya kelas/halaqoh sendiri,
-  /// opsi dibatasi ke situ saja. Admin murni (tanpa assignment sendiri)
-  /// nggak dibatasi — folder memang alat organisasi, admin boleh bikin
-  /// folder untuk kelas manapun.
-  bool get _restrictToOwn => _scope != null && _hasOwnAssignments;
+  /// <-- BERUBAH: dulu admin yang JUGA punya assignment sendiri SELALU
+  /// dibatasi ke kelas/halaqoh sendiri di sini (gak pernah bisa bikin
+  /// folder buat kelas lain walau admin) — beda sendiri dari form
+  /// laporan yang sudah punya jalan keluarnya. Sekarang disamain: kalau
+  /// toggle GLOBAL "Mode Admin" di Profil aktif (`scope.isAdmin`, lihat
+  /// AccessScope.adminModeActive), admin dengan assignment sendiri pun
+  /// bisa bikin folder untuk kelas manapun, sama seperti admin murni.
+  /// Guru pembimbing biasa (bukan admin) & admin yang Mode Admin-nya
+  /// nonaktif tetap dibatasi ke assignment sendiri.
+  bool get _restrictToOwn {
+    final scope = _scope;
+    if (scope == null) return false;
+    if (!_hasOwnAssignments) return false;
+    return !scope.isAdmin;
+  }
 
   List<String> _kelasOptions() {
     final scope = _scope;

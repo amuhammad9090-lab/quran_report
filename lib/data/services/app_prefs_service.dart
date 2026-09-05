@@ -25,6 +25,7 @@ class AppPrefsService {
   static const _keyActivatedIdentityDisplay = 'activated_report_identity_display';
   static const _keyPasswordOverrides = 'password_overrides';
   static const _keyDownloadNotifPaths = 'download_notif_paths';
+  static const _keyAdminModeActive = 'admin_mode_active'; // <-- BARU
 
   late Box<String> _box;
 
@@ -46,6 +47,18 @@ class AppPrefsService {
 
   Future<void> clearSession() async {
     await _box.delete(_keySessionUserId);
+  }
+
+  // <-- BARU: toggle "Mode Admin" global di Profil (lihat AccessScope &
+  // AuthProvider.setAdminModeActive). Disimpan PER DEVICE (bukan per akun
+  // di Firestore) — konsisten dengan `sessionUserId` yang juga per device.
+  // Default true (nilai lama sebelum fitur ini ada = admin selalu bypass
+  // semua scope), jadi upgrade dari versi lama tidak mendadak
+  // "mengunci" admin ke assignment sendiri tanpa dia sadar.
+  bool get adminModeActive => _box.get(_keyAdminModeActive) != 'false';
+
+  Future<void> setAdminModeActive(bool value) async {
+    await _box.put(_keyAdminModeActive, value ? 'true' : 'false');
   }
 
   // --- Draft form "Laporan Baru" ---

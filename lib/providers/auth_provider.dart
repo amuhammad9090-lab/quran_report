@@ -29,6 +29,11 @@ class AuthProvider extends ChangeNotifier {
   bool _loggingIn = false;
   String? _error;
   List<UserAccount> _allAccounts = [];
+  // <-- BARU: lihat AccessScope.adminModeActive & setAdminModeActive di
+  // bawah. Cuma relevan buat akun isAdmin==true, tapi disimpan lepas
+  // dari user (per device) biar gampang di-load duluan sebelum tau siapa
+  // yang login.
+  bool _adminModeActive = true;
 
   UserAccount? get currentUser => _currentUser;
   School? get currentSchool => _currentSchool;
@@ -43,13 +48,34 @@ class AuthProvider extends ChangeNotifier {
 
   /// Null kalau belum login. Dipakai provider lain (mis. RecordsProvider)
   /// buat nge-scope data — lihat catatan di [AccessScope].
-  AccessScope? get scope => _currentUser == null ? null : AccessScope(_currentUser!);
+  AccessScope? get scope => _currentUser == null
+      ? null
+      : AccessScope(_currentUser!, adminModeActive: _adminModeActive);
+
+  /// <-- BARU. Cuma benar-benar berarti kalau [currentUser.isAdmin] true
+  /// (lihat [AccessScope.adminModeActive]) — tapi tetap disediakan
+  /// walaupun user bukan admin (return apa adanya) supaya ProfileScreen
+  /// tidak perlu null-check khusus.
+  bool get adminModeActive => _adminModeActive;
+
+  /// <-- BARU. Toggle "Mode Admin" dari Profil. TIDAK memanggil
+  /// `updateScope()` provider lain (RecordsProvider/ParentNotesProvider)
+  /// sendiri — sengaja dibiarkan eksplisit dari pemanggil (lihat pola
+  /// yang sama di LoginScreen/ProfileScreen), supaya AuthProvider tetap
+  /// independen dari provider lain.
+  Future<void> setAdminModeActive(bool value) async {
+    if (_adminModeActive == value) return;
+    _adminModeActive = value;
+    await AppPrefsService.instance.setAdminModeActive(value);
+    notifyListeners();
+  }
 
   /// Dipanggil sekali di startup (sebelum runApp, sama seperti provider
   /// lain di project ini) — coba pulihkan session dari [AppPrefsService]
   /// supaya user tidak perlu login ulang tiap buka app.
   Future<void> restoreSession() async {
     _restoring = true;
+    _adminModeActive = AppPrefsService.instance.adminModeActive;
     _allAccounts = await _authRepo.allAccounts();
     final userId = AppPrefsService.instance.sessionUserId;
     if (userId != null) {

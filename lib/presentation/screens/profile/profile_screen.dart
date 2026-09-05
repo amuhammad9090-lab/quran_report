@@ -73,6 +73,15 @@ class ProfileScreen extends StatelessWidget {
     }
 
     final accessibleStudents = studentsProvider.accessibleFor(auth.scope);
+    // <-- BARU: beda dari `user.isAdmin` (identitas akun, tidak pernah
+    // berubah) — ini status EFEKTIF saat ini, mempertimbangkan toggle
+    // "Mode Admin" (lihat AccessScope.adminModeActive). Dipakai buat
+    // section yang nunjukin CAKUPAN AKSES SAAT INI (Ringkasan Global vs
+    // Assignment Saya, daftar kelas/halaqoh) — beda dari toggle card itu
+    // sendiri (baris di bawah) yang sengaja tetap baca `user.isAdmin`
+    // mentah, soalnya toggle itu harus tetap muncul buat admin walau
+    // lagi dia nonaktifkan.
+    final isEffectivelyAdmin = auth.scope?.isAdmin ?? false;
     // Kalau data master santri untuk assignment ini kosong (belum
     // diimpor), fallback ke jumlah santri unik dari riwayat laporan biar
     // angkanya tetap masuk akal, bukan 0 yang menyesatkan.
@@ -148,7 +157,7 @@ class ProfileScreen extends StatelessWidget {
                             label: auth.currentSchool?.name ?? '-',
                             sub: auth.currentSchool?.city,
                           ),
-                          if (!user.isAdmin) ...[
+                          if (!isEffectivelyAdmin) ...[
                             if (user.assignments.isEmpty)
                               const Column(
                                 children: [
@@ -182,7 +191,48 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  SectionLabel(user.isAdmin ? 'Ringkasan Global' : 'Ringkasan Assignment Saya'),
+                  // <-- BARU: toggle "Mode Admin" global. Cuma relevan buat
+                  // akun isAdmin (admin TANPA hak ini tidak pernah lihat
+                  // kartu ini sama sekali) — lihat AccessScope.adminModeActive
+                  // & AuthProvider.setAdminModeActive kenapa ini dibutuhkan:
+                  // admin yang JUGA guru pembimbing (punya assignment
+                  // sendiri) butuh cara cepat "fokus ke kelas sendiri"
+                  // tanpa logout-login akun beda.
+                  if (user.isAdmin) ...[
+                    Card(
+                      child: SwitchListTile.adaptive(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        secondary: Icon(
+                          auth.adminModeActive
+                              ? Icons.admin_panel_settings_rounded
+                              : Icons.admin_panel_settings_outlined,
+                          color: auth.adminModeActive ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                        title: const Text('Mode Admin',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Text(
+                          auth.adminModeActive
+                              ? 'Aktif — akses semua kelas & halaqoh (form laporan, folder, statistik)'
+                              : 'Nonaktif — hanya kelas/halaqoh yang Anda ampu sendiri',
+                          style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
+                        ),
+                        value: auth.adminModeActive,
+                        onChanged: (value) async {
+                          await auth.setAdminModeActive(value);
+                          if (!context.mounted) return;
+                          // Sama pola kayak _logout(): provider lain yang
+                          // baca AccessScope butuh dikasih tau eksplisit,
+                          // AuthProvider sengaja tidak mengurus provider
+                          // lain sendiri.
+                          context.read<RecordsProvider>().updateScope(auth.scope);
+                          context.read<ParentNotesProvider>().updateScope(auth.scope);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  SectionLabel(
+                      isEffectivelyAdmin ? 'Ringkasan Global' : 'Ringkasan Assignment Saya'),
                   Row(
                     children: [
                       Expanded(

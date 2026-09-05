@@ -23,11 +23,25 @@ import '../../data/models/user_account.dart';
 /// `ownerId`/`studentId`. Field `ownerId` yang ditambahkan ke
 /// [SantriRecord] tetap dipertahankan untuk keperluan audit/masa depan,
 /// tapi BUKAN dasar keputusan akses saat ini.
+///
+/// <-- BARU: [adminModeActive]. Akun admin yang JUGA guru pembimbing
+/// (punya [UserAccount.assignments] sendiri) sekarang bisa "matiin" akses
+/// globalnya lewat toggle "Mode Admin" di Profil (lihat ProfileScreen &
+/// AuthProvider.setAdminModeActive) — dipakai pas admin itu lagi mau
+/// kerja SEBAGAI guru pembimbing biasa (fokus cuma ke kelas/halaqoh
+/// sendiri di form/folder/statistik), tanpa harus logout-login akun
+/// beda. [user.isAdmin] TETAP true (identitas akun tidak berubah), yang
+/// berubah cuma [isAdmin] getter di bawah ini (dipakai SEMUA pengecekan
+/// akses) jadi ikut mempertimbangkan toggle ini. Default true supaya
+/// admin TANPA assignment sendiri (murni admin, gak punya kelas/halaqoh
+/// pribadi) tidak keneemu kesulitan tidak sengaja "mematikan" akses
+/// globalnya sendiri sampai tidak bisa lihat apa-apa.
 class AccessScope {
   final UserAccount user;
-  const AccessScope(this.user);
+  final bool adminModeActive;
+  const AccessScope(this.user, {this.adminModeActive = true});
 
-  bool get isAdmin => user.isAdmin;
+  bool get isAdmin => user.isAdmin && adminModeActive;
 
   bool canAccessKelasHalaqoh(String kelas, String halaqoh) {
     if (isAdmin) return true;
