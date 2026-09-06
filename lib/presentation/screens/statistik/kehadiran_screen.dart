@@ -24,9 +24,6 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // select: `allSortedByDateDesc` sekarang di-cache stabil per
-    // _dataVersion, jadi halaman ini nggak ikut rebuild waktu ada
-    // notifyListeners dari filter/search di layar lain.
     final all = context.select<RecordsProvider, List<SantriRecord>>(
       (p) => p.allSortedByDateDesc,
     );

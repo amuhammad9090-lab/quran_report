@@ -9,10 +9,6 @@ import '../../widgets/misc_widgets.dart';
 /// Tahap 1 alur "Buat Laporan" (lihat spesifikasi perubahan Laporan &
 /// Statistik, bagian 1): form IDENTITAS SAJA (Kelas → Halaqoh → Nama
 /// Santri) — SENGAJA tidak menanyakan capaian/tahfizh/tahsin/dst di sini.
-/// Begitu identitas disimpan, 1 kartu santri langsung muncul di tab
-/// Laporan (lihat [RecordsProvider.laporanCards]); capaian pekanan diisi
-/// belakangan lewat kartu itu (tap kartu -> Bottom Sheet "Laporan Baru"
-/// yang sudah ada, tidak dibuat ulang).
 Future<void> showBuatLaporanSheet(
   BuildContext context, {
   String? folderId,
@@ -33,14 +29,7 @@ Future<void> showBuatLaporanSheet(
 }
 
 class BuatLaporanSheet extends StatefulWidget {
-  /// Diisi kalau sheet ini dibuka dari dalam [FolderDetailScreen] — kartu
-  /// santri yang baru dibuat langsung "diparkir" ke folder ini (lihat
-  /// [RecordsProvider.activateIdentity]), jadi user nggak perlu pindahkan
-  /// manual lagi sesudahnya.
   final String? folderId;
-  /// Diteruskan ke [showAppSnackbar] supaya FAB di layar belakang ikut
-  /// disembunyikan selama snackbar "kartu dibuat/sudah ada/gagal" tampil
-  /// (sheet ini sendiri nggak punya FAB, tapi Scaffold di baliknya punya).
   final ValueChanged<bool>? onFabVisibilityChanged;
   const BuatLaporanSheet({super.key, this.folderId, this.onFabVisibilityChanged});
 
@@ -56,11 +45,6 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
   String? _halaqohError;
   String? _namaError;
   bool _saving = false;
-
-  // <-- BERUBAH: dulu toggle LOKAL "_adminBrowseAll" di sheet ini. Sekarang
-  // pakai toggle GLOBAL "Mode Admin" di Profil (lihat
-  // AccessScope.adminModeActive & AuthProvider.setAdminModeActive) — lihat
-  // catatan lengkap di RecordFormSheet._restrictToOwn (pola sama persis).
 
   AccessScope? get _scope => context.read<RecordsProvider>().scope;
   bool get _hasOwnAssignments => (_scope?.user.assignments ?? const []).isNotEmpty;
@@ -158,11 +142,6 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
     if (_kelasError != null || _halaqohError != null || _namaError != null) return;
 
     final provider = context.read<RecordsProvider>();
-
-    // Kalau kartu untuk santri ini sudah ada (baik dari laporan asli
-    // maupun dari identitas yang sebelumnya sudah diaktifkan), jangan
-    // bikin duplikat — cukup tutup sheet ini, kartunya sudah ada di tab
-    // Laporan.
     final key = reportIdentityKey(_kelas!, _halaqoh!, _nama!);
     final alreadyExists = provider.laporanCards.any((c) => c.identityKey == key);
     if (alreadyExists) {
@@ -219,15 +198,6 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
 
     return SafeArea(
       child: Material(
-        // Sebelumnya: Container(decoration: BoxDecoration(color:...,
-        // borderRadius:...)). Diganti ke Material supaya widget ini
-        // SENDIRI jadi ancestor Material terdekat buat SwitchListTile di
-        // bawah (Material mendukung `color` + `borderRadius` langsung,
-        // hasil render identik dengan Container+BoxDecoration sebelumnya,
-        // cuma sekarang background & ink splash SwitchListTile ikut
-        // kepotong rounded corner dengan benar, tidak ketiban DecoratedBox
-        // lagi). Lihat: assertion "ListTile background color or ink
-        // splashes may be invisible".
         color: Theme.of(context).bottomSheetTheme.backgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         child: Padding(

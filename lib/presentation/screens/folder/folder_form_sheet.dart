@@ -32,10 +32,6 @@ class FolderFormSheet extends StatefulWidget {
 }
 
 class _FolderFormSheetState extends State<FolderFormSheet> {
-  // Nama folder SEKARANG selalu disusun dari Kelas + Halaqoh yang dipilih
-  // lewat dropdown (nggak ada lagi kolom ketik bebas) — biar penamaan
-  // folder konsisten & selalu nyambung ke data kelas/halaqoh yang beneran
-  // ada, bukan teks sembarangan.
   String? _kelas;
   String? _halaqoh;
   String? _kelasError;
@@ -49,11 +45,6 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
     super.initState();
     final existingNama = widget.existing?.nama;
     if (existingNama != null) {
-      // Folder lama (sebelum perubahan ini) namanya masih teks bebas —
-      // coba tebak Kelas/Halaqoh-nya dari pola "Kelas X - Halaqoh Y" yang
-      // memang jadi format baku sejak awal fitur folder ini ada. Kalau
-      // nggak cocok pola (folder lama dengan nama lain), biarkan dropdown
-      // kosong — user tinggal pilih ulang.
       final match = RegExp(r'^Kelas\s+(.+?)\s+-\s+Halaqoh\s+(.+)$').firstMatch(existingNama.trim());
       if (match != null) {
         _kelas = match.group(1);
@@ -68,13 +59,7 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
 
   /// <-- BERUBAH: dulu admin yang JUGA punya assignment sendiri SELALU
   /// dibatasi ke kelas/halaqoh sendiri di sini (gak pernah bisa bikin
-  /// folder buat kelas lain walau admin) — beda sendiri dari form
-  /// laporan yang sudah punya jalan keluarnya. Sekarang disamain: kalau
-  /// toggle GLOBAL "Mode Admin" di Profil aktif (`scope.isAdmin`, lihat
-  /// AccessScope.adminModeActive), admin dengan assignment sendiri pun
-  /// bisa bikin folder untuk kelas manapun, sama seperti admin murni.
-  /// Guru pembimbing biasa (bukan admin) & admin yang Mode Admin-nya
-  /// nonaktif tetap dibatasi ke assignment sendiri.
+  /// folder buat kelas lain walau admin).
   bool get _restrictToOwn {
     final scope = _scope;
     if (scope == null) return false;
@@ -113,9 +98,6 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
       _kelas = v;
       _kelasError = null;
     });
-    // Kelas ganti -> halaqoh yang lagi kepilih mungkin udah nggak valid
-    // buat kelas baru ini (khusus mode dibatasi assignment sendiri) ->
-    // reset biar nggak nyangkut pasangan yang salah.
     final validHalaqoh = _halaqohOptions();
     if (_halaqoh != null && !validHalaqoh.contains(_halaqoh)) {
       setState(() => _halaqoh = null);
@@ -150,10 +132,6 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // context.watch di sini biar build() ini rebuild otomatis tiap
-    // RecordsProvider/StudentsProvider notifyListeners — _kelasOptions()
-    // dkk di atas boleh pakai context.read internal karena widget ini
-    // sudah "berlangganan" lewat watch di bawah.
     context.watch<RecordsProvider>();
     context.watch<StudentsProvider>();
 

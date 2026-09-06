@@ -85,10 +85,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     // <-- BARU: seluruh ListTile ini. Kebalikan dari
                     // "Backup ke Cloud" — dipakai kalau data lokal di HP
-                    // ini hilang (HP baru, app di-uninstall install
-                    // ulang, atau kalau app ini dipakai sebagai Web/PWA
-                    // lalu cache-nya dibersihkan/PWA-nya dihapus dari
-                    // Home Screen).
+                    // ini hilang.
                     ListTile(
                       leading: SoftIconBox(
                         icon: Icons.cloud_download_outlined,
@@ -177,10 +174,7 @@ class SettingsScreen extends StatelessWidget {
 
   // <-- BARU: seluruh method ini. Konfirmasi dulu sebelum "Pulihkan dari
   // Cloud" — walau restore-nya sendiri aman (laporan yang diedit lebih
-  // baru di lokal tidak akan ketiban versi cloud yang lebih lama, lihat
-  // StorageService.restoreFromFirestore), tetap butuh koneksi internet &
-  // makan beberapa detik kalau laporannya banyak, jadi guru perlu tahu
-  // dulu sebelum mulai.
+  // baru di lokal tidak akan ketiban versi cloud yang lebih lama.
   void _confirmRestoreFromCloud(BuildContext context) {
     showDialog(
       context: context,

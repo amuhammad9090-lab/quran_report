@@ -11,15 +11,11 @@ import '../laporan/open_week_action.dart';
 import 'add_recent_records_sheet.dart';
 import 'folder_form_sheet.dart';
 
-/// Halaman isi satu folder — daftar KARTU SANTRI di dalamnya (satu kartu =
-/// satu santri, sama seperti tab Laporan, BUKAN satu kartu per laporan
-/// pekanan lagi
+/// Halaman isi satu folder — daftar KARTU SANTRI di dalamnya.
 class FolderDetailScreen extends StatefulWidget {
   final String folderId;
 
-  /// Diteruskan dari [MainShell] lewat [LaporanTab] — dipakai buat
-  /// nyembunyiin FAB tab Laporan selama snackbar aksi (keluarkan/hapus) di
-  /// layar ini masih tampil.
+  /// Diteruskan dari [MainShell] lewat [LaporanTab].
   final ValueChanged<bool>? onFabVisibilityChanged;
 
   const FolderDetailScreen({super.key, required this.folderId, this.onFabVisibilityChanged});
@@ -32,8 +28,6 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
   bool _selectionMode = false;
   final Set<String> _selected = {};
 
-  // Accordion panel info pekan LINTAS-KARTU — lihat catatan yang sama di
-  // laporan_tab.dart.
   String? _expandedCardId;
   int? _expandedWeek;
 

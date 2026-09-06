@@ -48,10 +48,6 @@ class GenerateRekapBulananScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // select: monthlySantriRecaps sekarang di-cache stabil per bulan (ini
-    // salah satu perhitungan TERBERAT — gabungan semua pekan), jadi
-    // halaman generate ini nggak ikut ngitung ulang tiap notifyListeners
-    // yang gak nyangkut bulan ini.
     final recaps = context.select<RecordsProvider, List<SantriMonthlyRecap>>(
       (p) => p.monthlySantriRecaps(month),
     );
@@ -64,10 +60,6 @@ class GenerateRekapBulananScreen extends StatelessWidget {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // Tombol export di header (sudut kanan atas) SUDAH DIHAPUS —
-            // export tetap bisa lewat tombol per-tabel (1 Kelas+Halaqoh)
-            // di samping tiap judul grup di bawah, lihat IconButton di
-            // dalam SliverList.list.
             PushedPageHeader(
               title: 'Generate Rekap Bulanan',
               subtitle: bulanLabel,
@@ -102,14 +94,6 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                     for (final g in groups) ...[
                       Padding(
                         padding: const EdgeInsets.only(bottom: 10),
-                        // BERUBAH: Export di sini dulu IconButton polos
-                        // tanpa latar. Disamain sekarang jadi AppActionChip
-                        // (pill ikon + label) — persis kayak Export/Deploy
-                        // di layar Rekap Pekanan, biar konsisten 1 gaya di
-                        // semua layar rekap. Judul "Kelas X" / "Halaqoh Y"
-                        // ikut dipecah 2 baris (bukan digabung 1 baris
-                        // pakai em dash) biar gak kepotong "..." sekarang
-                        // chip-nya lebih lebar dari IconButton lama.
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -132,17 +116,9 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // Export per-tabel (1 Kelas+Halaqoh doang) —
-                            // beda dari tombol di header halaman (yang
-                            // export SEMUA kelompok jadi 1 dokumen).
                             AppActionChip(
                               icon: Icons.ios_share_rounded,
                               label: 'Export',
-                              // BERUBAH: dulu pakai colorScheme.primary
-                              // (bisa beda kehijauannya dari Deploy
-                              // tergantung tema) -- disamain sekarang
-                              // pakai warna teal yang sama kayak Deploy
-                              // biar 2 chip ini keliatan senada.
                               color: AppColors.deployOn(context),
                               tooltip: 'Export Kelas ${g.kelas} — Halaqoh ${g.halaqoh}',
                               onTap: () => showExportSheet(
@@ -188,8 +164,6 @@ class _MonthlyRecapTable extends StatelessWidget {
   final int totalWeeks;
   const _MonthlyRecapTable({required this.recaps, required this.totalWeeks});
 
-  // Lebar kolom Nama / tiap Pekan / Total Baris / Keterangan — tinggal
-  // diubah angkanya kalau mau lebih lebar/sempit.
   static const _namaWidth = 130.0;
   static const _pekanWidth = 150.0;
   static const _barisWidth = 60.0;

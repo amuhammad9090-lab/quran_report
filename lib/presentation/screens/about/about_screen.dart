@@ -203,9 +203,7 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-/// Kartu deskripsi "Tentang" — paragrafnya di-justify (rata kanan-kiri)
-/// sesuai permintaan, biar terasa lebih rapi & formal kayak dokumen resmi
-/// (bukan rata kiri biasa yang pinggir kanannya berantakan).
+/// Kartu deskripsi "Tentang" — paragrafnya di-justify.
 class _AboutDescriptionCard extends StatelessWidget {
   const _AboutDescriptionCard();
 
@@ -250,9 +248,7 @@ class _AboutDescriptionCard extends StatelessWidget {
   }
 }
 
-/// Baris info ikon + label + value — polanya niru referensi desain
-/// (icon, label kecil, value bold di bawahnya), tapi warna & bentuk kotak
-/// ikon tetap pakai aturan UI aplikasi ini (soft tint, bukan flat icon).
+/// Baris info ikon + label + value.
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -301,9 +297,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-/// Footer penutup — quote-nya sekarang dikasih garis kecil kiri-kanan
-/// (gaya "pull quote"), lebih terasa seperti aksen tipografi yang
-/// disengaja, bukan sekadar teks italic nyempil di bawah.
+/// Footer penutup.
 class _Footer extends StatelessWidget {
   const _Footer();
 
@@ -315,7 +309,7 @@ class _Footer extends StatelessWidget {
         Icon(Icons.favorite_rounded, color: cs.error, size: 20),
         const SizedBox(height: 10),
         const Text(
-          'Dibuat untuk kemudahan para guru pembimbing',
+          'Dibuat untuk kemudahan para Guru Al-Quran',
           textAlign: TextAlign.center,
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
         ),

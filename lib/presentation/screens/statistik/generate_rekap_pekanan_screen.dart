@@ -75,10 +75,6 @@ class GenerateRekapPekananScreen extends StatelessWidget {
       });
     final fixedTanggalLabel = _lastTanggalLabel(sorted);
     final groups = recordsProvider.groupByKelasHalaqoh(sorted);
-    // Kop periode di export (PDF/Word/Excel), mis. "Pekan ke-4, 24-30
-    // Agustus 2026" — lihat WeekUtils.periodeLabel kenapa formatnya
-    // beda dari subtitle di layar ini (yang boleh pakai en dash karena
-    // dirender font sistem, bukan font PDF).
     final periodeText = WeekUtils.periodeLabel(weekIndex, range);
 
     final exportSections = [
@@ -95,11 +91,6 @@ class GenerateRekapPekananScreen extends StatelessWidget {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // Tombol export "semua grup jadi 1 dokumen" di pojok kanan atas
-            // SUDAH DIHAPUS (sesuai permintaan) — export sekarang cuma
-            // lewat tombol per-grup Kelas+Halaqoh di bawah (lihat
-            // IconButton per baris grup). [exportSections] tetap dipakai
-            // buat tombol per-grup itu.
             PushedPageHeader(
               title: 'Generate Laporan Pekanan',
               subtitle: 'Pekan $weekIndex • $rangeLabel • $bulanLabel',
@@ -134,11 +125,6 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                     for (var i = 0; i < groups.length; i++) ...[
                       Padding(
                         padding: const EdgeInsets.only(bottom: 10),
-                        // Judul & 2 chip aksi (Export, Deploy) disandingin
-                        // lagi 1 baris (center) — tapi sekarang judulnya
-                        // dipecah 2 baris sendiri ("Kelas X" di atas,
-                        // "Halaqoh Y" di bawah) biar tetep muat & gak
-                        // kepotong "..." walau di samping ada 2 chip.
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -161,20 +147,9 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // <-- BERUBAH: dulu cuma 1 IconButton polos
-                            // (Export doang, tanpa latar). Sekarang
-                            // disandingkan 2 chip kecil bertinta lembut
-                            // (Export & Deploy) biar keliatan sepasang
-                            // aksi yang setara, bukan 1 ikon nyempil
-                            // sendirian — lihat [AppActionChip]/[_DeployChip].
                             AppActionChip(
                               icon: Icons.ios_share_rounded,
                               label: 'Export',
-                              // BERUBAH: dulu pakai colorScheme.primary
-                              // (bisa beda kehijauannya dari Deploy
-                              // tergantung tema) -- disamain sekarang
-                              // pakai warna teal yang sama kayak Deploy
-                              // biar 2 chip ini keliatan senada.
                               color: AppColors.deployOn(context),
                               tooltip: 'Export Kelas ${groups[i].kelas} — Halaqoh ${groups[i].halaqoh}',
                               onTap: () => showExportSheet(
@@ -232,11 +207,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
 /// Tombol "Deploy" — kirim rekap pekanan 1 Kelas+Halaqoh ke Firestore
 /// (buat Portal Ortu, lihat [WeeklyRecapDeployService]). Beda dari
 /// Export yang instan (langsung buka sheet, tidak ada proses async),
-/// Deploy butuh nunggu round-trip ke Firestore — makanya ini
-/// StatefulWidget sendiri: nunjukin spinner kecil pas lagi ngirim, dan
-/// kasih SnackBar sukses/gagal (BUKAN fire-and-forget diam-diam, karena
-/// ini aksi yang guru tekan sadar & berhak tahu hasilnya — beda dari
-/// mirror-backup otomatis lain yang boleh diam-diam gagal).
+/// Deploy butuh nunggu round-trip ke Firestore.
 class _DeployChip extends StatefulWidget {
   final String tooltip;
   final Future<void> Function() onDeploy;
@@ -277,18 +248,10 @@ class _DeployChipState extends State<_DeployChip> {
 
   @override
   Widget build(BuildContext context) {
-    // Warna teal-cloud dibedain sengaja dari Export (primary) biar
-    // dua aksinya kebeda maknanya sekilas: Export = dokumen ke HP,
-    // Deploy = kirim ke cloud/orang tua.
-    // BUG FIX: dulu warnanya di-hardcode 1 nilai (dipakai apa adanya di
-    // kedua tema) — akibatnya di dark mode chip-nya keliatan gelap/muram
-    // karena warna itu didesain buat kontras di atas background PUTIH,
-    // bukan di atas card gelap. Sekarang pakai versi dark-aware yang
-    // dicerahkan di dark mode, senada pola warna status lain di app ini.
     final deployColor = AppColors.deployOn(context);
     return AppActionChip(
       icon: Icons.cloud_upload_rounded,
-      label: 'Deploy',
+      label: 'Kirim',
       color: deployColor,
       tooltip: widget.tooltip,
       onTap: _loading ? null : _handleTap,

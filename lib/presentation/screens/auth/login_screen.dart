@@ -37,14 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await auth.login(_usernameCtrl.text.trim(), _passwordCtrl.text);
     if (!mounted) return;
     if (success) {
-      // Access scope baru terbentuk setelah login sukses — terapkan ke
-      // RecordsProvider supaya seluruh data (Home/Laporan/Statistik/
-      // Export) langsung ke-scope tanpa perlu restart app.
       context.read<RecordsProvider>().updateScope(auth.scope);
-      // <-- BARU: sama halnya, notifikasi Catatan Orang Tua juga perlu
-      // di-scope ulang begitu ada user baru login (mis. HP dipakai
-      // bergantian oleh beberapa guru) — kalau tidak, badge/list bisa
-      // ketinggalan scope guru SEBELUMnya sampai app di-restart manual.
       context.read<ParentNotesProvider>().updateScope(auth.scope);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainShell()),
@@ -92,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Khusus guru pembimbing & admin yang terdaftar.',
+                    'Khusus Guru Pembimbing & Admin yang terdaftar.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                   ),

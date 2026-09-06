@@ -28,8 +28,6 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
   bool _selectionMode = false;
   final Set<String> _selected = {};
 
-  // Accordion panel info pekan LINTAS-KARTU — pola sama seperti
-  // laporan_tab.dart & folder_detail_screen.dart.
   String? _expandedCardId;
   int? _expandedWeek;
 
@@ -201,9 +199,6 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
     final validFolderIds = foldersProvider.all.map((f) => f.id).toSet();
     final cards = recordsProvider.orphanedFolderCards(validFolderIds);
 
-    // Begitu semua kartu sudah "diselamatkan" (dipindah/dikeluarkan), tidak
-    // ada lagi yang perlu ditampilkan di sini -> otomatis balik ke layar
-    // sebelumnya.
     if (cards.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;

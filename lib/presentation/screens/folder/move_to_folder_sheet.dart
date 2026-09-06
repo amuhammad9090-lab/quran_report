@@ -5,9 +5,7 @@ import '../../../providers/folders_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import 'folder_form_sheet.dart';
 
-/// Bottom sheet pilih folder tujuan — dipakai buat "Pindahkan ke Folder"
-/// (satu laporan) maupun mode centang (banyak laporan sekaligus).
-/// Mengembalikan folderId yang dipilih user, atau null kalau dibatalkan.
+/// Bottom sheet pilih folder tujuan.
 Future<String?> showFolderPickerSheet(
   BuildContext context, {
   String? currentFolderId,
@@ -36,11 +34,6 @@ class _FolderPickerSheet extends StatelessWidget {
 
     return SafeArea(
       child: Container(
-        // Container ini SEKARANG cuma buat `constraints` — background +
-        // rounded corner dipindah ke Material di dalamnya, biar ListTile
-        // di list folder & aksi (di bawah) punya Material terdekat yang
-        // benar, nggak ketutup DecoratedBox lagi (lihat assertion "ListTile
-        // background color or ink splashes may be invisible").
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
         child: Material(
           color: Theme.of(context).bottomSheetTheme.backgroundColor,

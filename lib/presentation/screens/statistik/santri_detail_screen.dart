@@ -18,10 +18,6 @@ class SantriDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // select, bukan watch<RecordsProvider>() polos: sekarang recordsForSantri
-    // sudah di-cache stabil per _dataVersion, jadi halaman ini cuma rebuild
-    // kalau data SANTRI INI beneran berubah, bukan tiap notifyListeners
-    // provider (mis. filter/search berubah di tab Laporan).
     final records = context.select<RecordsProvider, List<SantriRecord>>(
       (p) => p.recordsForSantri(namaAnak),
     );

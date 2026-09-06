@@ -24,11 +24,7 @@ import 'providers/theme_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Mirror laporan ke Firestore buat Portal Orang Tua. Sign-in
-  // ANONIM (bukan akun guru).
   try {
-    // <-- BERUBAH: `if (Firebase.apps.isEmpty)` diganti jadi langsung
-    // coba initializeApp() + tangkep KHUSUS 'duplicate-app'.
     try {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     } on FirebaseException catch (e) {
@@ -41,9 +37,6 @@ void main() async {
     if (cached == null) {
       await auth.signInAnonymously();
     } else {
-      // reload() beneran nge-fetch ulang ke server -- lebih reliable
-      // buat deteksi akun anonim lama yang udah invalid/kehapus
-      // dibanding cuma getIdToken(true) doang.
       try {
         await cached.reload();
         final refreshedUser = auth.currentUser;
@@ -58,28 +51,6 @@ void main() async {
       }
     }
     FirebaseBootstrapStatus.markReady();
-    // BUG FIX (web): dulu ada blok `FirebaseFirestore.instance.settings =
-    // Settings(webExperimentalForceLongPolling: true, persistenceEnabled:
-    // false)` di sini, tapi kecabut lagi -- makanya Cloud Backup/Pulihkan
-    // & Deploy dua-duanya timeout "server tidak merespons" KHUSUS di
-    // web-app (Android normal). Ini bug KLASIK Firestore Web SDK: secara
-    // default dia nyoba konek pake WebChannel streaming (mirip
-    // long-lived HTTP/2 stream) buat komunikasi ke server -- koneksi ini
-    // gampang banget di-block/gagal diam-diam (nyangkut, gak
-    // error langsung, cuma nunggu sampai timeout) sama proxy/firewall
-    // kantor/sekolah, sebagian ISP, atau ad-blocker browser. Android
-    // (gRPC native) gak kena masalah ini sama sekali -- makanya app
-    // Android mulus tapi web-nya macet PERSIS di 2 fitur yang sama-sama
-    // manggil FirebaseFirestore.instance (Backup/Restore & Deploy).
-    // Fix: khusus di web, suruh Firestore otomatis DETEKSI kalau
-    // WebChannel gagal dan otomatis ganti ke long-polling (HTTP request
-    // biasa yang jarang di-block) -- `webExperimentalAutoDetectLongPolling`
-    // lebih aman dari versi "force" (cuma pindah ke long-polling kalau
-    // memang perlu, bukan maksa selalu). `persistenceEnabled: false`
-    // juga dimatiin di web biar gak ada cache IndexedDB antar-tab yang
-    // kadang ikut bikin nyangkut. HARUS diset sebelum Firestore
-    // dipakai sama sekali (makanya taruh di sini, bukan di
-    // StorageService/WeeklyRecapDeployService).
     if (kIsWeb) {
       FirebaseFirestore.instance.settings = const Settings(
         persistenceEnabled: false,
@@ -122,7 +93,6 @@ void main() async {
 
   final parentNotesProvider = ParentNotesProvider();
   parentNotesProvider.updateScope(authProvider.scope);
-  // <-- SEMENTARA DIMATIKAN buat isolasi bug timeout/webchannel
 
   runApp(
     MultiProvider(

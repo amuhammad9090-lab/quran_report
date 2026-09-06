@@ -11,12 +11,7 @@ import 'login_screen.dart';
 import 'onboarding_screen.dart';
 
 /// Splash — titik masuk app. Alur startup:
-///
-///   Splash -> cek onboarding -> cek session -> Onboarding / Login / Home
-///
-/// Catatan: seluruh data (records/folders/theme/session) sudah di-load
-/// SEBELUM runApp (lihat main.dart), jadi Splash di sini murni identitas
-/// merek sebentar + keputusan routing, bukan loading state yang berat.
+/// Splash -> cek onboarding -> cek session -> Onboarding / Login / Home
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -32,9 +27,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _route() async {
-    // Jeda sebentar murni buat keliatan brand-nya, bukan nunggu data
-    // (data udah siap semua sebelum runApp). 2700ms = 700ms awal + 2
-    // detik tambahan yang diminta.
     await Future.delayed(const Duration(milliseconds: 3000));
     if (!mounted) return;
 
@@ -57,13 +49,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Sengaja warna TETAP (gradient brand, bukan diturunkan dari
-    // ColorScheme dark/light) — splash adalah momen branding, dan
-    // gradient-nya di-sample presisi dari app icon sendiri (lihat
-    // AppColors.splashGradientStart/End), jadi harus selalu identik di
-    // kedua tema, bukan ikut mekanisme dark-mode-pucat punya ColorScheme.
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light, // ikon status bar putih, background-nya selalu gelap
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
         body: Container(
           width: double.infinity,
@@ -94,14 +81,12 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Laporan tahsin & tahfizh santri',
+                        'Laporan Tahsin & Tahfizh santri',
                         style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
                       ),
                     ],
                   ),
                 ),
-                // Logo SMPIT + credit — ditaruh kecil di bawah, bukan
-                // headline utama, biar fokus tetap ke brand app sendiri.
                 Positioned(
                   left: 0,
                   right: 0,

@@ -22,16 +22,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
   bool _laporanSelecting = false;
-  // Counter, bukan bool — biar aman kalau ada 2 snackbar nyaris bebarengan
-  // (mis. drag-drop cepat 2x): FAB baru muncul lagi kalau semua "pemegang"
-  // sudah selesai (count balik ke 0), gak ada yang keburu nge-reset ke true
-  // duluan padahal snackbar lain masih tampil.
   int _snackbarHidingFab = 0;
-
-  // Kontrol buka/tutup SpeedDialFab dari luar widgetnya sendiri (lihat
-  // SpeedDialController) -- dibutuhkan buat barrier transparan di bawah
-  // ini, biar tap di sembarang tempat langsung nutup dial-nya (bug fix:
-  // sebelumnya cuma bisa ditutup lewat tombol "+" itu sendiri).
   final _fabController = SpeedDialController();
 
   @override
@@ -42,12 +33,7 @@ class _MainShellState extends State<MainShell> {
 
   void _switchTab(int index) {
     if (index == _index) return;
-    // Snackbar (mis. dari bell notifikasi di Home) numpang di satu
-    // Scaffold yang sama antar-tab (IndexedStack) — kalau nggak di-hide
-    // dulu, dia bisa "nyasar" nongol di tab lain waktu pindah tab.
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    // Dial-nya cuma relevan di tab Laporan -- kalau lagi kebuka terus user
-    // pindah tab, tutup dulu biar barrier-nya nggak nyangkut di tab lain.
     _fabController.close();
     setState(() => _index = index);
   }
@@ -66,9 +52,6 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Fix: tanpa ini, ikon status bar (jam/baterai/sinyal) nggak ikut
-    // kontras tema — bisa "ketutup"/nyaris invisible di light theme
-    // karena warnanya nggak di-set sama sekali secara default.
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: isDark
           ? SystemUiOverlayStyle.light.copyWith(
@@ -82,12 +65,7 @@ class _MainShellState extends State<MainShell> {
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       // Fix: MainShell ini root route-nya app (nggak ada Navigator di
-      // atasnya) -- sebelumnya, tap tombol back hardware/gesture pas lagi
-      // di tab Laporan/Statistik/Pengaturan langsung nutup/keluar app,
-      // padahal harusnya balik dulu ke tab Home (baru app ke-close kalau
-      // ditekan sekali lagi dari Home). canPop cuma true kalau udah di
-      // Home (_index == 0); selain itu, "pop" ditangkap di sini dan cuma
-      // dipakai buat pindah tab, nggak ikut di-propagate buat nutup app.
+      // atasnya).
       child: PopScope(
         canPop: _index == 0,
         onPopInvokedWithResult: (didPop, _) {
@@ -95,13 +73,6 @@ class _MainShellState extends State<MainShell> {
           _switchTab(0);
         },
         child: Scaffold(
-          // Body dibungkus Stack + barrier transparan (lewat ListenableBuilder
-          // yang dengerin _fabController): pas SpeedDialFab lagi kebuka, tap
-          // di MANA AJA di body ini langsung nutup dial-nya. FAB sendiri
-          // (tombol "+" & 2 mini action-nya) dirender lewat slot
-          // `floatingActionButton` Scaffold, yang otomatis digambar DI ATAS
-          // body -- jadi barrier ini nggak nutupin/nge-block tap ke FAB atau
-          // mini action-nya sendiri, cuma nangkep tap di area lain.
           body: ListenableBuilder(
             listenable: _fabController,
             builder: (context, child) => Stack(
@@ -122,9 +93,6 @@ class _MainShellState extends State<MainShell> {
                 BerandaTab(onLihatLaporan: _goToLaporan),
                 LaporanTab(
                   onSelectionModeChanged: (v) {
-                    // Mode pilih-banyak aktif -> FAB-nya ikut disembunyikan
-                    // (lihat floatingActionButton di bawah), jadi dial-nya
-                    // juga harus ketutup, bukan cuma widget FAB-nya hilang.
                     if (v) _fabController.close();
                     setState(() => _laporanSelecting = v);
                   },
@@ -136,11 +104,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ),
           // Tab Laporan: FAB cuma "+", ditekan nyembul jadi 2 pilihan
-          // (Buat Folder / Buat Laporan). Tab lain: FAB disembunyikan lagi
-          // seperti semula. Pas mode pilih-banyak aktif ATAU snackbar
-          // "dipindahkan/dikeluarkan" lagi tampil, FAB ikut disembunyikan
-          // juga — biar snackbar bisa nempel rapi di atas bottom nav tanpa
-          // numpuk/ngambang di atas ikon FAB.
+          // (Buat Folder / Buat Laporan).
           floatingActionButton: _index == 1 && !_laporanSelecting && _snackbarHidingFab == 0
               ? SpeedDialFab(
             controller: _fabController,

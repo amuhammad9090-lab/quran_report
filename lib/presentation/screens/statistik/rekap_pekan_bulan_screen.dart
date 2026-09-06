@@ -31,9 +31,6 @@ class RekapPekanBulanScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // select: recordsInMonthWeek sekarang di-cache stabil per (bulan,
-    // pekan), jadi halaman ini nggak ikut rebuild kalau ada
-    // notifyListeners dari pekan/bulan lain atau filter di layar lain.
     final records = context.select<RecordsProvider, List<SantriRecord>>(
       (p) => p.recordsInMonthWeek(month, weekIndex),
     );
@@ -147,9 +144,7 @@ class RekapPekanBulanScreen extends StatelessWidget {
 /// Rincian jumlah laporan per hari dalam pekan ini — ditampilkan buat
 /// SEMUA pekan (Pekan 1, 2, 3, dst di bulan yang sama), bukan cuma pekan
 /// yang lagi berjalan. Tiap baris hari bisa DI-TAP buat lihat laporan hari
-/// itu (per Kelas & Halaqoh, lihat [RekapHarianDetailScreen]) — makanya
-/// baris dibuat lebih besar/jelas dari sebelumnya (dulu cuma teks
-/// ringkas, sekarang kartu penuh yang jelas kelihatan bisa di-tap).
+/// itu (per Kelas & Halaqoh, lihat [RekapHarianDetailScreen]).
 class _DailyRekapList extends StatelessWidget {
   final MonthWeekRange range;
   final List<SantriRecord> records;

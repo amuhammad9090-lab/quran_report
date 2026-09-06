@@ -248,7 +248,7 @@ class _ExportSheetState extends State<ExportSheet> {
       try {
         await ExportService.instance.openFile(file);
       } catch (_) {
-        // Diamkan -- file tetap berhasil dibuat, lanjut ke layar selesai.
+
       }
 
       if (!mounted) return;
@@ -352,10 +352,6 @@ class _ExportSheetState extends State<ExportSheet> {
                 const SizedBox(height: 16),
                 if (!_isFixed)
                   Material(
-                    // Sebelumnya Container(decoration: BoxDecoration(color,
-                    // borderRadius)) — diganti Material supaya RadioListTile
-                    // di dalamnya (2 baris di bawah) punya Material terdekat
-                    // yang benar, nggak ketutup DecoratedBox lagi.
                     color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(14),
                     child: Padding(

@@ -52,20 +52,9 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
         .toList();
 
     return Padding(
-      // WAJIB biar sheet ini kegeser naik ngikutin tinggi keyboard —
-      // tanpa ini, begitu keyboard muncul dia numpuk di belakang/ketiban
-      // keyboard (TextField pencarian jadi nggak keliatan pas diketik).
-      // Sheet-sheet lain di app ini (folder_form_sheet.dart dkk) sudah
-      // pakai pola yang sama.
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
         child: Container(
-          // Container ini SEKARANG cuma buat `constraints` (nggak ada
-          // decoration lagi di sini) — background+rounded corner dipindah
-          // ke Material di dalamnya, biar CheckboxListTile di list bawah
-          // punya Material terdekat yang benar (nggak ketutup DecoratedBox
-          // — lihat assertion "ListTile background color or ink splashes
-          // may be invisible").
           constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
           child: Material(
             color: Theme.of(context).bottomSheetTheme.backgroundColor,

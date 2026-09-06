@@ -31,8 +31,6 @@ class StatistikTab extends StatelessWidget {
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: provider.load,
-        // SliverAppBar pinned — header nempel di atas pas discroll, senada
-        // gaya Home & Laporan.
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -259,10 +257,7 @@ class _AyatWeeklyChartCard extends StatelessWidget {
   }
 }
 
-/// 1 batang bar chart + label pekan di bawahnya. Tinggi batang proporsional
-/// terhadap [maxValue] (nilai tertinggi di antara semua pekan), minimum 6px
-/// biar pekan dengan nilai 0 tetap kelihatan ada batangnya (bukan hilang
-/// total, biar sumbu tetap gampang dibaca).
+/// 1 batang bar chart + label pekan di bawahnya.
 class _WeekBar extends StatelessWidget {
   final int value;
   final int maxValue;
@@ -311,9 +306,7 @@ class _WeekBar extends StatelessWidget {
   }
 }
 
-/// Pil ringkasan kecil (angka besar + label) di bawah chart — dipisah dari
-/// [_TappableStat] karena ini bukan tombol (tidak ada halaman detail buat
-/// "total ayat 6 pekan", murni informasi).
+/// Pil ringkasan kecil (angka besar + label) di bawah chart.
 class _MiniStatPill extends StatelessWidget {
   final String value;
   final String label;

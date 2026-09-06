@@ -9,21 +9,13 @@ import '../../widgets/misc_widgets.dart';
 
 /// Detail laporan SATU HARI (mis. Senin) dalam sebuah Pekan — dibuka dari
 /// tap salah satu baris hari di dalam kartu "Pekan N" yang lagi di-expand
-/// pada RekapBulananScreen (lihat `_DayRow`). Isinya laporan hari itu
-/// dikelompokkan per Kelas & Halaqoh, ditampilkan sebagai tabel dengan
-/// kolom PERSIS sama
-/// seperti hasil export (lihat [ExportStyleRecordsTable]) — TIDAK ada
-/// tombol export di sini (export rekap pekanan gabungan ada di Generate
-/// Laporan Pekanan, lihat GenerateRekapPekananScreen).
+/// pada RekapBulananScreen (lihat `_DayRow`).
 class RekapHarianDetailScreen extends StatelessWidget {
   final DateTime date;
   const RekapHarianDetailScreen({super.key, required this.date});
 
   @override
   Widget build(BuildContext context) {
-    // select: recordsOnDate sekarang di-cache stabil per tanggal, jadi
-    // halaman detail satu-hari ini nggak ikut rebuild kalau ada
-    // notifyListeners dari data hari lain / filter di tab Laporan.
     final records = context.select<RecordsProvider, List<SantriRecord>>(
       (p) => p.recordsOnDate(date),
     );

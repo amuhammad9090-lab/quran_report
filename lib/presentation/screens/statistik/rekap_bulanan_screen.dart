@@ -31,11 +31,6 @@ class RekapBulananScreen extends StatefulWidget {
 
 class _RekapBulananScreenState extends State<RekapBulananScreen> {
   late DateTime _month;
-
-  // Pekan mana yang lagi expand (accordion — cuma 1 yang boleh kebuka
-  // sekaligus). Dulu tiap _PekanCard nyimpen expand-state sendiri2, jadi
-  // bisa kebuka bareng semua; sekarang dinaikin ke sini biar buka pekan
-  // baru otomatis nutup yang sebelumnya.
   int? _expandedWeek;
 
   final Map<int, GlobalKey> _weekKeys = {};
@@ -49,8 +44,6 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
   void _gotoMonth(int monthDelta) {
     setState(() {
       _month = DateTime(_month.year, _month.month + monthDelta);
-      // Reset biar gak ada pekan yang "nyangkut" ke-render expanded di
-      // bulan baru cuma karena weekIndex-nya kebetulan sama.
       _expandedWeek = null;
     });
   }
@@ -70,21 +63,11 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
     final expanding = _expandedWeek != weekIndex;
     setState(() => _expandedWeek = expanding ? weekIndex : null);
     if (!expanding) return;
-
-    // Auto-scroll pas expand, biar kartu (+ daftar hari yang baru nongol
-    // di bawahnya) langsung ke-bawa ke atas viewport tanpa user harus
-    // scroll manual lagi. Delay dulu ~sesuai durasi AnimatedCrossFade
-    // (200ms) supaya ensureVisible ngitung berdasarkan tinggi kartu yang
-    // udah (hampir) final, bukan tinggi lama pas masih collapsed.
     Future.delayed(const Duration(milliseconds: 220), () => _gotoWeek(weekIndex));
   }
 
   @override
   Widget build(BuildContext context) {
-    // select dengan Dart record (tuple): halaman ini rebuild HANYA kalau
-    // recordsInMonth/monthWeekSummaries bulan yang lagi dibuka beneran
-    // berubah (keduanya sekarang di-cache stabil di provider), bukan tiap
-    // notifyListeners APAPUN (mis. search/filter di tab Laporan).
     final (records, weeks) = context.select<RecordsProvider,
         (List<SantriRecord>, List<MonthWeekSummary>)>(
       (p) => (p.recordsInMonth(_month), p.monthWeekSummaries(_month)),
@@ -167,9 +150,6 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                   ),
                 ),
               ),
-              // Tombol Generate Rekap Bulanan — dipindah ke SINI (di bawah
-              // card Tahfizh/Tahsin/Total Baris), sebelumnya ada di atas
-              // (nempel langsung di bawah _MonthSwitcher).
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
                 sliver: SliverToBoxAdapter(
@@ -268,10 +248,7 @@ class _MonthSwitcher extends StatelessWidget {
             const SizedBox(height: 2),
             // Ringkasan pekan dalam bulan ini (1..5) — pekan yang sesuai
             // tanggal HARI INI ditandai terisi/aktif (cuma kalau [month]
-            // yang lagi dilihat memang bulan berjalan). Ketuk salah satu
-            // buat auto-scroll ke kartu "Pekan N" itu di bawah (lihat
-            // _MonthWeekList/_PekanCard) — ketuk lagi kartunya buat expand
-            // lihat daftar harinya.
+            // yang lagi dilihat memang bulan berjalan).
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 8,
@@ -341,14 +318,7 @@ class _MonthWeekList extends StatelessWidget {
 
 /// Kartu 1 Pekan — ketuk HEADER-nya buat expand/collapse, kalau expand
 /// nampilin daftar hari (Senin..Minggu, lihat [_DayRow]) pekan itu +
-/// tombol "Generate Laporan Pekanan" di bawahnya. Menggantikan halaman
-/// terpisah RekapPekanBulanScreen yang sudah dihapus — isinya sama
-/// (daftar hari + tombol generate), cuma sekarang inline di kartu ini,
-/// bukan pindah halaman.
-///
-/// Expand-state SEKARANG dikontrol dari luar (accordion — lihat
-/// [_RekapBulananScreenState._expandedWeek]), bukan state lokal lagi,
-/// biar buka 1 pekan otomatis nutup pekan lain yang lagi kebuka.
+/// tombol "Generate Laporan Pekanan" di bawahnya.
 class _PekanCard extends StatelessWidget {
   final DateTime month;
   final MonthWeekSummary summary;
@@ -431,11 +401,7 @@ class _PekanCard extends StatelessWidget {
 
 /// Isi kartu Pekan pas di-expand — daftar hari (Senin..Minggu) pekan itu
 /// (lihat [_DayRow]) + tombol "Generate Laporan Pekanan" (gabungan semua
-/// hari di pekan itu, lihat [GenerateRekapPekananScreen]). Widget
-/// terpisah (bukan langsung di [_PekanCardState.build]) supaya
-/// context.watch<RecordsProvider>() di sini TIDAK bikin seluruh
-/// [_PekanCard] (termasuk kartu2 yang lagi collapsed) ikut rebuild tiap
-/// ada perubahan data — cuma bagian expanded ini aja.
+/// hari di pekan itu, lihat [GenerateRekapPekananScreen]).
 class _PekanExpandedBody extends StatelessWidget {
   final DateTime month;
   final int weekIndex;
@@ -495,11 +461,7 @@ class _PekanExpandedBody extends StatelessWidget {
 }
 
 /// Satu baris hari (Senin, tanggalnya, jumlah laporan) di dalam kartu
-/// Pekan yang lagi expand — sengaja dibuat RINGKAS (row kecil, bukan
-/// kartu penuh seperti dulu di RekapPekanBulanScreen) karena sekarang
-/// nempel di dalam kartu Pekan, bukan halaman sendiri. Ketuk buat lihat
-/// tabel laporan hari itu (per Kelas & Halaqoh, lihat
-/// [RekapHarianDetailScreen]) — perilakunya sama seperti dulu.
+/// Pekan yang lagi expand.
 class _DayRow extends StatelessWidget {
   final DateTime date;
   final List<SantriRecord> records;

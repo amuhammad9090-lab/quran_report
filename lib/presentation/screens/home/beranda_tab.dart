@@ -31,10 +31,6 @@ class BerandaTab extends StatelessWidget {
     }
 
     return SafeArea(
-      // BUG FIX: tab ini dulu nggak dibungkus SafeArea sama sekali (beda
-      // dari Laporan & Statistik yang udah pakai), jadi avatar + nama
-      // pengguna kepotong/mepet bahkan lebih parah ke bar notifikasi
-      // dibanding 2 tab itu. Disamain sekarang.
       bottom: false,
       child: RefreshIndicator(
         onRefresh: provider.load,
@@ -48,9 +44,6 @@ class BerandaTab extends StatelessWidget {
               elevation: 0,
               scrolledUnderElevation: 3,
               shadowColor: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10),
-              // Ditinggiin dari 76 -> 80 + judul digeser ke bawah (lihat
-              // [_buildHeader]) biar jaraknya ke status bar senada
-              // Laporan & Statistik.
               toolbarHeight: 80,
               titleSpacing: 20,
               title: _buildHeader(context),
@@ -195,7 +188,6 @@ class BerandaTab extends StatelessWidget {
   }
 
   void _openProfile(BuildContext context) {
-    // Satu titik navigasi ke Profile.
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const ProfileScreen()),
     );
@@ -209,8 +201,6 @@ class BerandaTab extends StatelessWidget {
     final photoPath = user?.photoPath;
 
     return Padding(
-      // Senada Padding(top: 12) di judul Laporan & Statistik, biar avatar
-      // + nama pengguna sama-sama turun & gak mepet ke status bar.
       padding: const EdgeInsets.only(top: 12),
       child: Row(
         children: [
@@ -258,8 +248,7 @@ class BerandaTab extends StatelessWidget {
           ),
         ),
         // <-- BERUBAH: bell sekarang nampilin badge titik merah kalau ada
-        // catatan orang tua yang belum dibaca — sebelumnya cuma ikon
-        // statis tanpa indikator apapun.
+        // catatan orang tua yang belum dibaca.
         Builder(builder: (context) {
           final unread = context.watch<ParentNotesProvider>().unreadCount;
           return Material(

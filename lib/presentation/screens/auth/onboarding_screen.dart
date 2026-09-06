@@ -34,8 +34,7 @@ const _pages = [
 ];
 
 /// Onboarding — status penyelesaiannya persistent (Hive lewat
-/// AppPrefsService), jadi kalau sudah pernah selesai, layar ini tidak
-/// akan ditampilkan lagi (lihat SplashScreen).
+/// AppPrefsService).
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -53,8 +52,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } catch (e, st) {
       debugPrint('Gagal simpan status onboarding: $e');
       debugPrint('$st');
-      // Sengaja tetap lanjut walau gagal (mis. Safari yang kadang blokir
-      // IndexedDB) -- daripada tombol "Mulai" macet total tanpa respons.
     }
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
@@ -75,12 +72,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final isLast = _index == _pages.length - 1;
 
-    // Sengaja warna TETAP (gradient brand sama persis kayak Splash),
-    // BUKAN diturunkan dari ColorScheme dark/light — jadi biarpun HP-nya
-    // lagi dark mode, Onboarding tetap gradient hijau ini terus, konsisten
-    // sama Splash sebagai satu kesatuan momen "sebelum login".
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light, // ikon status bar putih, bg selalu gelap
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
         body: Container(
           width: double.infinity,
