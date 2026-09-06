@@ -18,22 +18,26 @@ class AppColors {
   AppColors._();
 
   // Brand
-  static const seed = Color(0xFF0E7C61); // deep teal-green
+  static const seed = Color(0xFF0E7C61);
   static const seedDark = Color(0xFF14A085);
-
-  // --- Splash (gradient diagonal, di-sample presisi dari app icon —
-  // ujung kiri-atas & kanan-bawah icon-nya sendiri emang gradasi hijau
-  // muda ke hijau tua gelap, jadi splash-nya dibikin identik) ---
   static const splashGradientStart = Color(0xFF52AD65);
   static const splashGradientEnd = Color(0xFF0B4A38);
 
-  // --- Status Tahfizh / Tahsin (versi light — juga dipakai export PDF/Excel) ---
+  // --- Status Tahfizh / Tahsin (versi light — juga dipakai export PDF/Excel).
   static const tahfizh = Color(0xFF0E7C61);
   static const tahsin = Color(0xFFB8860B);
 
   // --- Versi dark mode ---
   static const tahfizhDark = Color(0xFF3ED9AE);
   static const tahsinDark = Color(0xFFE8B84A);
+
+  // --- Aksi "Deploy" (kirim rekap ke Portal Ortu).
+  static const deploy = Color(0xFF0E8F6E);
+  static const deployDark = Color(0xFF3EDCB0);
+
+  /// Warna tombol/chip "Deploy" — otomatis pilih versi terang/gelap
+  /// sesuai tema aktif (lihat catatan di [deploy]/[deployDark]).
+  static Color deployOn(BuildContext context) => _isDark(context) ? deployDark : deploy;
 
   // --- Status Tahsin+Tahfizh / Muroja'ah-Tasmi' (versi light) ---
   static const tahsinTahfizh = Color(0xFF2F80B4);
@@ -68,25 +72,23 @@ class AppColors {
   static bool _isDark(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
 
-  /// Warna status Tahfizh — otomatis pilih versi terang/gelap sesuai tema
-  /// aktif. Dipakai di UI (bukan buat export dokumen).
+  /// Warna status Tahfizh.
   static Color tahfizhOn(BuildContext context) =>
       _isDark(context) ? tahfizhDark : tahfizh;
 
-  /// Warna status Tahsin — otomatis pilih versi terang/gelap sesuai tema aktif.
+  /// Warna status Tahsin.
   static Color tahsinOn(BuildContext context) =>
       _isDark(context) ? tahsinDark : tahsin;
 
-  /// Warna status Tahsin+Tahfizh — otomatis pilih versi terang/gelap sesuai tema aktif.
+  /// Warna status Tahsin+Tahfizh.
   static Color tahsinTahfizhOn(BuildContext context) =>
       _isDark(context) ? tahsinTahfizhDark : tahsinTahfizh;
 
-  /// Warna status Muroja'ah/Tasmi' — otomatis pilih versi terang/gelap sesuai tema aktif.
+  /// Warna status Muroja'ah/Tasmi'.
   static Color murojaahTasmiOn(BuildContext context) =>
       _isDark(context) ? murojaahTasmiDark : murojaahTasmi;
 
-  /// Warna generik untuk [HafalanStatus] apa pun — dipakai di badge, form,
-  /// dan kartu rekap kelas/halaqoh biar 1 sumber warna yang konsisten.
+  /// Warna generik untuk [HafalanStatus] apa pun.
   static Color statusOn(BuildContext context, HafalanStatus status) => switch (status) {
         HafalanStatus.tahfizh => tahfizhOn(context),
         HafalanStatus.tahsin => tahsinOn(context),
@@ -94,9 +96,7 @@ class AppColors {
         HafalanStatus.murojaahTasmi => murojaahTasmiOn(context),
       };
 
-  /// Versi dark-aware dari [keteranganColor] — dipakai di semua tempat UI
-  /// (chip, badge, filter). Untuk export dokumen tetap pakai
-  /// [keteranganColor] biasa (kertas selalu putih).
+  /// Versi dark-aware dari [keteranganColor].
   static Color keteranganColorOn(BuildContext context, String key) {
     final dark = _isDark(context);
     return switch (key) {
@@ -113,9 +113,7 @@ class AppColors {
     };
   }
 
-  /// Versi non-context, warna "kertas putih" tetap — dipakai khusus untuk
-  /// generate PDF/Excel/Word (dokumen ekspor selalu berlatar putih, gak
-  /// perlu ikut tema aplikasi).
+  /// Versi non-context, warna "kertas putih" tetap.
   static Color keteranganColor(String key) => switch (key) {
         'hadir' => hadir,
         'izinSakit' => izinSakit,
@@ -131,9 +129,7 @@ class AppColors {
 
   // --- Alias generik ---
   // Warna-warna di atas juga dipakai ulang di luar konteks "keterangan"
-  // (mis. ikon format ekspor, kartu statistik) — alias ini kasih nama
-  // netral biar pemanggilannya gak aneh secara semantik, tapi tetap 1
-  // sumber warna yang sama (dan tetap dark-aware).
+  // (mis. ikon format ekspor, kartu statistik).
   static Color greenOn(BuildContext context) => _isDark(context) ? hadirDark : hadir;
   static Color orangeOn(BuildContext context) => _isDark(context) ? izinSakitDark : izinSakit;
   static Color purpleOn(BuildContext context) => _isDark(context) ? izinLombaDark : izinLomba;

@@ -55,9 +55,7 @@ class WeeklyRecapDeployService {
   }
 
   /// Lempar exception apa adanya kalau gagal (BEDA dari service mirror
-  /// lain yang fire-and-forget/`catchError((_){})`) — ini aksi yang
-  /// ditekan guru secara sadar lewat tombol "Deploy", jadi dia BERHAK
-  /// tahu persis kalau gagal (mis. offline / rules belum di-deploy).
+  /// lain yang fire-and-forget/`catchError((_){})`).
   Future<void> deployWeeklyRecap({
     required String kelas,
     required String halaqoh,

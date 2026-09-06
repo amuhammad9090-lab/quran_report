@@ -229,13 +229,7 @@ class StorageService {
   // <-- BERUBAH: nambah parameter [scope]. Sebelumnya fungsi ini narik
   // SEMUA santriRecords satu sekolah tanpa filter, jadi device guru
   // pembimbing X ikut nyimpen lokal punya guru Y/Z juga (cuma disembunyiin
-  // di level tampilan lewat AccessScope.scopeRecords() pas render list) —
-  // akibatnya notifikasi/snackbar yang baca langsung dari local box tanpa
-  // lewat scopeRecords() bisa "nyampur" nunjukin punya guru lain. Sekarang
-  // record yang kelas+halaqoh-nya bukan tanggung jawab [scope] di-skip
-  // dari SUMBERNYA, gak pernah nyampe ditulis ke local storage device ini
-  // sama sekali. [scope] null (mis. gagal load user) -> fallback ke
-  // perilaku lama (semua record) daripada restore diam-diam kosong.
+  // di level tampilan lewat AccessScope.scopeRecords() pas render list).
   Future<int> restoreFromFirestore({AccessScope? scope}) async {
     final snapshot = await FirebaseFirestore.instance
         .collection('schools')

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../data/services/export_service.dart';
@@ -132,14 +133,31 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                   children: [
                     for (var i = 0; i < groups.length; i++) ...[
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: 10),
+                        // Judul & 2 chip aksi (Export, Deploy) disandingin
+                        // lagi 1 baris (center) — tapi sekarang judulnya
+                        // dipecah 2 baris sendiri ("Kelas X" di atas,
+                        // "Halaqoh Y" di bawah) biar tetep muat & gak
+                        // kepotong "..." walau di samping ada 2 chip.
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(
-                              child: Text(
-                                'Kelas ${groups[i].kelas} — Halaqoh ${groups[i].halaqoh}',
-                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
-                                overflow: TextOverflow.ellipsis,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Kelas ${groups[i].kelas}',
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'Halaqoh ${groups[i].halaqoh}',
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -148,11 +166,16 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                             // disandingkan 2 chip kecil bertinta lembut
                             // (Export & Deploy) biar keliatan sepasang
                             // aksi yang setara, bukan 1 ikon nyempil
-                            // sendirian — lihat [_ActionChip]/[_DeployChip].
-                            _ActionChip(
+                            // sendirian — lihat [AppActionChip]/[_DeployChip].
+                            AppActionChip(
                               icon: Icons.ios_share_rounded,
                               label: 'Export',
-                              color: Theme.of(context).colorScheme.primary,
+                              // BERUBAH: dulu pakai colorScheme.primary
+                              // (bisa beda kehijauannya dari Deploy
+                              // tergantung tema) -- disamain sekarang
+                              // pakai warna teal yang sama kayak Deploy
+                              // biar 2 chip ini keliatan senada.
+                              color: AppColors.deployOn(context),
                               tooltip: 'Export Kelas ${groups[i].kelas} — Halaqoh ${groups[i].halaqoh}',
                               onTap: () => showExportSheet(
                                 context,
@@ -206,64 +229,6 @@ class GenerateRekapPekananScreen extends StatelessWidget {
     );
   }
 }
-/// Chip kecil bertinta lembut (soft-tint pill) buat 1 aksi — dipakai
-/// buat "Export" (statis) dan sebagai dasar tampilan [_DeployChip].
-/// Sengaja bentuknya pill+label kecil (bukan IconButton polos tanpa
-/// latar seperti sebelumnya) biar Export & Deploy kelihatan sepasang
-/// yang setara & rapi kalau disandingkan, bukan 1 ikon nyempil sendirian.
-class _ActionChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final String tooltip;
-  final VoidCallback? onTap;
-  final Widget? leadingOverride;
-
-  const _ActionChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.tooltip,
-    required this.onTap,
-    this.leadingOverride,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final disabled = onTap == null;
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: color.withValues(alpha: disabled ? 0.07 : 0.13),
-        borderRadius: BorderRadius.circular(999),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(999),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                leadingOverride ??
-                    Icon(icon, size: 15, color: disabled ? color.withValues(alpha: 0.45) : color),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: disabled ? color.withValues(alpha: 0.45) : color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Tombol "Deploy" — kirim rekap pekanan 1 Kelas+Halaqoh ke Firestore
 /// (buat Portal Ortu, lihat [WeeklyRecapDeployService]). Beda dari
 /// Export yang instan (langsung buka sheet, tidak ada proses async),
@@ -315,15 +280,20 @@ class _DeployChipState extends State<_DeployChip> {
     // Warna teal-cloud dibedain sengaja dari Export (primary) biar
     // dua aksinya kebeda maknanya sekilas: Export = dokumen ke HP,
     // Deploy = kirim ke cloud/orang tua.
-    const deployColor = Color(0xFF0E8F6E);
-    return _ActionChip(
+    // BUG FIX: dulu warnanya di-hardcode 1 nilai (dipakai apa adanya di
+    // kedua tema) — akibatnya di dark mode chip-nya keliatan gelap/muram
+    // karena warna itu didesain buat kontras di atas background PUTIH,
+    // bukan di atas card gelap. Sekarang pakai versi dark-aware yang
+    // dicerahkan di dark mode, senada pola warna status lain di app ini.
+    final deployColor = AppColors.deployOn(context);
+    return AppActionChip(
       icon: Icons.cloud_upload_rounded,
       label: 'Deploy',
       color: deployColor,
       tooltip: widget.tooltip,
       onTap: _loading ? null : _handleTap,
       leadingOverride: _loading
-          ? const SizedBox(
+          ? SizedBox(
               width: 15,
               height: 15,
               child: CircularProgressIndicator(strokeWidth: 2, color: deployColor),

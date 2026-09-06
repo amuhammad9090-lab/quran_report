@@ -34,12 +34,7 @@ class _LaporanTabState extends State<LaporanTab> {
   bool _selectionMode = false;
   final Set<String> _selected = {};
 
-  // Accordion panel info pekan LINTAS-KARTU — cuma 1 (identityKey +
-  // weekIndex) yang boleh expand sekaligus di SELURUH daftar santri.
-  // Sebelumnya expand-state disimpen sendiri2 di tiap SantriReportCard,
-  // jadi bisa kebuka bareng di banyak kartu santri berbeda; sekarang
-  // dinaikin ke sini biar buka panel di 1 santri otomatis nutup punya
-  // santri lain (sama pola kayak accordion Pekan di Rekap Bulanan).
+  // Accordion panel info pekan LINTAS-KARTU
   String? _expandedCardId;
   int? _expandedWeek;
 
@@ -182,10 +177,6 @@ class _LaporanTabState extends State<LaporanTab> {
   /// (dipakai bersama dengan Bottom Sheet Filter yang sudah ada).
   List<SantriCardInfo> _filteredCards(RecordsProvider provider) {
     final q = provider.searchQuery.trim().toLowerCase();
-    // BUG FIX: dulu kalender murni — beda definisi "bulan ini" sama
-    // recordsInMonth() (yang sekarang berbasis kepemilikan pekan), jadi
-    // filter status/keterangan bisa salah nge-cover laporan di 1-2 hari
-    // ujung bulan. Disamain ke WeekUtils.ownerMonth kayak di tempat lain.
     final thisMonth = WeekUtils.ownerMonth(DateTime.now());
     return provider.laporanCards.where((c) {
       if (c.currentFolderId != null) return false;
@@ -271,12 +262,6 @@ class _LaporanTabState extends State<LaporanTab> {
     final foldersProvider = context.watch<FoldersProvider>();
     final cards = _filteredCards(provider);
     final folders = foldersProvider.all;
-    // Kartu yang folder tujuannya sudah tidak ada lagi (mis. restore dari
-    // Cloud dijalankan sebelum folder-nya sempat ikut ke-backup) -- lihat
-    // RecordsProvider.orphanedFolderCards. Kartu begini TIDAK nongol di
-    // `cards` (currentFolderId-nya masih terisi) maupun di section Folder
-    // di bawah (folder tujuannya sendiri sudah tidak ada), jadi perlu
-    // banner terpisah biar tetap ketemu & bisa diselamatkan.
     final orphanedCount =
         provider.orphanedFolderCards(folders.map((f) => f.id).toSet()).length;
 
@@ -305,7 +290,7 @@ class _LaporanTabState extends State<LaporanTab> {
                   surfaceTintColor: Colors.transparent,
                   elevation: 0,
                   scrolledUnderElevation: 0,
-                  toolbarHeight: 68,
+                  toolbarHeight: 80,
                   titleSpacing: 20,
                   title: _buildTitle(context),
                   actions: cards.isEmpty
@@ -414,11 +399,6 @@ class _LaporanTabState extends State<LaporanTab> {
                   ),
                   SelectionAction(
                     icon: Icons.drive_file_move_outline,
-                    // Sebelumnya 'Pindahkan ke Folder' -> kepanjangan buat
-                    // Expanded selebar setengah bar di layar HP (apalagi
-                    // berdampingan sama tombol "Hapus"), jadinya numpuk 2
-                    // baris / kepotong nggak rapi. Dipendekin, konsisten
-                    // sama gaya label singkat tombol "Hapus" di sebelahnya.
                     label: 'Pindahkan',
                     onTap: _selected.isEmpty ? null : _pindahkanSelected,
                     filled: true,
@@ -507,31 +487,30 @@ class _LaporanTabState extends State<LaporanTab> {
 
   Widget _buildTitle(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Laporan',
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        Text(
-          'Rekap capaian tahsin & tahfizh santri',
-          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Laporan',
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          Text(
+            'Rekap capaian tahsin & tahfizh santri',
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+          ),
+        ],
+      ),
     );
   }
 
   /// Bug fix: dulu ada halaman "Hasil Pencarian" ([SearchResultsScreen])
-  /// yang nyari ke SEMUA kartu santri termasuk yang sudah masuk folder
-  /// (bukan cuma yang tanpa folder kayak list di tab ini) -- tapi nggak ada
-  /// satupun tempat yang manggil halaman itu lagi, jadi fiturnya
-  /// "hilang" dari user meskipun kodenya masih ada. Sekalian ngebenerin
-  /// itu: field pencarian di tab ini sekarang jadi pintu masuk ke sana.
+  /// yang nyari ke SEMUA kartu santri.
   void _openSearchResults(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const SearchResultsScreen()),
@@ -546,17 +525,7 @@ class _LaporanTabState extends State<LaporanTab> {
         children: [
           Expanded(
             // Bug fix: field ini sebelumnya TextField biasa yang langsung
-            // bisa diketik di tempat -- pas di-tap, dia dapet fokus &
-            // nampilin kursor, tapi ketikannya cuma nyaring kartu yang
-            // TANPA folder (lihat _filteredCards di atas), jadi hasil
-            // pencarian yang ada di dalam folder nggak pernah kelihatan
-            // dari sini, dan kursornya nggak pernah "ilang" karena field-nya
-            // emang tetap fokus/aktif nungguin ketikan lanjutan.
-            // Sekarang field ini cuma TAMPILAN (AbsorbPointer -- nggak bisa
-            // difokus/diketik, jadi nggak akan pernah nampilin kursor sama
-            // sekali), tap di mana aja langsung buka SearchResultsScreen,
-            // yang punya field pencarian sungguhan (bisa diketik & ada
-            // kursor di sana) DAN nyari sampai ke dalam folder.
+            // bisa diketik di tempat.
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => _openSearchResults(context),
@@ -639,10 +608,7 @@ class _LaporanTabState extends State<LaporanTab> {
 }
 /// Banner peringatan yang tampil di tab Laporan begitu ada kartu santri
 /// yang folder tujuannya sudah tidak ada lagi (lihat
-/// [RecordsProvider.orphanedFolderCards] dan [OrphanedRecordsScreen]) --
-/// tanpa ini kartu-kartu itu tidak kelihatan di mana pun (bukan di daftar
-/// "Laporan" biasa, bukan juga di section Folder), padahal laporannya
-/// sendiri masih aman tersimpan.
+/// [RecordsProvider.orphanedFolderCards] dan [OrphanedRecordsScreen]).
 class _OrphanedRecordsBanner extends StatelessWidget {
   final int count;
   final VoidCallback onTap;

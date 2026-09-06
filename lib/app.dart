@@ -19,6 +19,18 @@ class QuranReportApp extends StatelessWidget {
       themeMode: themeProvider.mode,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
+      // BUG FIX: MaterialApp secara default nge-crossfade ThemeData
+      // (lewat AnimatedTheme bawaan) tiap kali themeMode ganti (mis. tap
+      // toggle gelap/terang). Selama crossfade itu, TextStyle semua
+      // Text di layar (termasuk header "Assalamu'alaikum" di Beranda,
+      // yang duduk di dalam SliverAppBar pinned) ikut di-lerp
+      // frame-demi-frame — dan ini kena bug lama di Flutter framework
+      // ("debugSize == size" assertion di text_painter.dart) yang bikin
+      // app crash kalau teks yang lagi di-lerp itu ada di dalam
+      // SliverPersistentHeader (SliverAppBar pinned). Matiin animasinya
+      // (ganti tema jadi instan, tanpa crossfade) biar bug itu gak
+      // ke-trigger sama sekali.
+      themeAnimationDuration: Duration.zero,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

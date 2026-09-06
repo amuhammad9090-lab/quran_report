@@ -14,13 +14,7 @@ String normalizeHalaqoh(String raw) {
 // TAMPILAN nama kartu santri waktu kapitalisasi aslinya benar-benar tidak
 // ketemu (lihat RecordsProvider.laporanCards & catatan lengkap soal kartu
 // "identitas kosong" yang kapitalisasinya cuma ada di
-// AppPrefsService.activatedIdentityDisplay). Sebelumnya fallback-nya
-// langsung pakai identityKey apa adanya (yang emang sengaja lowercase
-// buat perbandingan, lihat [reportIdentityKey]) — makanya nama santri
-// bisa kelihatan huruf kecil semua. Ini BUKAN jaminan 100% sama persis
-// kapitalisasi asli yang diketik guru (mis. singkatan/nama majemuk),
-// cuma jaring pengaman kosmetik terakhir SEBELUM data aslinya sempat
-// dipulihkan (lihat Pengaturan -> "Pulihkan dari Cloud").
+// AppPrefsService.activatedIdentityDisplay).
 String toTitleCase(String raw) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) return trimmed;

@@ -24,8 +24,7 @@ enum HafalanStatus {
 
   // <-- BARU: dipakai SantriMonthlyRecap.keteranganSummaryText buat nandain
   // "Nx Tahsin" / "Nx Murojaah" di kolom Keterangan Rekap Bulanan (status
-  // yang baris-nya 0 karena memang bukan hafalan baru) — versi pendek biar
-  // gak makan tempat kolom, beda dari [label] yang dipakai di tempat lain.
+  // yang baris-nya 0 karena memang bukan hafalan baru).
   String get shortLabel => switch (this) {
         HafalanStatus.tahsin => 'Tahsin',
         HafalanStatus.tahfizh => 'Tahfizh',
@@ -34,8 +33,7 @@ enum HafalanStatus {
       };
 
   // <-- BARU: true untuk status yang MEMANG TIDAK menghasilkan baris
-  // hafalan baru (Tahsin murni & Muroja'ah/Tasmi' — keduanya bukan hafalan
-  // baru, jadi totalBaris-nya 0 secara desain, bukan berarti "kosong").
+  // hafalan baru (Tahsin murni & Muroja'ah/Tasmi'.
   bool get isZeroBarisByDesign =>
       this == HafalanStatus.tahsin || this == HafalanStatus.murojaahTasmi;
 }
@@ -102,9 +100,7 @@ enum Keterangan {
       };
 
   /// Tiga keterangan "sanksi" (santri HADIR tapi nggak setor/tahsin/
-  /// murojaah — males/ketiduran/dll, bukan izin/sakit/alpa) — dipakai di
-  /// mana-mana yang perlu bedain "nggak hadir" vs "hadir tapi nggak
-  /// setor", mis. Kehadiran (tetap dihitung hadir) vs Distribusi Capaian.
+  /// murojaah — males/ketiduran/dll, bukan izin/sakit/alpa).
   bool get isSanksiTanpaSetoran =>
       this == Keterangan.tidakSetoran ||
       this == Keterangan.tidakTahsin ||

@@ -1480,3 +1480,62 @@ class DistribusiRow extends StatelessWidget {
     );
   }
 }
+
+/// Chip kecil bertinta lembut (soft-tint pill, ikon + label) — dipakai
+/// buat aksi "Export"/"Deploy" di layar Rekap Pekanan & Rekap Bulanan.
+/// Sengaja bentuknya pill+label kecil (bukan IconButton polos tanpa
+/// latar) biar tiap aksi kelihatan jelas fungsinya & konsisten dipakai
+/// ulang di semua layar rekap, bukan cuma 1 ikon nyempil sendirian.
+class AppActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final Widget? leadingOverride;
+
+  const AppActionChip({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+    this.leadingOverride,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: color.withValues(alpha: disabled ? 0.07 : 0.13),
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                leadingOverride ??
+                    Icon(icon, size: 15, color: disabled ? color.withValues(alpha: 0.45) : color),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: disabled ? color.withValues(alpha: 0.45) : color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

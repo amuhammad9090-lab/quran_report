@@ -5,9 +5,7 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  // Nama family sesuai yang didaftarkan di pubspec.yaml (fonts:) — font-nya
-  // sekarang di-bundle lokal di assets/fonts/, BUKAN lewat GoogleFonts.*()
-  // lagi (lihat catatan panjang di pubspec.yaml kenapa).
+  // Nama family sesuai yang didaftarkan di pubspec.yaml (fonts:).
   static const _fontFamily = 'PlusJakartaSans';
 
   static ThemeData light() => _base(Brightness.light);
@@ -24,8 +22,7 @@ class AppTheme {
         (isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme)
             .apply(fontFamily: _fontFamily);
 
-    // Warna dasar surface untuk card, dropdown menu, bottom sheet —
-    // disamakan biar dropdown/date-picker nggak "beda dunia" sama input lain.
+    // Warna dasar surface untuk card, dropdown menu, bottom sheet.
     final surfaceElevated = isDark ? const Color(0xFF181F26) : Colors.white;
     final shadowColor = isDark
         ? Colors.black.withValues(alpha: 0.55)
@@ -46,8 +43,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         // Karena backgroundColor transparan, Flutter nggak bisa nebak
-        // otomatis kontras ikon status bar — di-set eksplisit biar
-        // konsisten sama status bar fix di MainShell.
+        // otomatis kontras ikon status bar.
         systemOverlayStyle:
             isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         // Disamakan dengan ukuran judul di Statistik/Laporan (headlineSmall

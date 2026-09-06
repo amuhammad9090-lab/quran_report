@@ -101,20 +101,51 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                   children: [
                     for (final g in groups) ...[
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: 10),
+                        // BERUBAH: Export di sini dulu IconButton polos
+                        // tanpa latar. Disamain sekarang jadi AppActionChip
+                        // (pill ikon + label) — persis kayak Export/Deploy
+                        // di layar Rekap Pekanan, biar konsisten 1 gaya di
+                        // semua layar rekap. Judul "Kelas X" / "Halaqoh Y"
+                        // ikut dipecah 2 baris (bukan digabung 1 baris
+                        // pakai em dash) biar gak kepotong "..." sekarang
+                        // chip-nya lebih lebar dari IconButton lama.
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(
-                              child: Text(
-                                'Kelas ${g.kelas} — Halaqoh ${g.halaqoh}',
-                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Kelas ${g.kelas}',
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'Halaqoh ${g.halaqoh}',
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
                             ),
+                            const SizedBox(width: 8),
                             // Export per-tabel (1 Kelas+Halaqoh doang) —
                             // beda dari tombol di header halaman (yang
                             // export SEMUA kelompok jadi 1 dokumen).
-                            IconButton(
-                              onPressed: () => showExportSheet(
+                            AppActionChip(
+                              icon: Icons.ios_share_rounded,
+                              label: 'Export',
+                              // BERUBAH: dulu pakai colorScheme.primary
+                              // (bisa beda kehijauannya dari Deploy
+                              // tergantung tema) -- disamain sekarang
+                              // pakai warna teal yang sama kayak Deploy
+                              // biar 2 chip ini keliatan senada.
+                              color: AppColors.deployOn(context),
+                              tooltip: 'Export Kelas ${g.kelas} — Halaqoh ${g.halaqoh}',
+                              onTap: () => showExportSheet(
                                 context,
                                 groupedMonthlySections: [g],
                                 totalWeeks: totalWeeks,
@@ -122,11 +153,6 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                                     'Halaqoh ${g.halaqoh} - $bulanLabel',
                                 periode: bulanLabel,
                               ),
-                              icon: const Icon(Icons.ios_share_rounded, size: 19),
-                              tooltip: 'Export Kelas ${g.kelas} — Halaqoh ${g.halaqoh}',
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
                             ),
                           ],
                         ),

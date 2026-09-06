@@ -30,24 +30,33 @@ class BerandaTab extends StatelessWidget {
       onLihatLaporan();
     }
 
-    return RefreshIndicator(
-      onRefresh: provider.load,
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            scrolledUnderElevation: 3,
-            shadowColor: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10),
-            toolbarHeight: 76,
-            titleSpacing: 20,
-            title: _buildHeader(context),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+    return SafeArea(
+      // BUG FIX: tab ini dulu nggak dibungkus SafeArea sama sekali (beda
+      // dari Laporan & Statistik yang udah pakai), jadi avatar + nama
+      // pengguna kepotong/mepet bahkan lebih parah ke bar notifikasi
+      // dibanding 2 tab itu. Disamain sekarang.
+      bottom: false,
+      child: RefreshIndicator(
+        onRefresh: provider.load,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              automaticallyImplyLeading: false,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 3,
+              shadowColor: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10),
+              // Ditinggiin dari 76 -> 80 + judul digeser ke bawah (lihat
+              // [_buildHeader]) biar jaraknya ke status bar senada
+              // Laporan & Statistik.
+              toolbarHeight: 80,
+              titleSpacing: 20,
+              title: _buildHeader(context),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
             sliver: SliverList.list(
               children: [
                 WelcomeHeroCard(
@@ -181,6 +190,7 @@ class BerandaTab extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -198,8 +208,12 @@ class BerandaTab extends StatelessWidget {
     final initial = nama.isNotEmpty ? nama[0].toUpperCase() : '?';
     final photoPath = user?.photoPath;
 
-    return Row(
-      children: [
+    return Padding(
+      // Senada Padding(top: 12) di judul Laporan & Statistik, biar avatar
+      // + nama pengguna sama-sama turun & gak mepet ke status bar.
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
         Material(
           color: Colors.transparent,
           shape: const CircleBorder(),
@@ -292,6 +306,7 @@ class BerandaTab extends StatelessWidget {
           );
         }),
       ],
+      ),
     );
   }
 }

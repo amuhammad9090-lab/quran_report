@@ -21,13 +21,6 @@ class StatistikTab extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     final now = DateTime.now();
-    // BUG FIX: dulu pake kalender murni (`DateTime(now.year, now.month)`),
-    // beda sama definisi "bulan berjalan" yang dipakai di tempat lain
-    // (mis. laporanCards di provider) yang udah bener pake
-    // WeekUtils.ownerMonth — akibatnya di 1-2 hari ujung bulan (mis. 31
-    // Agustus, yang "milik" Pekan 1 September), card "Distribusi Capaian"
-    // nunjuk & buka ke Rekap Bulanan bulan yang SALAH (Agustus, padahal
-    // harusnya September). Disamain sekarang.
     final thisMonth = WeekUtils.ownerMonth(now);
     final totalTahfizhBulanIni = provider.totalTahfizhInMonth(thisMonth);
     final totalTahsinBulanIni = provider.totalTahsinInMonth(thisMonth);
@@ -50,24 +43,27 @@ class StatistikTab extends StatelessWidget {
               elevation: 0,
               scrolledUnderElevation: 3,
               shadowColor: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10),
-              toolbarHeight: 68,
+              toolbarHeight: 80,
               titleSpacing: 20,
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Statistik',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w800),
-                  ),
-                  Text(
-                    'Rekap keseluruhan data laporan',
-                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                  ),
-                ],
+              title: Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Statistik',
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    Text(
+                      'Rekap keseluruhan data laporan',
+                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
             ),
             SliverPadding(
@@ -219,18 +215,11 @@ class _AyatWeeklyChartCard extends StatelessWidget {
                             child: _WeekBar(
                               value: weeklyData[i].total,
                               maxValue: maxValue,
-                              // Pekan terakhir (pekan berjalan) dikasih warna
-                              // beda (hijau tosca, warna brand utama) biar
-                              // langsung keliatan mana "minggu ini" — sisanya
-                              // pakai warna amber Tahsin, senada palet app.
                               color: i == weeklyData.length - 1
                                   ? cs.primary
                                   : AppColors.tahsinOn(context),
                               // Label pakai rentang tanggal pekan (Senin-Minggu)
-                              // via WeekUtils — sistem penanggalan pekanan yang
-                              // sama dipakai di seluruh app (mis. "3–9 Agu"),
-                              // BUKAN label generik "W1"/"W2" yang nggak nyambung
-                              // sama kalender beneran.
+                              // via WeekUtils
                               label: WeekUtils.rangeLabel(
                                 MonthWeekRange(
                                   start: weeklyData[i].weekStart,
