@@ -1,0 +1,25 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "santriRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "namaAnak", "order": "ASCENDING" },
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "halaqoh", "order": "ASCENDING" },
+        { "fieldPath": "tanggal", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "weeklyRecaps",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "halaqoh", "order": "ASCENDING" },
+        { "fieldPath": "namaAnakLower", "order": "ASCENDING" },
+        { "fieldPath": "deployedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

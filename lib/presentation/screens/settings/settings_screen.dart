@@ -7,6 +7,7 @@ import '../../../providers/records_provider.dart';
 import '../../../providers/folders_provider.dart'; // <-- BARU
 import '../../../data/services/storage_service.dart';
 import '../../../data/services/app_prefs_service.dart'; // <-- BARU
+import '../../../data/services/firebase_bootstrap_status.dart';
 import '../../widgets/misc_widgets.dart';
 import '../about/about_screen.dart';
 
@@ -135,16 +136,6 @@ class SettingsScreen extends StatelessWidget {
 
   // <-- BARU: seluruh method ini. Handler tombol "Sinkronkan ke Cloud".
   Future<void> _syncToCloud(BuildContext context) async {
-    // Dialog loading tak-tertutup (barrierDismissible: false) — sengaja,
-    // biar guru gak nge-tap-tap lagi selagi proses jalan (bisa makan
-    // beberapa detik kalau laporannya ratusan).
-    // <-- BERUBAH: dibungkus PopScope(canPop: false) — barrierDismissible:
-    // false SEBELUMNYA cuma nyegah tap di luar dialog, TIDAK nyegah
-    // tombol back Android. Kalau koneksi lambat & user pencet back
-    // sambil nunggu, dialog ini ke-dismiss duluan; begitu proses akhirnya
-    // selesai, `Navigator.pop()` di bawah malah nutup LAYAR SETTINGS
-    // (karena dialognya udah gak ada), bikin layar jadi blank. PopScope
-    // ini yang nutup celah itu.
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -173,7 +164,13 @@ class SettingsScreen extends StatelessWidget {
       if (!context.mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal sinkron: $e. Cek koneksi internet, lalu coba lagi.')),
+        SnackBar(
+          content: Text(
+            FirebaseBootstrapStatus.ready
+                ? 'Gagal sinkron: $e. Cek koneksi internet, lalu coba lagi.'
+                : FirebaseBootstrapStatus.userMessage,
+          ),
+        ),
       );
     }
   }
@@ -230,35 +227,19 @@ class SettingsScreen extends StatelessWidget {
     );
 
     try {
-      // <-- BERUBAH: folder dipulihkan DULUAN sebelum laporan. Urutan ini
-      // sengaja — laporan yang balik dari Firestore masih bawa `folderId`
-      // lama, jadi folder tujuannya harus sudah ada di Hive duluan
-      // sebelum RecordsProvider/FoldersProvider di-reload, supaya laporan
-      // itu langsung ketemu folder "rumah"-nya begitu tab Laporan
-      // ke-render (tidak sempat kelihatan "hilang" walau cuma sekejap).
-      // <-- BERUBAH: pass scope guru yang lagi login, biar restore cuma
-      // narik record kelas+halaqoh yang emang tanggung jawabnya (lihat
-      // catatan lengkap di StorageService.restoreFromFirestore).
+      // <-- BERUBAH: folder dipulihkan DULUAN sebelum laporan.
       final scope = context.read<AuthProvider>().scope;
       await StorageService.instance.restoreFoldersFromFirestore();
       final count =
           await StorageService.instance.restoreFromFirestore(scope: scope);
-      // Metadata kartu kosong (identitas yang diaktifkan tapi belum ada
-      // laporannya) ikut dipulihkan juga — lihat catatan lengkapnya di
-      // AppPrefsService.restoreActivatedMetaFromFirestore soal kenapa ini
-      // perlu, BUKAN cuma data laporan.
+
       await AppPrefsService.instance.restoreActivatedMetaFromFirestore();
       if (!context.mounted) return;
-      // Reload provider supaya seluruh app (tab Laporan, Statistik, dst)
-      // langsung baca data yang baru dipulihkan ini. FoldersProvider juga
-      // ikut di-reload — sebelumnya luput, jadi walau foldernya sudah
-      // masuk ke Hive, tab Laporan/FolderDetail masih nampilin state
-      // folder yang LAMA (sebelum restore) sampai app di-restart manual.
       await context.read<RecordsProvider>().load();
       if (!context.mounted) return;
       await context.read<FoldersProvider>().load();
       if (!context.mounted) return;
-      Navigator.of(context).pop(); // tutup dialog loading
+      Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Berhasil! $count laporan dipulihkan dari cloud.')),
       );
@@ -266,7 +247,13 @@ class SettingsScreen extends StatelessWidget {
       if (!context.mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memulihkan: $e. Cek koneksi internet, lalu coba lagi.')),
+        SnackBar(
+          content: Text(
+            FirebaseBootstrapStatus.ready
+                ? 'Gagal memulihkan: $e. Cek koneksi internet, lalu coba lagi.'
+                : FirebaseBootstrapStatus.userMessage,
+          ),
+        ),
       );
     }
   }
@@ -310,8 +297,6 @@ class _SectionCard extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4),
-          // Label section sama persis dengan yang dipakai di Home &
-          // form laporan — biar konsisten satu aplikasi.
           child: SectionLabel(title),
         ),
         Card(

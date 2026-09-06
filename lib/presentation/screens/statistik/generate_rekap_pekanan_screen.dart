@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/week_utils.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../data/services/export_service.dart';
+import '../../../data/services/weekly_recap_deploy_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
@@ -136,15 +139,22 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                               child: Text(
                                 'Kelas ${groups[i].kelas} — Halaqoh ${groups[i].halaqoh}',
                                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            // Export per-tabel (1 Kelas+Halaqoh doang) —
-                            // satu-satunya cara export di halaman ini
-                            // sekarang (tombol export-semua-grup di header
-                            // sudah dihapus), jadi ini cuma bikin dokumen
-                            // buat kelompok ini saja.
-                            IconButton(
-                              onPressed: () => showExportSheet(
+                            const SizedBox(width: 8),
+                            // <-- BERUBAH: dulu cuma 1 IconButton polos
+                            // (Export doang, tanpa latar). Sekarang
+                            // disandingkan 2 chip kecil bertinta lembut
+                            // (Export & Deploy) biar keliatan sepasang
+                            // aksi yang setara, bukan 1 ikon nyempil
+                            // sendirian — lihat [_ActionChip]/[_DeployChip].
+                            _ActionChip(
+                              icon: Icons.ios_share_rounded,
+                              label: 'Export',
+                              color: Theme.of(context).colorScheme.primary,
+                              tooltip: 'Export Kelas ${groups[i].kelas} — Halaqoh ${groups[i].halaqoh}',
+                              onTap: () => showExportSheet(
                                 context,
                                 groupedSections: [exportSections[i]],
                                 judul: 'Laporan Pekanan - Kelas ${groups[i].kelas} '
@@ -154,11 +164,28 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                                 includeTanggal: true,
                                 fixedTanggalLabel: fixedTanggalLabel,
                               ),
-                              icon: const Icon(Icons.ios_share_rounded, size: 19),
-                              tooltip: 'Export Kelas ${groups[i].kelas} — Halaqoh ${groups[i].halaqoh}',
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
+                            ),
+                            const SizedBox(width: 8),
+                            _DeployChip(
+                              tooltip: 'Kirim rekap Kelas ${groups[i].kelas} — Halaqoh '
+                                  '${groups[i].halaqoh} ke Portal Ortu',
+                              onDeploy: () => WeeklyRecapDeployService.instance.deployWeeklyRecap(
+                                kelas: groups[i].kelas,
+                                halaqoh: groups[i].halaqoh,
+                                weekIndex: weekIndex,
+                                bulanLabel: bulanLabel,
+                                rangeLabel: rangeLabel,
+                                periode: periodeText,
+                                guruPembimbing: authProvider.guruPembimbingNameFor(
+                                  groups[i].kelas,
+                                  groups[i].halaqoh,
+                                ),
+                                rows: ExportService.instance.weeklyRowsGroupedBySantriFor(
+                                  groups[i].records,
+                                  fixedTanggalLabel: fixedTanggalLabel,
+                                ),
+                                deployedByNama: authProvider.currentUser?.displayName,
+                              ),
                             ),
                           ],
                         ),
@@ -176,6 +203,132 @@ class GenerateRekapPekananScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+/// Chip kecil bertinta lembut (soft-tint pill) buat 1 aksi — dipakai
+/// buat "Export" (statis) dan sebagai dasar tampilan [_DeployChip].
+/// Sengaja bentuknya pill+label kecil (bukan IconButton polos tanpa
+/// latar seperti sebelumnya) biar Export & Deploy kelihatan sepasang
+/// yang setara & rapi kalau disandingkan, bukan 1 ikon nyempil sendirian.
+class _ActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final Widget? leadingOverride;
+
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+    this.leadingOverride,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: color.withValues(alpha: disabled ? 0.07 : 0.13),
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                leadingOverride ??
+                    Icon(icon, size: 15, color: disabled ? color.withValues(alpha: 0.45) : color),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: disabled ? color.withValues(alpha: 0.45) : color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tombol "Deploy" — kirim rekap pekanan 1 Kelas+Halaqoh ke Firestore
+/// (buat Portal Ortu, lihat [WeeklyRecapDeployService]). Beda dari
+/// Export yang instan (langsung buka sheet, tidak ada proses async),
+/// Deploy butuh nunggu round-trip ke Firestore — makanya ini
+/// StatefulWidget sendiri: nunjukin spinner kecil pas lagi ngirim, dan
+/// kasih SnackBar sukses/gagal (BUKAN fire-and-forget diam-diam, karena
+/// ini aksi yang guru tekan sadar & berhak tahu hasilnya — beda dari
+/// mirror-backup otomatis lain yang boleh diam-diam gagal).
+class _DeployChip extends StatefulWidget {
+  final String tooltip;
+  final Future<void> Function() onDeploy;
+  const _DeployChip({required this.tooltip, required this.onDeploy});
+
+  @override
+  State<_DeployChip> createState() => _DeployChipState();
+}
+
+class _DeployChipState extends State<_DeployChip> {
+  bool _loading = false;
+
+  Future<void> _handleTap() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await widget.onDeploy();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rekap pekanan terkirim ke Portal Ortu.')),
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Waktu habis (20 detik), server tidak merespons. Cek koneksi internet, lalu coba lagi.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal kirim: $e. Cek koneksi internet, lalu coba lagi.')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Warna teal-cloud dibedain sengaja dari Export (primary) biar
+    // dua aksinya kebeda maknanya sekilas: Export = dokumen ke HP,
+    // Deploy = kirim ke cloud/orang tua.
+    const deployColor = Color(0xFF0E8F6E);
+    return _ActionChip(
+      icon: Icons.cloud_upload_rounded,
+      label: 'Deploy',
+      color: deployColor,
+      tooltip: widget.tooltip,
+      onTap: _loading ? null : _handleTap,
+      leadingOverride: _loading
+          ? const SizedBox(
+              width: 15,
+              height: 15,
+              child: CircularProgressIndicator(strokeWidth: 2, color: deployColor),
+            )
+          : null,
     );
   }
 }
