@@ -32,23 +32,39 @@ class DefaultFirebaseOptions {
     }
   }
 
+  // BERUBAH: Android app ini (com.mirailabs.quran_report) sekarang
+  // resmi nunjuk ke project quran-reportweb (project yang beneran
+  // punya Firestore Database) -- diambil dari google-services.json
+  // project quran-reportweb. Dulu nilainya masih project lama
+  // "quran-report" yang gak punya Firestore sama sekali.
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBConv1P4QyHxEYNij4AkgYmA7kI63ma7g',
-    appId: '1:665962415231:android:7096f42eea903da972ab4a',
-    messagingSenderId: '665962415231',
-    projectId: 'quran-report',
-    storageBucket: 'quran-report.firebasestorage.app',
+    apiKey: 'AIzaSyDs1M0fxMZLh0hL2sLXsSicgHzohHbe344',
+    appId: '1:110737865436:android:e4264999f8f45e1bdb9219',
+    messagingSenderId: '110737865436',
+    projectId: 'quran-reportweb',
+    storageBucket: 'quran-reportweb.firebasestorage.app',
   );
 
+  // BERUBAH: sama kayak android -- ini akar penyebab web-app timeout
+  // pas Backup/Deploy. Sekarang nunjuk ke project quran-reportweb
+  // (diambil dari SDK config App Web project itu), bukan lagi
+  // "quran-report" yang Firestore-nya emang gak ada.
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCF6B7XiuLVgdN9sAXseD2V6VGUe1Ep1Rw',
-    appId: '1:665962415231:web:2d25b7857107294472ab4a',
-    messagingSenderId: '665962415231',
-    projectId: 'quran-report',
-    authDomain: 'quran-report.firebaseapp.com',
-    storageBucket: 'quran-report.firebasestorage.app',
+    apiKey: 'AIzaSyBB0uR2q8_nfldRT6_yYnqR1m-ZUdqCFbw',
+    appId: '1:110737865436:web:ca09856908c942ffdb9219',
+    messagingSenderId: '110737865436',
+    projectId: 'quran-reportweb',
+    authDomain: 'quran-reportweb.firebaseapp.com',
+    storageBucket: 'quran-reportweb.firebasestorage.app',
   );
 
+  // <-- CATATAN: macos/ios/windows di bawah ini BELUM diupdate --
+  // masih nunjuk ke project lama "quran-report" karena belum ada
+  // config quran-reportweb buat platform-platform ini. Kalau lo
+  // pake/build salah satu dari ini, kasih tau gw config-nya (dari
+  // Firebase Console App iOS/App Windows di project quran-reportweb,
+  // atau jalanin `flutterfire configure` biar sekalian semua platform
+  // ke-generate otomatis & konsisten).
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyArAfIbTJnvpb5W0sQBxS_GyqypHEKIBE4',
     appId: '1:665962415231:ios:3d4420668a72459272ab4a',
