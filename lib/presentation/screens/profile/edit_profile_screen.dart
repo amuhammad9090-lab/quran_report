@@ -60,6 +60,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  // <-- BARU: konfirmasi dulu sebelum beneran hapus
+  Future<void> _confirmRemovePhoto() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus foto profil?'),
+        content: const Text(
+          'Foto profil ini akan dihapus dan tidak bisa dikembalikan.',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _removePhoto();
+  }
+
   Future<void> _removePhoto() async {
     final auth = context.read<AuthProvider>();
     final oldPath = auth.currentUser?.photoPath;
@@ -111,7 +135,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 title: Text('Hapus Foto', style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _removePhoto();
+                  _confirmRemovePhoto();
                 },
               ),
             const SizedBox(height: 8),

@@ -383,11 +383,18 @@ class RecordsProvider extends ChangeNotifier {
   /// plus lepas [identityKey]-nya dari daftar identitas aktif kalau ada
   /// (jaga-jaga kartu itu juga "diaktifkan" lewat Buat Laporan) — dipakai
   /// kartu santri di tab Laporan waktu user pilih "Hapus" buat kartu itu.
+  ///
+  /// <-- BARU: ikut hapus semua dokumen `weeklyRecaps` (rekap pekanan
+  /// yang sudah di-"Deploy" ke Portal Ortu) milik santri ini juga --
+  /// sebelumnya cuma `santriRecords` (laporan mentah harian) yang
+  /// terhapus, jadi rekap yang sudah dibagikan ke orang tua tetap
+  /// nongkrong sebagai dokumen yatim di Firestore.
   Future<void> deleteAllForSantri(String namaAnak, String identityKey) async {
     final ids = recordsForSantri(namaAnak).map((r) => r.id).toList();
     for (final id in ids) {
       await StorageService.instance.delete(id);
     }
+    await StorageService.instance.deleteWeeklyRecapsForSantri(namaAnak);
     await AppPrefsService.instance.removeActivatedIdentity(identityKey);
     await AppPrefsService.instance.removeActivatedIdentityDisplay(identityKey);
     _activatedKeys.remove(identityKey);

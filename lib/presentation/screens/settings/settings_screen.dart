@@ -81,11 +81,8 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       title: const Text('Backup ke Cloud'),
                       subtitle: const Text('Kirim ulang semua laporan ke Portal Orang Tua'),
-                      onTap: () => _syncToCloud(context),
+                      onTap: () => _confirmSyncToCloud(context),
                     ),
-                    // <-- BARU: seluruh ListTile ini. Kebalikan dari
-                    // "Backup ke Cloud" — dipakai kalau data lokal di HP
-                    // ini hilang.
                     ListTile(
                       leading: SoftIconBox(
                         icon: Icons.cloud_download_outlined,
@@ -125,6 +122,32 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // <-- BARU: Konfirmasi dulu sebelum Backup ke
+  // Cloud
+  void _confirmSyncToCloud(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Backup ke Cloud?'),
+        content: const Text(
+          'Semua laporan yang tersimpan di HP ini akan dikirim ulang ke Portal Orang Tua. '
+          'Data lama di cloud dengan laporan yang sama akan ditimpa. Butuh koneksi internet.',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _syncToCloud(context);
+            },
+            child: const Text('Backup'),
           ),
         ],
       ),

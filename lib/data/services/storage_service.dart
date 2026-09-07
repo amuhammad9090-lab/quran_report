@@ -153,6 +153,52 @@ class StorageService {
         .catchError((_) {});
   }
 
+  // FIRESTORE: HAPUS REKAP PEKANAN (PORTAL ORTU) MILIK 1 SANTRI
+  // <-- BARU: sebelumnya dokumen `weeklyRecaps` (hasil tombol "Deploy" di
+  // generate_rekap_pekanan_screen.dart, lihat WeeklyRecapDeployService)
+  // tidak pernah dihapus sama sekali -- kartu santri di tab Laporan
+  // dihapus (plus semua `santriRecords`-nya), tapi rekap pekanan yang
+  // sudah kadung di-deploy ke Portal Ortu tetap nongkrong di Firestore
+  // jadi dokumen "yatim" yang tidak sinkron lagi dengan sumbernya.
+  // Dipanggil dari [RecordsProvider.deleteAllForSantri] biar ikut bersih.
+  //
+  // Query pakai `namaAnakLower` (bukan `namaAnak`) karena field ini yang
+  // didenormalisasi lowercase khusus buat exact-match case-insensitive
+  // (lihat komentar di WeeklyRecapDeployService) -- match seluruh pekan
+  // milik santri itu sekaligus, bukan cuma 1 dokumen, karena 1 santri
+  // bisa punya banyak dokumen `weeklyRecaps` (1 dokumen per pekan).
+  //
+  // Fire-and-forget (try/catch, bukan lempar exception) sama seperti
+  // mirror lain di atas -- kalau ini gagal (mis. lagi offline), jangan
+  // sampai bikin proses hapus kartu (Hive + santriRecords) yang sudah
+  // jalan duluan jadi ketahan/gagal di UI.
+  Future<void> deleteWeeklyRecapsForSantri(String namaAnak) async {
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('schools')
+          .doc(kSchoolId)
+          .collection('weeklyRecaps')
+          .where(
+            'namaAnakLower',
+            isEqualTo: namaAnak.trim().toLowerCase(),
+          )
+          .get()
+          .timeout(const Duration(seconds: 20));
+
+      if (query.docs.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+
+      for (final doc in query.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit().timeout(const Duration(seconds: 20));
+    } catch (_) {
+
+    }
+  }
+
   // SINKRONKAN SEMUA KE FIRESTORE
   Future<int> syncAllToFirestore() async {
     final all = getAll();
