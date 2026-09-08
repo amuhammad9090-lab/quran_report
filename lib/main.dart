@@ -21,6 +21,28 @@ import 'providers/records_provider.dart';
 import 'providers/students_provider.dart';
 import 'providers/theme_provider.dart';
 
+// <-- BARU: helper ini, dipisah dari main() biar bisa dibungkus
+// [Future.timeout] (lihat catatan panjang di main()).
+Future<void> _signInAnonymouslyIfNeeded(FirebaseAuth auth) async {
+  final cached = auth.currentUser;
+  if (cached == null) {
+    await auth.signInAnonymously();
+    return;
+  }
+  try {
+    await cached.reload();
+    final refreshedUser = auth.currentUser;
+    if (refreshedUser == null) {
+      await auth.signInAnonymously();
+    } else {
+      await refreshedUser.getIdToken(true);
+    }
+  } catch (_) {
+    await auth.signOut();
+    await auth.signInAnonymously();
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -32,24 +54,22 @@ void main() async {
       debugPrint('Firebase app "[DEFAULT]" sudah ada duluan (native/hot-restart) -- pakai yang itu.');
     }
 
-    final auth = FirebaseAuth.instance;
-    final cached = auth.currentUser;
-    if (cached == null) {
-      await auth.signInAnonymously();
-    } else {
-      try {
-        await cached.reload();
-        final refreshedUser = auth.currentUser;
-        if (refreshedUser == null) {
-          await auth.signInAnonymously();
-        } else {
-          await refreshedUser.getIdToken(true);
-        }
-      } catch (_) {
-        await auth.signOut();
-        await auth.signInAnonymously();
-      }
-    }
+    // <-- BERUBAH: dibungkus [timeout]. Sebelumnya sign-in anonim (atau
+    // reload/refresh token buat sesi yang udah ada) SAMA SEKALI gak
+    // punya batas waktu -- kalau sinyal lagi lemah/lambat pas app
+    // dibuka, `await` ini bisa nggantung lama (SDK Firebase nunggu
+    // cukup lama sebelum nyerah sendiri), dan karena semua ini kejadian
+    // SEBELUM runApp(), splash/launcher-nya ikut nggantung selama itu
+    // juga -- persis gejala "kadang lama kadang biasa aja" tergantung
+    // kualitas sinyal pas itu.
+    //
+    // Sekarang dikasih batas 8 detik: kalau kelamaan, app TETAP lanjut
+    // ke runApp() (fitur cloud jadi nonaktif sementara, sama seperti
+    // skenario gagal biasa -- lihat FirebaseBootstrapStatus &
+    // userMessage-nya).
+    await _signInAnonymouslyIfNeeded(FirebaseAuth.instance)
+        .timeout(const Duration(seconds: 8));
+
     FirebaseBootstrapStatus.markReady();
     if (kIsWeb) {
       FirebaseFirestore.instance.settings = const Settings(
@@ -58,7 +78,7 @@ void main() async {
       );
     }
   } catch (e, st) {
-    debugPrint('Firebase init/sign-in anonim GAGAL: $e');
+    debugPrint('Firebase init/sign-in anonim GAGAL (atau timeout jaringan): $e');
     debugPrint('$st');
     FirebaseBootstrapStatus.markFailed(e);
   }

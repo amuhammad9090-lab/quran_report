@@ -12,8 +12,11 @@ import '../../data/models/enums.dart';
 /// adanya di kedua tema — akibatnya beberapa (tahfizh, izin lomba, izin
 /// pelatihan, alpa) kontrasnya jatuh di bawah standar keterbacaan WCAG AA
 /// (4.5:1) saat dark mode, karena warnanya didesain buat kontras di atas
-/// background PUTIH, bukan di atas card gelap (~#181F26). Versi `*Dark`
-/// di bawah sudah dicek manual: semua ≥ 6.5:1 kontras di atas card gelap.
+/// background PUTIH, bukan di atas card gelap. Versi `*Dark` di bawah
+/// sudah dicek manual terhadap warna card dark mode (lihat
+/// `AppTheme.surfaceElevated`, ~#222B33 per pembaruan terakhir): semua
+/// tetap ≥ 6.5:1 kontras walau warna card sempat dinaikin (sebelumnya
+/// ~#181F26, lebih gelap) biar dark mode-nya gak kelewat pekat.
 class AppColors {
   AppColors._();
 

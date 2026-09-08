@@ -22,8 +22,18 @@ class AppTheme {
         (isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme)
             .apply(fontFamily: _fontFamily);
 
-    // Warna dasar surface untuk card, dropdown menu, bottom sheet.
-    final surfaceElevated = isDark ? const Color(0xFF181F26) : Colors.white;
+    // <-- BERUBAH: sebelumnya `#10151A`/`#181F26` — nyaris hitam pekat dan
+    // jaraknya ke card cuma tipis, jadi kelihatan "gelap banget" & card
+    // gak keangkat dari background-nya. Dinaikin sedikit ke keluarga
+    // navy-charcoal yang lebih nyaman di mata, dengan jarak scaffold↔card
+    // yang lebih jelas (biar tetap ada rasa "elevasi").
+    //
+    // Kontras warna aksen (lihat AppColors, komentar "≥6.5:1 di atas card
+    // gelap") TETAP AMAN setelah ini — background baru masih jauh lebih
+    // gelap dari teks/aksen terang manapun (dicek ulang: turun dari
+    // ~9.5:1 ke ~8:1 buat kasus terketat, masih jauh di atas standar WCAG
+    // AA 4.5:1).
+    final surfaceElevated = isDark ? const Color(0xFF222B33) : Colors.white;
     final shadowColor = isDark
         ? Colors.black.withValues(alpha: 0.55)
         : const Color(0xFF0E7C61).withValues(alpha: 0.10);
@@ -33,7 +43,7 @@ class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor:
-          isDark ? const Color(0xFF10151A) : const Color(0xFFF6F8F7),
+          isDark ? const Color(0xFF171D23) : const Color(0xFFF6F8F7),
       canvasColor: surfaceElevated,
       textTheme: baseTextTheme,
       fontFamily: _fontFamily,
@@ -71,7 +81,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor:
-            isDark ? const Color(0xFF1E2732) : const Color(0xFFEFF3F1),
+            isDark ? const Color(0xFF2A343D) : const Color(0xFFEFF3F1),
         selectedColor: colorScheme.primaryContainer,
         labelStyle: baseTextTheme.labelMedium,
         side: BorderSide.none,
@@ -80,7 +90,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? const Color(0xFF1B232B) : const Color(0xFFF0F3F2),
+        fillColor: isDark ? const Color(0xFF252F38) : const Color(0xFFF0F3F2),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -138,7 +148,11 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: isDark ? const Color(0xFF141B21) : Colors.white,
+        // <-- BERUBAH: sebelumnya `#141B21` -- malah lebih gelap dari
+        // card-nya sendiri (`surfaceElevated`), jadi bottom sheet
+        // (tempat form laporan diisi) kerasa paling gelap di seluruh
+        // app. Disamain ke keluarga warna yang sama kayak card.
+        backgroundColor: isDark ? const Color(0xFF1E262D) : Colors.white,
         elevation: isDark ? 0 : 6,
         shadowColor: shadowColor,
         shape: const RoundedRectangleBorder(
