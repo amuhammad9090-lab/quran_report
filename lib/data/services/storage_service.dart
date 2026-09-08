@@ -11,6 +11,7 @@ import '../models/santri_record.dart';
 
 /// Persistensi lokal record laporan & folder menggunakan Hive.
 /// Hive tetap menjadi sumber utama data.
+///
 /// Firestore digunakan sebagai mirror / cloud backup.
 class StorageService {
   StorageService._();

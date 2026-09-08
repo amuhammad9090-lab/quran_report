@@ -24,6 +24,19 @@
 // nebak. Kalau tidak ambigu (santri belum punya laporan lain di pekan
 // ini), perilakunya SAMA PERSIS seperti sebelumnya (langsung ke hari ini,
 // tanpa friksi tambahan).
+//
+// <-- BERUBAH: bug yang sama ternyata ada juga di jalur PEKAN YANG SUDAH
+// LEWAT — sebelumnya cabang itu SELALU langsung buka/buatkan laporan di
+// Senin (range.start) tanpa pernah cek laporan lain di pekan itu. Kalau
+// santri ternyata sudah punya laporan di hari lain pekan lalu itu (mis.
+// Selasa & Kamis) dan Senin-nya sendiri belum ada laporan, tap kartu
+// Pekan bisa kebablasan BIKIN laporan baru (kosong) di Senin, padahal
+// yang mau dibetulkan itu laporan Selasa/Kamis-nya. Sekarang "hari
+// default" pekan itu (hari ini untuk pekan berjalan, Senin untuk pekan
+// lalu) dan "laporan hari lain di pekan itu" dihitung dengan cara yang
+// sama buat DUA-duanya, jadi sheet pilihan yang sama muncul di kedua
+// kasus. Kasus umum (0-1 laporan di pekan itu, pas di hari default) TETAP
+// langsung kebuka tanpa friksi tambahan — perilaku lama, tidak berubah.
 library;
 
 import 'package:flutter/material.dart';
@@ -59,27 +72,34 @@ Future<void> openWeekForSantri(
       !today.isBefore(range.start) &&
       !today.isAfter(range.end);
 
-  if (!isCurrentWeek) {
-    // Pekan yang SUDAH LEWAT: tetap seperti semula — default ke Senin
-    // pekan itu (range.start). Buat lihat/isi hari lain yang spesifik di
-    // pekan lama, lewat Rekap Harian (tap hari itu di Rekap Pekan),
-    // bukan dari kartu pekan ini.
-    _openExact(context, provider, card, range.start, initialFolderId);
-    return;
-  }
+  // "Hari default" pekan ini — hari ini kalau pekan yang dibuka itu pekan
+  // berjalan, atau Senin (range.start) kalau pekan yang sudah lewat. Ini
+  // hari yang dibuka LANGSUNG kalau ternyata gak ada laporan lain yang
+  // bikin ambigu (lihat komentar panjang di atas).
+  final defaultDay = isCurrentWeek ? today : range.start;
+  final defaultDayExisting = provider.recordForSantriOnDate(card.nama, defaultDay);
 
-  final todayExisting = provider.recordForSantriOnDate(card.nama, today);
-  final otherDaysThisWeek = provider.recordsForSantriInRange(
-    card.nama,
-    range.start,
-    today.subtract(const Duration(days: 1)),
-  );
+  // Laporan santri ini di hari LAIN pekan itu (di luar hari default) —
+  // buat pekan berjalan cuma hari SEBELUM hari ini yang relevan (hari
+  // setelah hari ini pasti belum ada laporan apa pun, wajar). Buat pekan
+  // yang sudah lewat, SEMUA hari di rentang pekan itu selain Senin
+  // relevan (gak ada konsep "belum sampai harinya").
+  final otherRecordsThisWeek = isCurrentWeek
+      ? provider.recordsForSantriInRange(
+          card.nama,
+          range.start,
+          today.subtract(const Duration(days: 1)),
+        )
+      : provider
+          .recordsForSantriInRange(card.nama, range.start, range.end)
+          .where((r) => !DateUtils.isSameDay(r.tanggal, defaultDay))
+          .toList();
 
   // Kasus umum (paling sering terjadi): belum ada laporan lain di pekan
-  // ini selain (mungkin) hari ini sendiri -> langsung buka/isi hari ini,
+  // ini selain (mungkin) hari default -> langsung buka/isi hari default,
   // TANPA friksi tambahan — perilaku lama, tidak berubah.
-  if (otherDaysThisWeek.isEmpty) {
-    _openExact(context, provider, card, today, initialFolderId, existing: todayExisting);
+  if (otherRecordsThisWeek.isEmpty) {
+    _openExact(context, provider, card, defaultDay, initialFolderId, existing: defaultDayExisting);
     return;
   }
 
@@ -87,14 +107,15 @@ Future<void> openWeekForSantri(
   final pilihan = await _pilihHariSheet(
     context,
     card: card,
-    today: today,
-    todayExisting: todayExisting,
-    otherDaysThisWeek: otherDaysThisWeek,
+    defaultDay: defaultDay,
+    isCurrentWeek: isCurrentWeek,
+    defaultDayExisting: defaultDayExisting,
+    otherDaysThisWeek: otherRecordsThisWeek,
   );
   if (pilihan == null || !context.mounted) return;
 
   if (pilihan.pilihHariIni) {
-    _openExact(context, provider, card, today, initialFolderId, existing: todayExisting);
+    _openExact(context, provider, card, defaultDay, initialFolderId, existing: defaultDayExisting);
   } else if (pilihan.record != null) {
     showRecordFormSheet(context, existing: pilihan.record, lockIdentity: true);
   }
@@ -134,10 +155,23 @@ class _PilihHari {
 Future<_PilihHari?> _pilihHariSheet(
   BuildContext context, {
   required SantriCardInfo card,
-  required DateTime today,
-  required SantriRecord? todayExisting,
+  required DateTime defaultDay,
+  required bool isCurrentWeek,
+  required SantriRecord? defaultDayExisting,
   required List<SantriRecord> otherDaysThisWeek,
 }) {
+  // <-- BARU: wording sheet dibedain dikit tergantung [isCurrentWeek] —
+  // buat pekan berjalan tetap "hari ini" persis kayak sebelumnya (biar
+  // gak ada yang berubah dari sisi guru buat kasus yang udah bener), buat
+  // pekan yang sudah lewat pakai nama hari + tanggal eksplisit (mis.
+  // "Senin, 7 September") soalnya "hari ini" gak pas buat pekan lalu.
+  final defaultDayLabel = isCurrentWeek
+      ? 'hari ini'
+      : DateFormat('EEEE, d MMMM', 'id_ID').format(defaultDay);
+  final defaultDayShort = isCurrentWeek
+      ? 'hari ini'
+      : DateFormat('EEEE', 'id_ID').format(defaultDay);
+
   return showModalBottomSheet<_PilihHari>(
     context: context,
     isScrollControlled: true,
@@ -154,13 +188,13 @@ Future<_PilihHari?> _pilihHariSheet(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Pekan ini sudah ada laporan lain',
+                isCurrentWeek ? 'Pekan ini sudah ada laporan lain' : 'Pekan itu sudah ada laporan lain',
                 style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(
-                '${card.nama} sudah punya laporan di hari lain pekan ini. '
-                'Mau isi laporan hari ini, atau betulkan salah satu laporan di bawah?',
+                '${card.nama} sudah punya laporan di hari lain pekan ${isCurrentWeek ? "ini" : "itu"}. '
+                'Mau isi laporan $defaultDayLabel, atau betulkan salah satu laporan di bawah?',
                 style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
               ),
               const SizedBox(height: 12),
@@ -185,11 +219,11 @@ Future<_PilihHari?> _pilihHariSheet(
               const SizedBox(height: 4),
               FilledButton.tonalIcon(
                 onPressed: () => Navigator.pop(ctx, const _PilihHari.hariIni()),
-                icon: Icon(todayExisting != null ? Icons.edit_outlined : Icons.add),
+                icon: Icon(defaultDayExisting != null ? Icons.edit_outlined : Icons.add),
                 label: Text(
-                  todayExisting != null
-                      ? 'Lanjut edit laporan hari ini (${DateFormat('d MMMM', 'id_ID').format(today)})'
-                      : 'Buat laporan baru untuk hari ini (${DateFormat('d MMMM', 'id_ID').format(today)})',
+                  defaultDayExisting != null
+                      ? 'Lanjut edit laporan $defaultDayShort (${DateFormat('d MMMM', 'id_ID').format(defaultDay)})'
+                      : 'Buat laporan baru untuk $defaultDayShort (${DateFormat('d MMMM', 'id_ID').format(defaultDay)})',
                 ),
               ),
               const SizedBox(height: 8),
