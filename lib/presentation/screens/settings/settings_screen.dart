@@ -174,11 +174,23 @@ class SettingsScreen extends StatelessWidget {
     );
 
     try {
-      final count = await StorageService.instance.syncAllToFirestore();
+      final scope = context.read<AuthProvider>().scope;
+      final count = await StorageService.instance.syncAllToFirestore(scope: scope);
       if (!context.mounted) return;
       Navigator.of(context).pop(); // tutup dialog loading
+      // <-- BERUBAH: nambahin jumlah santri (bukan cuma jumlah laporan)
+      // di pesannya -- guru pembimbing biasanya lebih kebayang lewat
+      // "berapa anak" ketimbang "berapa baris laporan". `totalSantri`
+      // sudah otomatis ke-scope ke kelas/halaqoh guru ini sendiri (lihat
+      // RecordsProvider._scoped), jadi buat guru non-admin ini beneran
+      // jumlah anak-anaknya dia doang, bukan seluruh sekolah.
+      final totalSantri = context.read<RecordsProvider>().totalSantri;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Berhasil! $count laporan tersinkron ke cloud.')),
+        SnackBar(
+          content: Text(
+            'Berhasil! $count laporan ($totalSantri santri) tersinkron ke cloud.',
+          ),
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -257,8 +269,15 @@ class SettingsScreen extends StatelessWidget {
       await context.read<FoldersProvider>().load();
       if (!context.mounted) return;
       Navigator.of(context).pop();
+      // <-- BERUBAH: sama kayak _syncToCloud, ikut nampilin jumlah
+      // santri (ter-scope ke guru pembimbing ini) di snackbar-nya.
+      final totalSantri = context.read<RecordsProvider>().totalSantri;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Berhasil! $count laporan dipulihkan dari cloud.')),
+        SnackBar(
+          content: Text(
+            'Berhasil! $count laporan ($totalSantri santri) dipulihkan dari cloud.',
+          ),
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;

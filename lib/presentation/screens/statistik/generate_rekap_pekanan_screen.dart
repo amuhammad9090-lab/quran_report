@@ -87,6 +87,18 @@ class GenerateRekapPekananScreen extends StatelessWidget {
         ),
     ];
 
+    // <-- BARU: dihitung sekali di sini (bukan inline di dalam onDeploy)
+    // biar bisa dipakai DUA kali -- buat body deploy-nya sendiri DAN
+    // buat nampilin jumlah santri di snackbar/tooltip _DeployChip --
+    // tanpa nge-generate rows-nya dua kali per grup.
+    final weeklyRowsPerGroup = [
+      for (final g in groups)
+        ExportService.instance.weeklyRowsGroupedBySantriFor(
+          g.records,
+          fixedTanggalLabel: fixedTanggalLabel,
+        ),
+    ];
+
     return Scaffold(
       body: SafeArea(
         child: CustomScrollView(
@@ -167,6 +179,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                             _DeployChip(
                               tooltip: 'Kirim rekap Kelas ${groups[i].kelas} — Halaqoh '
                                   '${groups[i].halaqoh} ke Portal Ortu',
+                              santriCount: weeklyRowsPerGroup[i].length,
                               onDeploy: () => WeeklyRecapDeployService.instance.deployWeeklyRecap(
                                 kelas: groups[i].kelas,
                                 halaqoh: groups[i].halaqoh,
@@ -178,10 +191,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                                   groups[i].kelas,
                                   groups[i].halaqoh,
                                 ),
-                                rows: ExportService.instance.weeklyRowsGroupedBySantriFor(
-                                  groups[i].records,
-                                  fixedTanggalLabel: fixedTanggalLabel,
-                                ),
+                                rows: weeklyRowsPerGroup[i],
                                 deployedByNama: authProvider.currentUser?.displayName,
                               ),
                             ),
@@ -210,8 +220,13 @@ class GenerateRekapPekananScreen extends StatelessWidget {
 /// Deploy butuh nunggu round-trip ke Firestore.
 class _DeployChip extends StatefulWidget {
   final String tooltip;
+  final int santriCount;
   final Future<void> Function() onDeploy;
-  const _DeployChip({required this.tooltip, required this.onDeploy});
+  const _DeployChip({
+    required this.tooltip,
+    required this.santriCount,
+    required this.onDeploy,
+  });
 
   @override
   State<_DeployChip> createState() => _DeployChipState();
@@ -226,8 +241,14 @@ class _DeployChipState extends State<_DeployChip> {
     try {
       await widget.onDeploy();
       if (!mounted) return;
+      // <-- BERUBAH: ikut nampilin jumlah santri yang barusan terkirim
+      // (grup Kelas+Halaqoh ini doang, bukan seluruh sekolah).
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rekap pekanan terkirim ke Portal Ortu.')),
+        SnackBar(
+          content: Text(
+            'Rekap pekanan terkirim ke Portal Ortu (${widget.santriCount} santri).',
+          ),
+        ),
       );
     } on TimeoutException {
       if (!mounted) return;

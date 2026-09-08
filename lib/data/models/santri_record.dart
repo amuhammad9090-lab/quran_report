@@ -1,5 +1,6 @@
 import '../../core/utils/text_utils.dart';
 import 'enums.dart';
+import 'kelas_halaqoh.dart';
 
 /// Satu segmen Tahfizh (hafalan baru): 1 surah + rentang ayat + hasil
 /// generate barisnya sendiri. Laporan bisa punya LEBIH DARI SATU segmen
@@ -240,6 +241,16 @@ class SantriRecord {
     );
   }
 
+  // <-- BARU: field turunan (denormalized), murni buat query Firestore
+  // ter-scope di StorageService.restoreFromFirestore (whereIn per
+  // pasangan kelas+halaqoh guru pembimbing) — BUKAN field baru di
+  // constructor/Hive, dihitung ulang tiap saat dari kelas+halaqoh yang
+  // sudah ada, jadi TIDAK butuh migrasi data lokal apa pun. Ikut ditulis
+  // di [toJson] supaya dokumen Firestore (baru maupun yang di-backup
+  // ulang) punya field ini buat di-query; [fromJson] sengaja tidak baca
+  // field ini balik (gak perlu, kelas+halaqoh sudah cukup).
+  String get kelasHalaqohKey => buildKelasHalaqohKey(kelas, halaqoh);
+
   /// Laporan ini pernah diedit setelah pertama dibuat — dipakai buat
   /// nampilin badge "Diedit" di kartu laporan (tab Laporan & detail
   /// santri), biar guru pembimbing/ortu tahu isinya bukan versi asli lagi.
@@ -379,6 +390,8 @@ class SantriRecord {
         'catatan': catatan,
         'folderId': folderId,
         'ownerId': ownerId,
+        // <-- BARU: lihat dokumentasi di getter [kelasHalaqohKey] di atas.
+        'kelasHalaqoh': kelasHalaqohKey,
       };
 
   factory SantriRecord.fromJson(Map<String, dynamic> json) => SantriRecord(

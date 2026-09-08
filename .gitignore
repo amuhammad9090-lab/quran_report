@@ -8,10 +8,6 @@ build/
 .flutter-plugins-dependencies
 .metadata
 
-# Firebase
-**/google-services.json
-**/GoogleService-Info.plist
-
 # AI Agent Configuration
 .claude/
 .agent/
