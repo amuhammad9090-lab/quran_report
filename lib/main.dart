@@ -58,10 +58,7 @@ void main() async {
     // reload/refresh token buat sesi yang udah ada) SAMA SEKALI gak
     // punya batas waktu -- kalau sinyal lagi lemah/lambat pas app
     // dibuka, `await` ini bisa nggantung lama (SDK Firebase nunggu
-    // cukup lama sebelum nyerah sendiri), dan karena semua ini kejadian
-    // SEBELUM runApp(), splash/launcher-nya ikut nggantung selama itu
-    // juga -- persis gejala "kadang lama kadang biasa aja" tergantung
-    // kualitas sinyal pas itu.
+    // cukup lama sebelum nyerah sendiri).
     //
     // Sekarang dikasih batas 8 detik: kalau kelamaan, app TETAP lanjut
     // ke runApp() (fitur cloud jadi nonaktif sementara, sama seperti

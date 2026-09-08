@@ -599,9 +599,32 @@ class _WeekChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final accent = (filled || isCurrent || isExpanded) ? cs.primary : cs.onSurfaceVariant;
+    // <-- BERUBAH: sebelumnya "filled" (pekan udah diisi) pakai tint yang
+    // SAMA level-nya (alpha 0.12) kayak _ActionChip (tombol "Buat
+    // Laporan"/"Tambah Laporan" di atasnya, alpha 0.08) — dua-duanya sama
+    // warna (cs.primary) dan sama-sama flat tanpa border, jadi kurang
+    // kebeda pas dipandang sekilas walau maksudnya beda (satu tombol aksi,
+    // satu status "sudah kelar"). Dinaikin tint-nya + dikasih border tipis
+    // KHUSUS pas filled, biar kerasa kayak badge yang "solid/mantap" —
+    // tetap satu keluarga warna (cs.primary/ijo brand), cuma levelnya
+    // dibedain, bukan gonta-ganti hue.
     final bg = filled
-        ? cs.primary.withValues(alpha: 0.12)
+        ? cs.primary.withValues(alpha: 0.18)
         : (isCurrent ? cs.primary.withValues(alpha: 0.06) : cs.surfaceContainerHighest.withValues(alpha: 0.35));
+
+    // Prioritas border: expanded (lagi dibuka) & current-belum-diisi
+    // (ajakan "isi sekarang") tetap paling nonjol seperti sebelumnya —
+    // border tebal solid. Filled (sudah diisi, kondisi diam/tidak lagi
+    // butuh perhatian) dapat border tipis transparan, sekadar penegas
+    // "badge", bukan ajakan aksi.
+    final Border? border;
+    if (isExpanded || (isCurrent && !filled)) {
+      border = Border.all(color: cs.primary, width: 1.3);
+    } else if (filled) {
+      border = Border.all(color: cs.primary.withValues(alpha: 0.35), width: 1);
+    } else {
+      border = null;
+    }
 
     return Material(
       color: bg,
@@ -613,7 +636,7 @@ class _WeekChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 7),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: (isExpanded || (isCurrent && !filled)) ? Border.all(color: cs.primary, width: 1.3) : null,
+            border: border,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
