@@ -44,41 +44,33 @@ service cloud.firestore {
         return request.auth != null &&
           request.auth.token.firebase.sign_in_provider == 'anonymous';
       }
-      // <-- BARU: seluruh match ini. Collection `accounts` (data guru/
-      // admin: username, passwordHash awal, displayName, assignments
-      // kelas+halaqoh, flag isAdmin) — dipakai ApiAuthRepository, fitur
-      // baru yang bikin admin bisa edit assignment guru dari dalam app
-      // (menu "Kelola Akun Guru") TANPA build ulang APK, plus tombol
-      // "Migrasi Data Guru & Murid ke Cloud" (migrateSeedToFirestore).
-      // JANGAN disamakan dengan `santriAccounts` di atas — itu punya
-      // SANTRI/Portal Ortu, beda sama sekali. Sebelum blok ini
-      // ditambahkan, collection ini nggak ke-cover rule manapun ->
-      // default-deny Firestore bikin refresh()/updateAssignments()/
-      // migrateSeedToFirestore() semua permission-denied. Cuma app guru
-      // (anonim) yang pernah baca/tulis collection ini — santri/admin
-      // Portal Ortu tidak pernah butuh data guru.
+      // Collection `accounts` (data guru/admin: username, passwordHash
+      // awal, displayName, assignments kelas+halaqoh, flag isAdmin) —
+      // dipakai ApiAuthRepository, fitur admin bisa edit assignment guru
+      // dari dalam app ("Kelola Akun Guru") TANPA build ulang APK, plus
+      // tombol "Migrasi Data Guru & Murid ke Cloud"
+      // (migrateSeedToFirestore). JANGAN disamakan dengan
+      // `santriAccounts` di bawah — itu punya SANTRI/Portal Ortu, beda
+      // sama sekali. Cuma app guru (anonim) yang pernah baca/tulis
+      // collection ini — santri/admin Portal Ortu tidak pernah butuh
+      // data guru.
       match /accounts/{accountId} {
         allow read, write: if isGuruApp();
       }
-      // Akun santri:
+      // Akun santri (Portal Ortu):
       //  - santri baca dokumennya sendiri (uid = ID dokumen)
       //  - admin baca/tulis SEMUA (buat akun baru, nonaktifkan)
-      //  - <-- BERUBAH: isGuruApp() ditambah di allow write. Fitur
-      //    "Migrasi Data Guru & Murid ke Cloud" (admin LOKAL app guru,
-      //    tombol di Pengaturan) nulis ke sini, tapi app guru SELALU
-      //    sign-in anonim ke Firebase (isGuruApp()) — gak pernah punya
-      //    sesi Firebase Auth ber-email admin (isAdmin() di atas itu
-      //    khusus buat admin Portal Ortu/Console, identitas yang BEDA).
-      //    Tanpa ini, migrasi selalu permission-denied walau yang
-      //    mencet tombolnya admin di app guru. Trade-off yang disadari:
-      //    ini nyamain level trust isGuruApp() dengan collection lain
-      //    yang app guru tulis (santriRecords, dst) — UI-nya sendiri
-      //    tetap menyembunyikan tombol ini dari guru pembimbing biasa
-      //    (lihat "Kelola Sekolah (Admin)" di settings_screen.dart),
-      //    tapi dari sisi Firestore, semua sesi app guru anonim setara.
+      //
+      // <-- BERUBA (dikoreksi): sempat ditambah `isGuruApp()` di allow
+      // write dengan asumsi fitur "Migrasi Data Guru & Murid ke Cloud"
+      // nulis ke sini juga — TERNYATA SALAH, migrasi itu cuma nulis ke
+      // `accounts`/`students` (2 collection terpisah di atas/bawah),
+      // TIDAK PERNAH ke `santriAccounts`. Dibalikin ke `isAdmin()` doang,
+      // supaya kredensial login santri/orang tua tidak ikut kebuka buat
+      // ditulis oleh sembarang sesi app guru yang anonim.
       match /santriAccounts/{accountId} {
         allow read: if isAdmin() || (request.auth != null && request.auth.uid == accountId);
-        allow write: if isAdmin() || isGuruApp();
+        allow write: if isAdmin();
       }
       // Data master santri:
       //  - santri baca datanya sendiri
@@ -88,11 +80,10 @@ service cloud.firestore {
       //    isGuruApp() boleh nulis juga, khusus buat fitur "Migrasi
       //    Data Guru & Murid ke Cloud" (ApiStudentRepository.
       //    migrateSeedToFirestore) — sekali-jalan, upsert per id,
-      //    dipicu admin LOKAL dari app guru. Sama trade-off-nya kayak
-      //    santriAccounts di atas: gak ada cara bedain "admin lokal"
-      //    vs "guru pembimbing biasa" di level Firestore selama
-      //    keduanya sama-sama anonim, jadi trust-nya di-generalisasi
-      //    ke seluruh isGuruApp() — ditutup di sisi UI, bukan di rules.
+      //    dipicu admin LOKAL dari app guru. Gak ada cara bedain "admin
+      //    lokal" vs "guru pembimbing biasa" di level Firestore selama
+      //    keduanya sama-sama anonim, jadi trust-nya di-generalisasi ke
+      //    seluruh isGuruApp() — ditutup di sisi UI, bukan di rules.
       match /students/{studentId} {
         allow read: if isAdmin() || (request.auth != null && myAccount().studentId == studentId);
         allow write: if isGuruApp();
