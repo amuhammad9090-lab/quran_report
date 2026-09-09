@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../core/access/access_scope.dart';
 import '../data/models/school.dart';
 import '../data/models/user_account.dart';
+import '../data/repositories/api_auth_repository.dart';
 import '../data/repositories/auth_repository.dart';
-import '../data/repositories/local_auth_repository.dart';
 import '../data/repositories/school_repository.dart';
 import '../data/services/app_prefs_service.dart';
 import '../data/services/auth_hash_service.dart';
@@ -14,10 +14,15 @@ import '../data/services/auth_hash_service.dart';
 /// constructor supaya gampang diganti implementasi backend nanti tanpa
 /// mengubah provider ini sama sekali.
 class AuthProvider extends ChangeNotifier {
+  // <-- BERUBAH: default-nya sekarang [ApiAuthRepository] (Firestore +
+  // cache Hive lokal buat login offline, fallback ke seed kalau belum
+  // pernah online sama sekali) -- bukan lagi [LocalAuthRepository] (seed
+  // doang). Assignment kelas/halaqoh guru sekarang bisa diedit admin
+  // dari dalam app tanpa build ulang APK -- lihat ApiAuthRepository.
   AuthProvider({
     AuthRepository? authRepository,
     SchoolRepository? schoolRepository,
-  })  : _authRepo = authRepository ?? LocalAuthRepository(),
+  })  : _authRepo = authRepository ?? ApiAuthRepository.instance,
         _schoolRepo = schoolRepository ?? LocalSchoolRepository();
 
   final AuthRepository _authRepo;
@@ -151,6 +156,24 @@ class AuthProvider extends ChangeNotifier {
       if (acc.id == id) return acc.displayName;
     }
     return null;
+  }
+
+  /// Muat ulang [allAccounts] dari repository — dipanggil abis admin
+  /// ngedit assignment guru lewat layar Kelola Akun Guru. Kalau akun yang
+  /// lagi login ikut ke-edit, [currentUser]/[scope] ikut disegerin juga di
+  /// sini, biar assignment barunya langsung kepakai tanpa perlu
+  /// logout-login dulu.
+  Future<void> reloadAccounts() async {
+    _allAccounts = await _authRepo.allAccounts();
+    if (_currentUser != null) {
+      for (final acc in _allAccounts) {
+        if (acc.id == _currentUser!.id) {
+          _currentUser = acc;
+          break;
+        }
+      }
+    }
+    notifyListeners();
   }
 
   Future<void> logout() async {
