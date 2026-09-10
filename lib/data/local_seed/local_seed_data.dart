@@ -25,7 +25,7 @@ const List<Map<String, dynamic>> kSeedSchoolsJson = [
     'id': 'smpit_al_madinah_tanjungpinang',
     'name': 'SMPIT Al Madinah',
     'city': 'Tanjungpinang',
-    'logo': null,
+    'logo': null, // owner akan pasang logo asli sendiri
   },
 ];
 

@@ -317,7 +317,11 @@ class SchoolDataExcelService {
         unknownIds.add(username.isEmpty ? id : '$id ($username)');
         continue;
       }
+<<<<<<< HEAD
       if (displayName.isEmpty) continue;
+=======
+      if (displayName.isEmpty) continue; // baris gak lengkap, skip aman
+>>>>>>> b6ba5a6 (Update mode admin: data guru dan murid)
 
       rows.add(AccountImportRow(
         current: current,
