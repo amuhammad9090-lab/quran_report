@@ -5,16 +5,12 @@ import '../../../providers/theme_provider.dart';
 import '../../../providers/auth_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
 import '../../../providers/folders_provider.dart'; // <-- BARU
-import '../../../providers/students_provider.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../data/services/app_prefs_service.dart'; // <-- BARU
 import '../../../data/services/firebase_bootstrap_status.dart';
-import '../../../data/repositories/api_student_repository.dart';
-import '../../../data/repositories/api_auth_repository.dart';
 import '../../widgets/misc_widgets.dart';
 import '../about/about_screen.dart';
-import 'kelola_murid_screen.dart';
-import 'kelola_guru_screen.dart';
+import 'kelola_data_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -114,30 +110,13 @@ class SettingsScreen extends StatelessWidget {
                     title: 'Kelola Sekolah (Admin)',
                     children: [
                       ListTile(
-                        leading: SoftIconBox(icon: Icons.groups_2_outlined, color: cs.primary),
-                        title: const Text('Kelola Data Murid'),
-                        subtitle: const Text('Pindah kelas/halaqoh (mis. naik Tahsin → Tahfizh)'),
+                        leading: SoftIconBox(icon: Icons.manage_accounts_outlined, color: cs.primary),
+                        title: const Text('Halaman Kelola'),
+                        subtitle: const Text('Kelola guru & murid, export/import Excel, migrasi data'),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const KelolaMuridScreen()),
+                          MaterialPageRoute(builder: (_) => const KelolaDataScreen()),
                         ),
-                      ),
-                      ListTile(
-                        leading: SoftIconBox(icon: Icons.badge_outlined, color: cs.primary),
-                        title: const Text('Kelola Akun Guru'),
-                        subtitle: const Text('Ubah nama & assignment kelas/halaqoh guru pembimbing'),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const KelolaGuruScreen()),
-                        ),
-                      ),
-                      ListTile(
-                        leading: SoftIconBox(icon: Icons.cloud_sync_outlined, color: cs.primary),
-                        title: const Text('Migrasi Data Guru & Murid ke Cloud'),
-                        subtitle: const Text(
-                          'Sekali jalan — pindahin data bawaan APK ke cloud, aman dipencet berkali-kali',
-                        ),
-                        onTap: () => _confirmMigrateSeed(context),
                       ),
                     ],
                   ),
@@ -356,66 +335,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  // <-- BARU: seluruh method ini. Handler tombol "Migrasi Data Guru &
-  // Murid ke Cloud" (admin only) — sekali-jalan, aman dipencet
-  // berkali-kali (upsert per id, bukan nambah dobel). Lihat
-  // ApiStudentRepository/ApiAuthRepository.migrateSeedToFirestore.
-  void _confirmMigrateSeed(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Migrasi data ke Cloud?'),
-        content: const Text(
-          'Data guru & murid bawaan APK akan disalin ke cloud. Aman dijalankan berkali-kali '
-          '(data lama dengan id yang sama akan ditimpa, bukan digandakan). Butuh koneksi internet.',
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _migrateSeed(context);
-            },
-            child: const Text('Migrasi'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _migrateSeed(BuildContext context) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const PopScope(
-        canPop: false,
-        child: Center(child: CircularProgressIndicator()),
-      ),
-    );
-
-    try {
-      final students = await ApiStudentRepository.instance.migrateSeedToFirestore();
-      final accounts = await ApiAuthRepository.instance.migrateSeedToFirestore();
-
-      if (!context.mounted) return;
-      await context.read<StudentsProvider>().load();
-      if (!context.mounted) return;
-      await context.read<AuthProvider>().reloadAccounts();
-      if (!context.mounted) return;
-
-      Navigator.of(context).pop(); // tutup dialog loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Berhasil! $students murid & $accounts akun guru tersalin ke cloud.')),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal migrasi: $e')),
-      );
-    }
-  }
 }
 
 /// Kotak ikon bertinta lembut untuk leading icon list tile pengaturan —

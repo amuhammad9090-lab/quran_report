@@ -148,6 +148,40 @@ class ApiStudentRepository implements StudentRepository {
     }
   }
 
+  /// Ubah kelas/halaqoh BANYAK santri sekaligus (dipakai admin dari
+  /// import Excel di Halaman Kelola, sesudah preview & konfirmasi --
+  /// BUKAN dari input bebas). Batched biar aman buat ratusan santri
+  /// sekaligus (limit 500 operasi per batch WriteBatch Firestore, sama
+  /// pola batch-nya kayak [migrateSeedToFirestore]).
+  Future<int> bulkUpdateKelasHalaqoh(List<Student> updatedStudents) async {
+    if (updatedStudents.isEmpty) return 0;
+    const batchSize = 400;
+    var written = 0;
+
+    for (var i = 0; i < updatedStudents.length; i += batchSize) {
+      final end = (i + batchSize > updatedStudents.length) ? updatedStudents.length : i + batchSize;
+      final chunk = updatedStudents.sublist(i, end);
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final s in chunk) {
+        batch.set(_collection.doc(s.id), s.toJson());
+      }
+      await batch.commit().timeout(const Duration(seconds: 20));
+      written += chunk.length;
+    }
+
+    final box = await _openBox();
+    for (final s in updatedStudents) {
+      await box.put(s.id, jsonEncode(s.toJson()));
+    }
+    if (_memCache != null) {
+      final byId = {for (final s in updatedStudents) s.id: s};
+      _memCache = [for (final s in _memCache!) byId[s.id] ?? s];
+    }
+
+    return written;
+  }
+
   /// Migrasi SEKALI-JALAN: tulis seluruh [kSeedStudentsJson] ke
   /// Firestore. Aman dipencet berkali-kali (upsert per id lewat `.set`,
   /// bukan nambah dobel) — dipanggil dari tombol admin di Settings.

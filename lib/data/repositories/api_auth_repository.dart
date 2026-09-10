@@ -172,6 +172,41 @@ class ApiAuthRepository implements AuthRepository {
     }
   }
 
+  /// Ubah displayName & assignments BANYAK akun guru sekaligus (dipakai
+  /// admin dari import Excel di Halaman Kelola, sesudah preview &
+  /// konfirmasi -- BUKAN dari input bebas). SENGAJA TIDAK menyentuh
+  /// `passwordHash`/`role`/`username`, sama seperti [updateAssignments]
+  /// satuan -- caller (KelolaDataScreen) hanya boleh mengoper akun hasil
+  /// `AccountImportRow.toUpdatedAccount()`, yang sudah menjaga batasan itu.
+  Future<int> bulkUpdateAssignments(List<UserAccount> updatedAccounts) async {
+    if (updatedAccounts.isEmpty) return 0;
+    const batchSize = 400;
+    var written = 0;
+
+    for (var i = 0; i < updatedAccounts.length; i += batchSize) {
+      final end = (i + batchSize > updatedAccounts.length) ? updatedAccounts.length : i + batchSize;
+      final chunk = updatedAccounts.sublist(i, end);
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final a in chunk) {
+        batch.set(_collection.doc(a.id), a.toJson());
+      }
+      await batch.commit().timeout(const Duration(seconds: 20));
+      written += chunk.length;
+    }
+
+    final box = await _openBox();
+    for (final a in updatedAccounts) {
+      await box.put(a.id, jsonEncode(a.toJson()));
+    }
+    if (_memCache != null) {
+      final byId = {for (final a in updatedAccounts) a.id: a};
+      _memCache = [for (final a in _memCache!) byId[a.id] ?? a];
+    }
+
+    return written;
+  }
+
   /// Migrasi SEKALI-JALAN: tulis seluruh [kSeedAccountsJson] ke
   /// Firestore. Aman dipencet berkali-kali (upsert per id).
   Future<int> migrateSeedToFirestore() async {
