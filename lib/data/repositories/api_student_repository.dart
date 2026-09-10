@@ -182,33 +182,42 @@ class ApiStudentRepository implements StudentRepository {
     return written;
   }
 
-  /// Migrasi SEKALI-JALAN: tulis seluruh [kSeedStudentsJson] ke
-  /// Firestore. Aman dipencet berkali-kali (upsert per id lewat `.set`,
-  /// bukan nambah dobel) — dipanggil dari tombol admin di Settings.
+  /// Migrasi SEKALI-JALAN: tulis [kSeedStudentsJson] ke Firestore.
+  ///
+  /// PENTING (fix): id yang SUDAH ADA di Firestore (mis. sudah pernah
+  /// di-migrasi sebelumnya, diedit lewat Kelola Murid, atau diupdate
+  /// lewat Import Excel di Halaman Kelola) SENGAJA DILEWATIN -- cuma id
+  /// yang BELUM ADA sama sekali yang ditulis. Ini yang bikin tombol ini
+  /// aman dipencet berkali-kali TANPA nimpa balik ke data lama (sebelum
+  /// fix ini, migrate nulis ulang SEMUA id dari seed tiap kali dipencet,
+  /// jadi kalau dipencet SESUDAH ada perubahan dari Kelola Murid/Import,
+  /// perubahan itu ketimpa balik ke nilai seed yang lama).
   Future<int> migrateSeedToFirestore() async {
-    final students = kSeedStudentsJson.map(Student.fromJson).toList();
-    const batchSize = 400;
-    var written = 0;
+    final seedStudents = kSeedStudentsJson.map(Student.fromJson).toList();
 
-    for (var i = 0; i < students.length; i += batchSize) {
-      final end = (i + batchSize > students.length) ? students.length : i + batchSize;
-      final chunk = students.sublist(i, end);
+    final snapshot = await _collection.get().timeout(const Duration(seconds: 15));
+    final existingIds = snapshot.docs.map((d) => d.id).toSet();
+
+    final toWrite = seedStudents.where((s) => !existingIds.contains(s.id)).toList();
+
+    const batchSize = 400;
+    for (var i = 0; i < toWrite.length; i += batchSize) {
+      final end = (i + batchSize > toWrite.length) ? toWrite.length : i + batchSize;
+      final chunk = toWrite.sublist(i, end);
 
       final batch = FirebaseFirestore.instance.batch();
       for (final s in chunk) {
         batch.set(_collection.doc(s.id), s.toJson());
       }
       await batch.commit().timeout(const Duration(seconds: 20));
-      written += chunk.length;
     }
 
-    // Langsung seger-in cache Hive & in-memory juga, biar gak perlu
-    // nunggu refresh berikutnya buat lihat hasilnya.
-    final box = await _openBox();
-    await box.clear();
-    await box.putAll({for (final s in students) s.id: jsonEncode(s.toJson())});
-    _memCache = students;
+    // Seger-in cache dari Firestore YANG SEBENARNYA (bukan cuma daftar
+    // seed) -- biar konsisten sama data yang beneran ada sekarang,
+    // termasuk perubahan dari Kelola Murid/Import yang gak ikut ditulis
+    // ulang di atas.
+    await refresh();
 
-    return written;
+    return toWrite.length;
   }
 }

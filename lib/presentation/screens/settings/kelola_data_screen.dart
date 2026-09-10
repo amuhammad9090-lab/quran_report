@@ -274,8 +274,9 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Migrasi data ke Cloud?'),
         content: const Text(
-          'Data guru & murid bawaan APK akan disalin ke cloud. Aman dijalankan berkali-kali '
-          '(data lama dengan id yang sama akan ditimpa, bukan digandakan). Butuh koneksi internet.',
+          'Data guru & murid bawaan APK akan disalin ke cloud, TAPI id yang sudah ada di cloud '
+          'akan dilewatin (tidak ditimpa) -- jadi perubahan yang sudah kamu buat lewat Kelola Guru/'
+          'Murid atau Import Excel tetap aman. Aman dijalankan berkali-kali. Butuh koneksi internet.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [

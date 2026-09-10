@@ -209,28 +209,42 @@ class ApiAuthRepository implements AuthRepository {
 
   /// Migrasi SEKALI-JALAN: tulis seluruh [kSeedAccountsJson] ke
   /// Firestore. Aman dipencet berkali-kali (upsert per id).
+  /// Migrasi SEKALI-JALAN: tulis [kSeedAccountsJson] ke Firestore.
+  ///
+  /// PENTING (fix): id yang SUDAH ADA di Firestore (mis. sudah pernah
+  /// di-migrasi sebelumnya, diedit lewat Kelola Guru, atau diupdate
+  /// lewat Import Excel di Halaman Kelola) SENGAJA DILEWATIN -- cuma id
+  /// yang BELUM ADA sama sekali yang ditulis. Ini yang bikin tombol ini
+  /// aman dipencet berkali-kali TANPA nimpa balik ke data lama (sebelum
+  /// fix ini, migrate nulis ulang SEMUA id dari seed tiap kali dipencet,
+  /// jadi kalau dipencet SESUDAH ada perubahan dari Kelola Guru/Import,
+  /// perubahan itu ketimpa balik ke nilai seed yang lama).
   Future<int> migrateSeedToFirestore() async {
-    final accounts = kSeedAccountsJson.map(UserAccount.fromJson).toList();
-    const batchSize = 400;
-    var written = 0;
+    final seedAccounts = kSeedAccountsJson.map(UserAccount.fromJson).toList();
 
-    for (var i = 0; i < accounts.length; i += batchSize) {
-      final end = (i + batchSize > accounts.length) ? accounts.length : i + batchSize;
-      final chunk = accounts.sublist(i, end);
+    final snapshot = await _collection.get().timeout(const Duration(seconds: 15));
+    final existingIds = snapshot.docs.map((d) => d.id).toSet();
+
+    final toWrite = seedAccounts.where((a) => !existingIds.contains(a.id)).toList();
+
+    const batchSize = 400;
+    for (var i = 0; i < toWrite.length; i += batchSize) {
+      final end = (i + batchSize > toWrite.length) ? toWrite.length : i + batchSize;
+      final chunk = toWrite.sublist(i, end);
 
       final batch = FirebaseFirestore.instance.batch();
       for (final a in chunk) {
         batch.set(_collection.doc(a.id), a.toJson());
       }
       await batch.commit().timeout(const Duration(seconds: 20));
-      written += chunk.length;
     }
 
-    final box = await _openBox();
-    await box.clear();
-    await box.putAll({for (final a in accounts) a.id: jsonEncode(a.toJson())});
-    _memCache = accounts;
+    // Seger-in cache dari Firestore YANG SEBENARNYA (bukan cuma daftar
+    // seed) -- biar konsisten sama data yang beneran ada sekarang,
+    // termasuk perubahan dari Kelola Guru/Import yang gak ikut ditulis
+    // ulang di atas.
+    await refresh();
 
-    return written;
+    return toWrite.length;
   }
 }

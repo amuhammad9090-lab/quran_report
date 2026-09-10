@@ -85,7 +85,14 @@ service cloud.firestore {
       //    keduanya sama-sama anonim, jadi trust-nya di-generalisasi ke
       //    seluruh isGuruApp() — ditutup di sisi UI, bukan di rules.
       match /students/{studentId} {
-        allow read: if isAdmin() || (request.auth != null && myAccount().studentId == studentId);
+        // <-- BERUBAH: ditambah isGuruApp() di allow read. Sebelumnya app
+        // guru cuma boleh WRITE ke students, gak boleh READ sama sekali --
+        // ini bikin refresh data murid dari cloud (buka Kelola Murid, dll)
+        // diam-diam gagal terus fallback ke cache lokal (ketutup try-catch
+        // di ApiStudentRepository.refresh()), dan bikin fitur Migrasi
+        // (yang butuh baca dulu buat cek id mana yang udah ada sebelum
+        // nulis) kena permission-denied beneran.
+        allow read: if isAdmin() || isGuruApp() || (request.auth != null && myAccount().studentId == studentId);
         allow write: if isGuruApp();
       }
       // Laporan — SantriRecord tidak punya studentId (desain existing
