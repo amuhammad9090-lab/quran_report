@@ -234,7 +234,7 @@ class _AboutDescriptionCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             const Text(
-              'Laporan Hafalan adalah aplikasi pencatatan capaian hafalan '
+              'Quran Report adalah aplikasi pencatatan capaian hafalan '
               '(tahfizh) dan bacaan (tahsin) Al-Qur\'an santri, lengkap dengan '
               'generator baris setoran otomatis berbasis pemetaan baris mushaf '
               'rasm Utsmani (Madinah 15 baris).',
