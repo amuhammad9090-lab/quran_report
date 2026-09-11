@@ -290,7 +290,7 @@ class _LaporanTabState extends State<LaporanTab> {
                   surfaceTintColor: Colors.transparent,
                   elevation: 0,
                   scrolledUnderElevation: 0,
-                  toolbarHeight: 80,
+                  toolbarHeight: 84,
                   titleSpacing: 20,
                   title: _buildTitle(context),
                   actions: cards.isEmpty
@@ -488,7 +488,7 @@ class _LaporanTabState extends State<LaporanTab> {
   Widget _buildTitle(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 4),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,8 +501,11 @@ class _LaporanTabState extends State<LaporanTab> {
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),
           Text(
-            'Rekap capaian tahsin & tahfizh santri',
-            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+            'Kelola kartu laporan hafalan santri',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -520,7 +523,7 @@ class _LaporanTabState extends State<LaporanTab> {
   Widget _buildSearchAndFilter(BuildContext context, RecordsProvider provider) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Row(
         children: [
           Expanded(

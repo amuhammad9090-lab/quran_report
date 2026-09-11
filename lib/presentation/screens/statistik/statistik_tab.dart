@@ -41,13 +41,13 @@ class StatistikTab extends StatelessWidget {
               elevation: 0,
               scrolledUnderElevation: 3,
               shadowColor: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10),
-              toolbarHeight: 80,
+              toolbarHeight: 84,
               titleSpacing: 20,
               title: Padding(
-                padding: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.only(top: 4),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Statistik',
@@ -57,15 +57,20 @@ class StatistikTab extends StatelessWidget {
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     Text(
-                      'Rekap keseluruhan data laporan',
-                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                      'Ringkasan progres tahfizh & tahsin santri',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
               sliver: SliverList.list(
                 children: [
                   _AyatWeeklyChartCard(

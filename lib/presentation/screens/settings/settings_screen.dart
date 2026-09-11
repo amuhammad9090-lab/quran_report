@@ -31,16 +31,29 @@ class SettingsScreen extends StatelessWidget {
             elevation: 0,
             scrolledUnderElevation: 3,
             shadowColor: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10),
-            toolbarHeight: 62,
+            toolbarHeight: 84,
             titleSpacing: 20,
             title: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Pengaturan',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w800),
+              padding: const EdgeInsets.only(top: 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pengaturan',
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    'Atur aplikasi dan kelola data',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
           ),

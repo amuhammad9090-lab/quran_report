@@ -28,11 +28,11 @@ class AppColors {
 
   // --- Status Tahfizh / Tahsin (versi light — juga dipakai export PDF/Excel).
   static const tahfizh = Color(0xFF0E7C61);
-  static const tahsin = Color(0xFFB8860B);
+  static const tahsin = Color(0xFFD97706);
 
   // --- Versi dark mode ---
   static const tahfizhDark = Color(0xFF3ED9AE);
-  static const tahsinDark = Color(0xFFE8B84A);
+  static const tahsinDark = Color(0xFFFBBF24);
 
   // --- Aksi "Deploy" (kirim rekap ke Portal Ortu).
   static const deploy = Color(0xFF0E8F6E);

@@ -111,6 +111,7 @@ void main() async {
 
   final parentNotesProvider = ParentNotesProvider();
   parentNotesProvider.updateScope(authProvider.scope);
+  parentNotesProvider.start();
 
   runApp(
     MultiProvider(

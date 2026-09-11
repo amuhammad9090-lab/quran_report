@@ -44,7 +44,7 @@ class BerandaTab extends StatelessWidget {
               elevation: 0,
               scrolledUnderElevation: 3,
               shadowColor: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.10),
-              toolbarHeight: 80,
+              toolbarHeight: 78,
               titleSpacing: 20,
               title: _buildHeader(context),
             ),
