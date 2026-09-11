@@ -137,6 +137,17 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
   late HafalanStatus _status;
   late Keterangan _keterangan;
 
+  // <-- BARU: toggle "Hadir tanpa capaian hari ini" -- buat kasus santri
+  // beneran hadir tapi hari itu nggak ada capaian tahfizh/tahsin buat
+  // dilaporkan (mis. lagi dengerin arahan perubahan pemetaan halaqoh,
+  // ada acara sekolah, dll) -- BUKAN izin/alpa (dia tetap hadir), tapi
+  // juga jangan dipaksa isi capaian ngasal cuma biar formnya valid.
+  // Sengaja EKSPLISIT (checkbox, default OFF) bukan bikin capaian
+  // otomatis opsional diam-diam pas Hadir -- biar guru sadar/sengaja
+  // nandain, bukan kelewat nggak isi. Lihat _wajibIsiStatusCapaian di
+  // bawah & _buildKeteranganSelector.
+  bool _tanpaCapaian = false;
+
   // Error manual buat 3 field select (di luar Form karena
   // DropdownButtonFormField dari [SelectField] nggak otomatis nyambung
   // sempurna ke error state kalau errorText di-drive manual kayak gini).
@@ -184,9 +195,10 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
 
   bool get _isEdit => widget.existing != null;
 
-  // Kalau bukan "Hadir", kolom status capaian nggak wajib diisi & bakal
-  // dikosongin lagi pas disimpan (biar konsisten pas diekspor).
-  bool get _wajibIsiStatusCapaian => _keterangan == Keterangan.hadir;
+  // Kalau bukan "Hadir", ATAU "Hadir" tapi ditandai "tanpa capaian hari
+  // ini" (lihat [_tanpaCapaian]), kolom status capaian nggak wajib diisi
+  // & bakal dikosongin lagi pas disimpan (biar konsisten pas diekspor).
+  bool get _wajibIsiStatusCapaian => _keterangan == Keterangan.hadir && !_tanpaCapaian;
 
   AccessScope? get _scope => context.read<RecordsProvider>().scope;
 
@@ -735,6 +747,19 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       return;
     }
 
+    // <-- BARU: kalau ditandai "Hadir tanpa capaian hari ini", catatan
+    // WAJIB diisi -- itu satu-satunya penjelasan kenapa nggak ada capaian
+    // padahal statusnya Hadir (lihat toggle _tanpaCapaian di
+    // _buildKeteranganSelector).
+    if (_tanpaCapaian && _catatanCtrl.text.trim().isEmpty) {
+      _localMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Isi catatan dulu -- wajib buat jelasin kenapa nggak ada capaian hari ini.'),
+        ),
+      );
+      return;
+    }
+
     final isiStatusCapaian = _wajibIsiStatusCapaian;
 
     final needsTahfizhPart =
@@ -1123,7 +1148,9 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            'Keterangan "${_keterangan.label}" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan.',
+                                            _tanpaCapaian
+                                                ? 'Ditandai "tanpa capaian" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan. Jangan lupa isi catatan.'
+                                                : 'Keterangan "${_keterangan.label}" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan.',
                                             style: TextStyle(
                                               fontSize: 11.5,
                                               color: AppColors.tahsinOn(context),
@@ -1157,7 +1184,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                           ),
                           const SizedBox(height: 16),
                           FormSectionCard(
-                            title: 'Catatan (Opsional)',
+                            title: _tanpaCapaian ? 'Catatan (Wajib)' : 'Catatan (Opsional)',
                             icon: Icons.edit_note_rounded,
                             child: TextFormField(
                               controller: _catatanCtrl,
@@ -1165,8 +1192,10 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                               decoration: fieldDecoration(
                                 context,
                                 icon: Icons.notes_rounded,
-                                label: 'Catatan',
-                                hint: 'Catatan tambahan untuk guru pembimbing/ortu...',
+                                label: _tanpaCapaian ? 'Catatan (wajib diisi)' : 'Catatan',
+                                hint: _tanpaCapaian
+                                    ? 'Jelasin kenapa nggak ada capaian hari ini...'
+                                    : 'Catatan tambahan untuk guru pembimbing/ortu...',
                                 accent: cs.primary,
                               ),
                               onChanged: (_) => _markEditedAndScheduleDraftSave(),
@@ -1999,7 +2028,14 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
-            setState(() => _keterangan = k);
+            setState(() {
+              _keterangan = k;
+              // <-- BARU: reset toggle "tanpa capaian" kalau keterangan-nya
+              // dipindah dari Hadir ke yang lain -- toggle itu cuma
+              // relevan buat Hadir, biar nggak nyangkut nilainya kalau
+              // guru gonta-ganti keterangan.
+              if (k != Keterangan.hadir) _tanpaCapaian = false;
+            });
             _markEditedAndScheduleDraftSave();
           },
           child: AnimatedContainer(
@@ -2062,6 +2098,55 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         for (int i = 0; i < rows.length; i++) ...[
           if (i > 0) const SizedBox(height: 8),
           spacedRow(rows[i]),
+        ],
+        // <-- BARU: toggle ini cuma relevan (dan cuma ditampilin) pas
+        // keterangan-nya "Hadir" -- buat keterangan lain, capaian emang
+        // udah otomatis opsional & dikosongin, nggak butuh penanda ini.
+        if (_keterangan == Keterangan.hadir) ...[
+          const SizedBox(height: 10),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              setState(() => _tanpaCapaian = !_tanpaCapaian);
+              _markEditedAndScheduleDraftSave();
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: _tanpaCapaian
+                    ? cs.primary.withValues(alpha: 0.10)
+                    : cs.surfaceContainerHighest.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _tanpaCapaian ? cs.primary : Colors.transparent,
+                  width: 1.3,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: _tanpaCapaian,
+                    onChanged: (v) {
+                      setState(() => _tanpaCapaian = v ?? false);
+                      _markEditedAndScheduleDraftSave();
+                    },
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Hadir tanpa capaian hari ini (mis. ada arahan/kegiatan lain) — '
+                      'capaian boleh dikosongkan, tapi catatan wajib diisi.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _tanpaCapaian ? cs.primary : cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ],
     );
