@@ -7,7 +7,6 @@ import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/status_badge.dart';
-import '../record_form/record_form_sheet.dart';
 
 /// Rekap kehadiran — siapa saja hadir/izin sakit/izin lomba/izin
 /// pelatihan/alpa, dikelompokkan per tanggal. Bisa difilter per jenis
@@ -101,7 +100,10 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                                 halaqoh: r.halaqoh,
                                 keteranganChip:
                                     KeteranganChip(keterangan: r.keterangan, compact: true),
-                                onTap: () => showRecordFormSheet(context, existing: r),
+                                // <-- BERUBAH: dulu tap baris ini buka form
+                                // edit -- sekarang read-only (lihat catatan
+                                // yang sama di santri_detail_screen.dart).
+                                // Edit laporan cuma lewat tab Laporan/Folder.
                               ))
                           .toList(),
                     );

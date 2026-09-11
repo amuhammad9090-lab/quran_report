@@ -7,7 +7,6 @@ import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/status_badge.dart';
-import '../record_form/record_form_sheet.dart';
 
 /// Riwayat lengkap satu santri, dikelompokkan per tanggal dalam card
 /// (senada gaya grouping di Home) — bukan list detail penuh seperti tab
@@ -101,9 +100,17 @@ class SantriDetailScreen extends StatelessWidget {
                                 statusColor: AppColors.statusOn(context, r.status),
                                 statusLabel: r.status.label,
                                 capaianText: r.capaianText,
+                                catatan: r.catatan,
                                 keteranganChip:
                                     KeteranganChip(keterangan: r.keterangan, compact: true),
-                                onTap: () => showRecordFormSheet(context, existing: r),
+                                // <-- BERUBAH: sebelumnya tap baris ini
+                                // langsung buka form EDIT
+                                // (showRecordFormSheet) -- sekarang
+                                // read-only murni. Alasan: biar cuma ADA
+                                // SATU tempat buat edit laporan (tab
+                                // Laporan/Folder), gak nyebar ke banyak
+                                // layar statistik yang niatnya cuma buat
+                                // liat rekap.
                                 isEdited: r.isEdited,
                               ))
                           .toList(),

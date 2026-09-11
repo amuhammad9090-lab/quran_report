@@ -840,6 +840,11 @@ class RecordSummaryRow extends StatelessWidget {
   // Nampilin badge kecil "Diedit" di sebelah label status kalau laporan
   // ini pernah diubah setelah pertama dibuat (lihat SantriRecord.isEdited).
   final bool isEdited;
+  // <-- BARU: catatan laporan (kalau ada) -- ditampilin di bawah
+  // capaianText, dipakai khusus di layar read-only (SantriDetailScreen)
+  // biar "riwayat capaian + catatan + status" kebaca lengkap tanpa perlu
+  // buka form edit sama sekali.
+  final String? catatan;
 
   const RecordSummaryRow({
     super.key,
@@ -850,6 +855,7 @@ class RecordSummaryRow extends StatelessWidget {
     required this.keteranganChip,
     this.onTap,
     this.isEdited = false,
+    this.catatan,
   });
 
   @override
@@ -890,6 +896,19 @@ class RecordSummaryRow extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (catatan != null && catatan!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      catatan!.trim(),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontStyle: FontStyle.italic,
+                        color: cs.onSurfaceVariant,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ],
               ),
             ),

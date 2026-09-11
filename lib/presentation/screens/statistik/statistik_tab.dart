@@ -70,34 +70,8 @@ class StatistikTab extends StatelessWidget {
                 children: [
                   _AyatWeeklyChartCard(
                     weeklyData: provider.weeklyAyatSummary(weekCount: 6),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _TappableStat(
-                          label: 'Total Santri',
-                          value: '${provider.totalSantri}',
-                          icon: Icons.groups_2_rounded,
-                          color: cs.primary,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const SantriListScreen()),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _TappableStat(
-                          label: 'Total Hadir',
-                          value: '${provider.totalHadir}',
-                          icon: Icons.check_circle_rounded,
-                          color: AppColors.greenOn(context),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const KehadiranScreen()),
-                          ),
-                        ),
-                      ),
-                    ],
+                    totalSantri: provider.totalSantri,
+                    totalHadir: provider.totalHadir,
                   ),
                   const SizedBox(height: 24),
                   SectionLabel(
@@ -160,13 +134,27 @@ class StatistikTab extends StatelessWidget {
   }
 }
 
-/// Kartu "Ayat Tersetor / Minggu" — bar chart 6 pekan terakhir + 2 pil
-/// ringkasan (total & rata-rata), ditaruh paling atas tab Statistik biar
-/// progres mingguan langsung kelihatan sebelum angka-angka lain.
+/// Kartu "Ayat Tersetor / Minggu" — bar chart 6 pekan terakhir + 2 baris pil
+/// ringkasan (Total Santri/Hadir yang tappable, lalu Total Ayat/Rata-rata),
+/// ditaruh paling atas tab Statistik biar progres mingguan langsung
+/// kelihatan sebelum angka-angka lain.
+//
+// <-- BERUBAH: Total Santri & Total Hadir dulu kartu `_TappableStat`
+// terpisah di bawah kartu ini (dibikin kecil banget biar "gak berebut
+// perhatian"), tapi hasilnya malah kebacanya kekecilan/kurang jelas.
+// Sekarang digabung ke sini, gaya pil abu-abu yang sama kayak Total Ayat/
+// Rata-rata Setoran (lebih besar & konsisten), tetap tappable ke halaman
+// detail masing-masing (lihat _MiniStatPill.onTap).
 class _AyatWeeklyChartCard extends StatelessWidget {
   final List<WeeklyAyatPoint> weeklyData;
+  final int totalSantri;
+  final int totalHadir;
 
-  const _AyatWeeklyChartCard({required this.weeklyData});
+  const _AyatWeeklyChartCard({
+    required this.weeklyData,
+    required this.totalSantri,
+    required this.totalHadir,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -231,6 +219,34 @@ class _AyatWeeklyChartCard extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MiniStatPill(
+                        value: '$totalSantri',
+                        label: 'Total Santri',
+                        icon: Icons.groups_2_rounded,
+                        iconColor: cs.primary,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SantriListScreen()),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _MiniStatPill(
+                        value: '$totalHadir',
+                        label: 'Total Hadir',
+                        icon: Icons.check_circle_rounded,
+                        iconColor: AppColors.greenOn(context),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const KehadiranScreen()),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
@@ -307,24 +323,51 @@ class _WeekBar extends StatelessWidget {
 }
 
 /// Pil ringkasan kecil (angka besar + label) di bawah chart.
+//
+// <-- BERUBAH: sekarang dukung [onTap] + [icon]/[iconColor] opsional —
+// dipakai buat Total Santri/Total Hadir (tappable, ada ikon+chevron),
+// sementara Total Ayat/Rata-rata tetap pakai versi polos (onTap null).
 class _MiniStatPill extends StatelessWidget {
   final String value;
   final String label;
+  final VoidCallback? onTap;
+  final IconData? icon;
+  final Color? iconColor;
 
-  const _MiniStatPill({required this.value, required this.label});
+  const _MiniStatPill({
+    required this.value,
+    required this.label,
+    this.onTap,
+    this.icon,
+    this.iconColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+    final content = Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
+          if (icon != null) ...[
+            Icon(icon, size: 18, color: iconColor ?? cs.primary),
+            const SizedBox(height: 6),
+          ],
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
+              if (onTap != null) ...[
+                const SizedBox(width: 2),
+                Icon(Icons.chevron_right_rounded, size: 16, color: cs.onSurfaceVariant),
+              ],
+            ],
+          ),
           const SizedBox(height: 2),
           Text(
             label,
@@ -334,76 +377,16 @@ class _MiniStatPill extends StatelessWidget {
         ],
       ),
     );
-  }
-}
 
-/// Versi tappable dari [SummaryStatCard] — dipakai buat Total Santri &
-/// Total Hadir yang masing-masing buka halaman detailnya sendiri.
-class _TappableStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _TappableStat({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+    if (onTap == null) return content;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Theme.of(context).dividerTheme.color ?? Colors.transparent,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, size: 18, color: color),
-              ),
-              const SizedBox(height: 8),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-              const SizedBox(height: 2),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  Icon(Icons.chevron_right_rounded,
-                      size: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ],
-              ),
-            ],
-          ),
-        ),
+        borderRadius: BorderRadius.circular(14),
+        child: content,
       ),
     );
   }
 }
+
