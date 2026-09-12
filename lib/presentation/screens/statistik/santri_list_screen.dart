@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import 'santri_detail_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Daftar semua santri unik yang sudah tercatat di laporan — cukup nama,
 /// kelas, halaqoh (bukan detail laporan seperti tab Laporan). Tap satu
@@ -51,10 +51,10 @@ class _SantriListScreenState extends State<SantriListScreen> {
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
                     hintText: 'Cari nama santri...',
-                    prefixIcon: const Icon(SolarIconsBold.magnifier),
+                    prefixIcon: const Icon(LucideIcons.search),
                     suffixIcon: _query.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(SolarIconsBold.closeCircle, size: 18),
+                            icon: const Icon(LucideIcons.circleX, size: 18),
                             onPressed: () {
                               _searchCtrl.clear();
                               setState(() => _query = '');
@@ -69,7 +69,7 @@ class _SantriListScreenState extends State<SantriListScreen> {
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
-                  icon: _query.isNotEmpty ? SolarIconsBold.magnifier : SolarIconsBold.usersGroupTwoRounded,
+                  icon: _query.isNotEmpty ? LucideIcons.search : LucideIcons.users,
                   title: _query.isNotEmpty ? 'Santri tidak ditemukan' : 'Belum ada santri',
                   subtitle: _query.isNotEmpty
                       ? 'Coba kata kunci lain.'
@@ -145,7 +145,7 @@ class _SantriListCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(SolarIconsBold.altArrowRight, color: cs.onSurfaceVariant),
+              Icon(LucideIcons.chevronRight, color: cs.onSurfaceVariant),
             ],
           ),
         ),

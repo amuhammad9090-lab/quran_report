@@ -14,7 +14,7 @@ import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import 'kelola_guru_screen.dart';
 import 'kelola_murid_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// "Halaman Kelola" -- pusat Mode Admin buat data guru & murid: pindah ke
 /// Kelola Guru/Kelola Murid (edit satuan), export/import Excel (edit
@@ -75,19 +75,19 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                   title: 'Kelola Data',
                   children: [
                     ListTile(
-                      leading: SoftIconBox(icon: SolarIconsBold.medalStar, color: cs.primary),
+                      leading: SoftIconBox(icon: LucideIcons.medal, color: cs.primary),
                       title: const Text('Kelola Guru'),
                       subtitle: const Text('Ubah nama & assignment kelas/halaqoh guru pembimbing'),
-                      trailing: const Icon(SolarIconsBold.altArrowRight),
+                      trailing: const Icon(LucideIcons.chevronRight),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const KelolaGuruScreen()),
                       ),
                     ),
                     ListTile(
-                      leading: SoftIconBox(icon: SolarIconsBold.usersGroupTwoRounded, color: cs.primary),
+                      leading: SoftIconBox(icon: LucideIcons.users, color: cs.primary),
                       title: const Text('Kelola Murid'),
                       subtitle: const Text('Pindah kelas/halaqoh (mis. naik Tahsin → Tahfizh)'),
-                      trailing: const Icon(SolarIconsBold.altArrowRight),
+                      trailing: const Icon(LucideIcons.chevronRight),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const KelolaMuridScreen()),
                       ),
@@ -99,19 +99,19 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                   title: 'Export & Import',
                   children: [
                     ListTile(
-                      leading: SoftIconBox(icon: SolarIconsBold.fileDownload, color: cs.primary),
+                      leading: SoftIconBox(icon: LucideIcons.fileDown, color: cs.primary),
                       title: const Text('Export ke Excel'),
                       subtitle: const Text('Satu file .xlsx, sheet "Murid" & "Guru"'),
                       onTap: () => _withBusy(() => _exportExcel(context)),
                     ),
                     ListTile(
-                      leading: SoftIconBox(icon: SolarIconsBold.cloudUpload, color: cs.primary),
+                      leading: SoftIconBox(icon: LucideIcons.cloudUpload, color: cs.primary),
                       title: const Text('Import dari Excel'),
                       subtitle: const Text('Upload balik file yang sudah diedit, ada preview dulu'),
                       onTap: () => _withBusy(() => _importExcel(context)),
                     ),
                     ListTile(
-                      leading: SoftIconBox(icon: SolarIconsBold.code, color: cs.primary),
+                      leading: SoftIconBox(icon: LucideIcons.code, color: cs.primary),
                       title: const Text('Export sebagai kode seed (.dart)'),
                       subtitle: const Text('Buat developer, sebelum build APK berikutnya'),
                       onTap: () => _withBusy(() => _exportSeedCode(context)),
@@ -123,7 +123,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                   title: 'Migrasi',
                   children: [
                     ListTile(
-                      leading: SoftIconBox(icon: SolarIconsBold.cloud, color: cs.primary),
+                      leading: SoftIconBox(icon: LucideIcons.cloud, color: cs.primary),
                       title: const Text('Migrasi Data Guru & Murid ke Cloud'),
                       subtitle: const Text(
                         'Sekali jalan — pindahin data bawaan APK ke cloud, aman dipencet berkali-kali',
@@ -413,7 +413,7 @@ class _ImportPreviewScreenState extends State<_ImportPreviewScreen> {
                   const Padding(
                     padding: EdgeInsets.only(top: 40),
                     child: EmptyState(
-                      icon: SolarIconsBold.folderSecurity,
+                      icon: LucideIcons.folderLock,
                       title: 'Gak ada perubahan',
                       subtitle: 'Semua baris di file sama persis dengan data sekarang.',
                     ),
@@ -440,7 +440,7 @@ class _ImportPreviewScreenState extends State<_ImportPreviewScreen> {
                             ],
                           ),
                         ),
-                icon: const Icon(SolarIconsBold.checkCircle),
+                icon: const Icon(LucideIcons.circleCheck),
                 label: Text('Terapkan $includedCount Perubahan'),
               ),
             ),
@@ -498,7 +498,7 @@ class _UnknownIdsBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(SolarIconsBold.dangerTriangle, size: 18, color: Theme.of(context).colorScheme.error),
+          Icon(LucideIcons.triangleAlert, size: 18, color: Theme.of(context).colorScheme.error),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -527,7 +527,7 @@ class _SeedCodeScreen extends StatelessWidget {
         title: const Text('Kode Seed (.dart)'),
         actions: [
           IconButton(
-            icon: const Icon(SolarIconsBold.copy),
+            icon: const Icon(LucideIcons.copy),
             tooltip: 'Copy semua',
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: code));

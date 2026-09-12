@@ -5,7 +5,7 @@ import '../../../core/access/access_scope.dart';
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Tahap 1 alur "Buat Laporan" (lihat spesifikasi perubahan Laporan &
 /// Statistik, bagian 1): form IDENTITAS SAJA (Kelas → Halaqoh → Nama
@@ -150,7 +150,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
       showAppSnackbar(
         context,
         'Kartu laporan "$_nama" sudah ada.',
-        icon: SolarIconsBold.infoCircle,
+        icon: LucideIcons.info,
         onFabVisibilityChanged: widget.onFabVisibilityChanged,
       );
       Navigator.of(context).pop();
@@ -169,7 +169,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
       showAppSnackbar(
         context,
         'Kartu laporan "$_nama" dibuat.',
-        icon: SolarIconsBold.checkCircle,
+        icon: LucideIcons.circleCheck,
         onFabVisibilityChanged: widget.onFabVisibilityChanged,
       );
       Navigator.of(context).pop();
@@ -179,7 +179,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
       showAppSnackbar(
         context,
         e is ScopeViolationException ? e.message : 'Gagal membuat kartu laporan.',
-        icon: SolarIconsBold.dangerCircle,
+        icon: LucideIcons.circleAlert,
         onFabVisibilityChanged: widget.onFabVisibilityChanged,
       );
     }
@@ -233,7 +233,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
                     key: ValueKey('bl_kelas_$_kelas'),
                     value: _kelas,
                     label: 'Kelas',
-                    icon: SolarIconsBold.diploma,
+                    icon: LucideIcons.graduationCap,
                     options: kelasOptions,
                     errorText: _kelasError,
                     accent: cs.primary,
@@ -246,7 +246,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
                     key: ValueKey('bl_halaqoh_$_halaqoh'),
                     value: _halaqoh,
                     label: 'Halaqoh',
-                    icon: SolarIconsBold.usersGroupRounded,
+                    icon: LucideIcons.usersRound,
                     options: halaqohOptions,
                     errorText: _halaqohError,
                     accent: cs.primary,
@@ -261,7 +261,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
               value: _nama,
               label: 'Nama Santri',
               hint: comboBelumLengkap ? 'Pilih kelas & halaqoh dulu' : null,
-              icon: SolarIconsBold.user,
+              icon: LucideIcons.user,
               options: namaOptions,
               errorText: _namaError,
               accent: cs.primary,
@@ -282,7 +282,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(SolarIconsBold.checkCircle, size: 20),
+                    : const Icon(LucideIcons.circleCheck, size: 20),
                 label: const Text('Simpan'),
               ),
             ),

@@ -48,7 +48,7 @@ import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/status_badge.dart';
 import '../record_form/record_form_sheet.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Buka form laporan untuk kartu Pekan [weekIndex] milik [card] —
 /// [initialFolderId] dipakai kalau ternyata belum ada laporan sama sekali
@@ -213,14 +213,14 @@ Future<_PilihHari?> _pilihHariSheet(
                         KeteranganChip(keterangan: r.keterangan, compact: true),
                       ],
                     ),
-                    trailing: const Icon(SolarIconsBold.penNewRound),
+                    trailing: const Icon(LucideIcons.penLine),
                     onTap: () => Navigator.pop(ctx, _PilihHari.laporan(r)),
                   ),
                 ),
               const SizedBox(height: 4),
               FilledButton.tonalIcon(
                 onPressed: () => Navigator.pop(ctx, const _PilihHari.hariIni()),
-                icon: Icon(defaultDayExisting != null ? SolarIconsBold.penNewRound : SolarIconsBold.addCircle),
+                icon: Icon(defaultDayExisting != null ? LucideIcons.penLine : LucideIcons.circlePlus),
                 label: Text(
                   defaultDayExisting != null
                       ? 'Lanjut edit laporan $defaultDayShort (${DateFormat('d MMMM', 'id_ID').format(defaultDay)})'

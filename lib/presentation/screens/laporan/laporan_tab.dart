@@ -15,7 +15,7 @@ import '../folder/folder_form_sheet.dart';
 import '../folder/move_to_folder_sheet.dart';
 import '../folder/orphaned_records_screen.dart';
 import 'search_results_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Tab "Laporan" — pencarian, filter, section Folder, dan daftar kartu
 /// santri
@@ -169,7 +169,7 @@ class _LaporanTabState extends State<LaporanTab> {
     showAppSnackbar(
       ctx,
       '$count kartu dipindahkan.',
-      icon: SolarIconsBold.moveToFolder,
+      icon: LucideIcons.folderInput,
       onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
@@ -218,7 +218,7 @@ class _LaporanTabState extends State<LaporanTab> {
     showAppSnackbar(
       context,
       'Kartu "${card.nama}" dipindahkan.',
-      icon: SolarIconsBold.moveToFolder,
+      icon: LucideIcons.folderInput,
       onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
@@ -246,7 +246,7 @@ class _LaporanTabState extends State<LaporanTab> {
               showAppSnackbar(
                 context,
                 'Kartu "${card.nama}" dihapus.',
-                icon: SolarIconsBold.trashBinMinimalistic,
+                icon: LucideIcons.trash2,
                 onFabVisibilityChanged: widget.onFabVisibilityChanged,
               );
             },
@@ -300,7 +300,7 @@ class _LaporanTabState extends State<LaporanTab> {
                     IconButton(
                       onPressed: _toggleSelectionMode,
                       icon: Icon(
-                        _selectionMode ? SolarIconsBold.closeCircle : SolarIconsBold.checklist,
+                        _selectionMode ? LucideIcons.circleX : LucideIcons.listChecks,
                       ),
                       tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa kartu',
                     ),
@@ -343,8 +343,8 @@ class _LaporanTabState extends State<LaporanTab> {
                     sliver: SliverToBoxAdapter(
                       child: EmptyState(
                         icon: provider.hasActiveFilters
-                            ? SolarIconsBold.magnifier
-                            : SolarIconsBold.book,
+                            ? LucideIcons.search
+                            : LucideIcons.bookOpen,
                         title: provider.hasActiveFilters
                             ? 'Data tidak ditemukan'
                             : 'Belum ada laporan',
@@ -393,13 +393,13 @@ class _LaporanTabState extends State<LaporanTab> {
                 onCancel: _toggleSelectionMode,
                 actions: [
                   SelectionAction(
-                    icon: SolarIconsBold.trashBinMinimalistic,
+                    icon: LucideIcons.trash2,
                     label: 'Hapus',
                     onTap: _selected.isEmpty ? null : _hapusSelected,
                     destructive: true,
                   ),
                   SelectionAction(
-                    icon: SolarIconsBold.moveToFolder,
+                    icon: LucideIcons.folderInput,
                     label: 'Pindahkan',
                     onTap: _selected.isEmpty ? null : _pindahkanSelected,
                     filled: true,
@@ -422,7 +422,7 @@ class _LaporanTabState extends State<LaporanTab> {
           'Folder',
           trailing: IconButton(
             onPressed: () => showFolderFormSheet(context),
-            icon: const Icon(SolarIconsBold.addCircle, size: 20),
+            icon: const Icon(LucideIcons.circlePlus, size: 20),
             tooltip: 'Buat folder',
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
@@ -538,7 +538,7 @@ class _LaporanTabState extends State<LaporanTab> {
                   controller: _searchCtrl,
                   decoration: const InputDecoration(
                     hintText: 'Cari nama santri...',
-                    prefixIcon: Icon(SolarIconsBold.magnifier),
+                    prefixIcon: Icon(LucideIcons.search),
                   ),
                 ),
               ),
@@ -550,7 +550,7 @@ class _LaporanTabState extends State<LaporanTab> {
             children: [
               IconButton.filledTonal(
                 onPressed: () => showFilterSheet(context),
-                icon: const Icon(SolarIconsBold.tuning),
+                icon: const Icon(LucideIcons.slidersHorizontal),
                 style: IconButton.styleFrom(
                   minimumSize: const Size(52, 52),
                 ),
@@ -631,7 +631,7 @@ class _OrphanedRecordsBanner extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              SoftIconBox(icon: SolarIconsBold.removeFolder, color: cs.error),
+              SoftIconBox(icon: LucideIcons.folderMinus, color: cs.error),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -654,7 +654,7 @@ class _OrphanedRecordsBanner extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(SolarIconsBold.altArrowRight, color: cs.onErrorContainer),
+              Icon(LucideIcons.chevronRight, color: cs.onErrorContainer),
             ],
           ),
         ),

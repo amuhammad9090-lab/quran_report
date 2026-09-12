@@ -5,6 +5,7 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
+  // Nama family sesuai yang didaftarkan di pubspec.yaml (fonts:).
   static const _fontFamily = 'PlusJakartaSans';
 
   static ThemeData light() => _base(Brightness.light);
@@ -21,6 +22,17 @@ class AppTheme {
         (isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme)
             .apply(fontFamily: _fontFamily);
 
+    // <-- BERUBAH: sebelumnya `#10151A`/`#181F26` — nyaris hitam pekat dan
+    // jaraknya ke card cuma tipis, jadi kelihatan "gelap banget" & card
+    // gak keangkat dari background-nya. Dinaikin sedikit ke keluarga
+    // navy-charcoal yang lebih nyaman di mata, dengan jarak scaffold↔card
+    // yang lebih jelas (biar tetap ada rasa "elevasi").
+    //
+    // Kontras warna aksen (lihat AppColors, komentar "≥6.5:1 di atas card
+    // gelap") TETAP AMAN setelah ini — background baru masih jauh lebih
+    // gelap dari teks/aksen terang manapun (dicek ulang: turun dari
+    // ~9.5:1 ke ~8:1 buat kasus terketat, masih jauh di atas standar WCAG
+    // AA 4.5:1).
     final surfaceElevated = isDark ? const Color(0xFF222B33) : Colors.white;
     final shadowColor = isDark
         ? Colors.black.withValues(alpha: 0.55)
@@ -40,8 +52,12 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        // Karena backgroundColor transparan, Flutter nggak bisa nebak
+        // otomatis kontras ikon status bar.
         systemOverlayStyle:
             isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        // Disamakan dengan ukuran judul di Statistik/Laporan (headlineSmall
+        // w800), sebelumnya titleLarge w700 kelihatan kekecilan.
         titleTextStyle: baseTextTheme.headlineSmall?.copyWith(
           fontWeight: FontWeight.w800,
           color: colorScheme.onSurface,
@@ -132,6 +148,10 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
+        // <-- BERUBAH: sebelumnya `#141B21` -- malah lebih gelap dari
+        // card-nya sendiri (`surfaceElevated`), jadi bottom sheet
+        // (tempat form laporan diisi) kerasa paling gelap di seluruh
+        // app. Disamain ke keluarga warna yang sama kayak card.
         backgroundColor: isDark ? const Color(0xFF1E262D) : Colors.white,
         elevation: isDark ? 0 : 6,
         shadowColor: shadowColor,
@@ -230,7 +250,7 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: isDark ? const Color(0xFF232C34) : const Color(0xFF1F2A24),
-        contentTextStyle: const TextStyle(
+        contentTextStyle: TextStyle(
           fontFamily: _fontFamily,
           color: Colors.white,
           fontSize: 13.5,

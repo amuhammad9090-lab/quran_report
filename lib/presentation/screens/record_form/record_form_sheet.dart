@@ -15,7 +15,7 @@ import '../../../data/services/quran_engine_service.dart';
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Menampilkan modal bottom sheet full-height untuk tambah/edit laporan.
 ///
@@ -1021,12 +1021,12 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                         if (_isEdit)
                           IconButton(
                             onPressed: () => _confirmDelete(context),
-                            icon: Icon(SolarIconsBold.trashBinMinimalistic, color: cs.error),
+                            icon: Icon(LucideIcons.trash2, color: cs.error),
                             tooltip: 'Hapus laporan ini',
                           ),
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(SolarIconsBold.closeCircle),
+                          icon: const Icon(LucideIcons.circleX),
                         ),
                       ],
                     ),
@@ -1059,7 +1059,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                           ],
                           FormSectionCard(
                             title: 'Tanggal',
-                            icon: SolarIconsBold.calendar,
+                            icon: LucideIcons.calendarDays,
                             child: _buildDateField(cs),
                           ),
                           // Identitas santri (Kelas/Halaqoh/Nama) SENGAJA
@@ -1072,7 +1072,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                             const SizedBox(height: 16),
                             FormSectionCard(
                               title: 'Identitas Santri',
-                              icon: SolarIconsBold.medalStar,
+                              icon: LucideIcons.medal,
                               child: Column(
                                 children: [
                                   Row(
@@ -1082,7 +1082,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                           key: ValueKey('kelas_$_kelas'),
                                           value: _kelas,
                                           label: 'Kelas',
-                                          icon: SolarIconsBold.diploma,
+                                          icon: LucideIcons.graduationCap,
                                           options: kelasOptions,
                                           errorText: _kelasError,
                                           accent: cs.primary,
@@ -1096,7 +1096,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                           key: ValueKey('halaqoh_$_halaqoh'),
                                           value: _halaqoh,
                                           label: 'Halaqoh',
-                                          icon: SolarIconsBold.usersGroupRounded,
+                                          icon: LucideIcons.usersRound,
                                           options: halaqohOptions,
                                           errorText: _halaqohError,
                                           accent: cs.primary,
@@ -1114,7 +1114,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                     hint: comboBelumLengkap
                                         ? 'Pilih kelas & halaqoh dulu'
                                         : null,
-                                    icon: SolarIconsBold.user,
+                                    icon: LucideIcons.user,
                                     options: namaOptions,
                                     errorText: _namaError,
                                     accent: cs.primary,
@@ -1128,7 +1128,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                           const SizedBox(height: 16),
                           FormSectionCard(
                             title: 'Status Capaian',
-                            icon: SolarIconsBold.graphUp,
+                            icon: LucideIcons.trendingUp,
                             child: Column(
                               children: [
                                 _buildStatusSelector(cs),
@@ -1144,7 +1144,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(SolarIconsBold.infoCircle,
+                                        Icon(LucideIcons.info,
                                             size: 16, color: AppColors.tahsinOn(context)),
                                         const SizedBox(width: 8),
                                         Expanded(
@@ -1180,19 +1180,19 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                           const SizedBox(height: 16),
                           FormSectionCard(
                             title: 'Keterangan',
-                            icon: SolarIconsBold.clipboardCheck,
+                            icon: LucideIcons.clipboardCheck,
                             child: _buildKeteranganSelector(cs),
                           ),
                           const SizedBox(height: 16),
                           FormSectionCard(
                             title: _tanpaCapaian ? 'Catatan (Wajib)' : 'Catatan (Opsional)',
-                            icon: SolarIconsBold.penNewRound,
+                            icon: LucideIcons.penLine,
                             child: TextFormField(
                               controller: _catatanCtrl,
                               maxLines: 3,
                               decoration: fieldDecoration(
                                 context,
-                                icon: SolarIconsBold.documentText,
+                                icon: LucideIcons.fileText,
                                 label: _tanpaCapaian ? 'Catatan (wajib diisi)' : 'Catatan',
                                 hint: _tanpaCapaian
                                     ? 'Jelasin kenapa nggak ada capaian hari ini...'
@@ -1215,7 +1215,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                     fontSize: 15, fontWeight: FontWeight.w800),
                               ),
                               onPressed: _submit,
-                              icon: const Icon(SolarIconsBold.checkCircle, size: 20),
+                              icon: const Icon(LucideIcons.circleCheck, size: 20),
                               label: Text(
                                   _isEdit ? 'Simpan Perubahan' : 'Simpan Laporan'),
                             ),
@@ -1249,7 +1249,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         children: [
           Row(
             children: [
-              Icon(SolarIconsBold.history, size: 18, color: cs.primary),
+              Icon(LucideIcons.history, size: 18, color: cs.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1297,12 +1297,12 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       child: InputDecorator(
         decoration: fieldDecoration(
           context,
-          icon: SolarIconsBold.calendar,
+          icon: LucideIcons.calendarDays,
           label: 'Tanggal Laporan',
           accent: cs.primary,
         ).copyWith(
           suffixIcon:
-              Icon(SolarIconsBold.altArrowDown, color: cs.onSurfaceVariant),
+              Icon(LucideIcons.chevronDown, color: cs.onSurfaceVariant),
         ),
         child: Text(
           DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(_tanggal),
@@ -1374,7 +1374,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
             child: Row(
               children: [
-                Icon(SolarIconsBold.list, size: 18, color: cs.primary),
+                Icon(LucideIcons.list, size: 18, color: cs.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1409,7 +1409,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                 ),
                 child: Row(
                   children: [
-                    Icon(SolarIconsBold.history, size: 15, color: AppColors.tahsinOn(context)),
+                    Icon(LucideIcons.history, size: 15, color: AppColors.tahsinOn(context)),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -1492,7 +1492,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                   onTap: () => _removeTahfizhSegment(index),
                   child: Padding(
                     padding: const EdgeInsets.all(4),
-                    child: Icon(SolarIconsBold.closeCircle, size: 18, color: cs.error),
+                    child: Icon(LucideIcons.circleX, size: 18, color: cs.error),
                   ),
                 ),
               ],
@@ -1502,10 +1502,10 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           initialValue: seg.surahNumber,
           isExpanded: true,
           borderRadius: BorderRadius.circular(16),
-          icon: Icon(SolarIconsBold.altArrowDown, color: cs.onSurfaceVariant),
+          icon: Icon(LucideIcons.chevronDown, color: cs.onSurfaceVariant),
           decoration: fieldDecoration(
             context,
-            icon: SolarIconsBold.book,
+            icon: LucideIcons.bookOpen,
             label: 'Surah',
             accent: cs.primary,
           ),
@@ -1535,7 +1535,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                 keyboardType: TextInputType.number,
                 decoration: fieldDecoration(
                   context,
-                  icon: SolarIconsBold.doubleAltArrowLeft,
+                  icon: LucideIcons.chevronsLeft,
                   label: 'Dari Ayat',
                   accent: cs.primary,
                 ),
@@ -1555,7 +1555,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                 keyboardType: TextInputType.number,
                 decoration: fieldDecoration(
                   context,
-                  icon: SolarIconsBold.doubleAltArrowRight,
+                  icon: LucideIcons.chevronsRight,
                   label: 'Sampai Ayat',
                   accent: cs.primary,
                 ),
@@ -1598,7 +1598,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         children: [
           Row(
             children: [
-              Icon(SolarIconsBold.infoCircle, size: 16, color: cs.error),
+              Icon(LucideIcons.info, size: 16, color: cs.error),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -1616,7 +1616,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             keyboardType: TextInputType.number,
             decoration: fieldDecoration(
               context,
-              icon: SolarIconsBold.list,
+              icon: LucideIcons.list,
               label: 'Jumlah Baris (manual)',
               accent: cs.error,
             ),
@@ -1656,7 +1656,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
             onPressed: _addTahfizhSegment,
-            icon: const Icon(SolarIconsBold.addCircle, size: 18),
+            icon: const Icon(LucideIcons.circlePlus, size: 18),
             label: const Text('Tambah Surah (nyambung)'),
             style: TextButton.styleFrom(
               foregroundColor: cs.primary,
@@ -1679,7 +1679,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(SolarIconsBold.magicStick_2, size: 19),
+                : const Icon(LucideIcons.wand, size: 19),
             label: Text(_generating
                 ? 'Menghitung...'
                 : (_tahfizhSegs.length > 1 ? 'Generate Semua Baris' : 'Generate Baris')),
@@ -1695,7 +1695,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             ),
             child: Row(
               children: [
-                Icon(SolarIconsBold.infoCircle, size: 18, color: cs.error),
+                Icon(LucideIcons.info, size: 18, color: cs.error),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(_generateError!,
@@ -1716,7 +1716,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             ),
             child: Row(
               children: [
-                Icon(SolarIconsBold.calculator, size: 17, color: cs.primary),
+                Icon(LucideIcons.calculator, size: 17, color: cs.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text('Total ${_tahfizhSegs.length} surah',
@@ -1801,7 +1801,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                   onTap: () => _removeTilawahSegment(index),
                   child: Padding(
                     padding: const EdgeInsets.all(4),
-                    child: Icon(SolarIconsBold.closeCircle, size: 18, color: cs.error),
+                    child: Icon(LucideIcons.circleX, size: 18, color: cs.error),
                   ),
                 ),
               ],
@@ -1811,10 +1811,10 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           initialValue: seg.surahNumber,
           isExpanded: true,
           borderRadius: BorderRadius.circular(16),
-          icon: Icon(SolarIconsBold.altArrowDown, color: cs.onSurfaceVariant),
+          icon: Icon(LucideIcons.chevronDown, color: cs.onSurfaceVariant),
           decoration: fieldDecoration(
             context,
-            icon: SolarIconsBold.book,
+            icon: LucideIcons.bookOpen,
             label: 'Surah',
             accent: accent,
           ),
@@ -1838,7 +1838,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                 keyboardType: TextInputType.number,
                 decoration: fieldDecoration(
                   context,
-                  icon: SolarIconsBold.doubleAltArrowLeft,
+                  icon: LucideIcons.chevronsLeft,
                   label: 'Dari Ayat',
                   accent: accent,
                 ),
@@ -1855,7 +1855,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                 keyboardType: TextInputType.number,
                 decoration: fieldDecoration(
                   context,
-                  icon: SolarIconsBold.doubleAltArrowRight,
+                  icon: LucideIcons.chevronsRight,
                   label: 'Sampai Ayat',
                   accent: accent,
                 ),
@@ -1890,7 +1890,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
             onPressed: _addTilawahSegment,
-            icon: const Icon(SolarIconsBold.addCircle, size: 18),
+            icon: const Icon(LucideIcons.circlePlus, size: 18),
             label: const Text('Tambah Surah (nyambung)'),
             style: TextButton.styleFrom(
               foregroundColor: accent,
@@ -1930,10 +1930,10 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           initialValue: _wafaLevel,
           isExpanded: true,
           borderRadius: BorderRadius.circular(16),
-          icon: Icon(SolarIconsBold.altArrowDown, color: cs.onSurfaceVariant),
+          icon: Icon(LucideIcons.chevronDown, color: cs.onSurfaceVariant),
           decoration: fieldDecoration(
             context,
-            icon: SolarIconsBold.book,
+            icon: LucideIcons.bookOpen,
             label: 'Jenjang WAFA',
             accent: AppColors.tahsinOn(context),
           ),
@@ -1955,7 +1955,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
           controller: _halamanWafaCtrl,
           decoration: fieldDecoration(
             context,
-            icon: SolarIconsBold.hashtag,
+            icon: LucideIcons.hash,
             label: 'Halaman',
             hint: 'mis. 12 atau 12-13',
             accent: AppColors.tahsinOn(context),

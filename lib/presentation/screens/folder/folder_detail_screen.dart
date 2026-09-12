@@ -10,7 +10,7 @@ import '../laporan/buat_laporan_sheet.dart';
 import '../laporan/open_week_action.dart';
 import 'add_recent_records_sheet.dart';
 import 'folder_form_sheet.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Halaman isi satu folder — daftar KARTU SANTRI di dalamnya.
 class FolderDetailScreen extends StatefulWidget {
@@ -101,7 +101,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     showAppSnackbar(
       ctx,
       '$count kartu dikeluarkan dari folder',
-      icon: SolarIconsBold.removeFolder,
+      icon: LucideIcons.folderMinus,
       onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
@@ -169,7 +169,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     showAppSnackbar(
       context,
       'Kartu "${card.nama}" dihapus.',
-      icon: SolarIconsBold.trashBinMinimalistic,
+      icon: LucideIcons.trash2,
       onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
@@ -204,7 +204,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                       : IconButton(
                     onPressed: _toggleSelectionMode,
                     icon: Icon(
-                      _selectionMode ? SolarIconsBold.closeCircle : SolarIconsBold.checklist,
+                      _selectionMode ? LucideIcons.circleX : LucideIcons.listChecks,
                     ),
                     tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa kartu',
                   ),
@@ -222,7 +222,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                   const SliverFillRemaining(
                     hasScrollBody: false,
                     child: EmptyState(
-                      icon: SolarIconsBold.folderOpen,
+                      icon: LucideIcons.folderOpen,
                       title: 'Folder ini masih kosong',
                       subtitle: 'Buat laporan baru atau tambahkan kartu yang sudah ada.',
                     ),
@@ -266,13 +266,13 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                   onCancel: _toggleSelectionMode,
                   actions: [
                     SelectionAction(
-                      icon: SolarIconsBold.trashBinMinimalistic,
+                      icon: LucideIcons.trash2,
                       label: 'Hapus',
                       onTap: _selected.isEmpty ? null : _confirmDeleteSelected,
                       destructive: true,
                     ),
                     SelectionAction(
-                      icon: SolarIconsBold.removeFolder,
+                      icon: LucideIcons.folderMinus,
                       label: 'Keluarkan',
                       onTap: _selected.isEmpty ? null : _keluarkanSelected,
                       filled: true,
@@ -299,7 +299,7 @@ class _ActionButtonsRow extends StatelessWidget {
       child: Row(
         children: [
           _ActionChip(
-            icon: SolarIconsBold.documentAdd,
+            icon: LucideIcons.filePlus2,
             label: 'Buat Laporan',
             onTap: () => showBuatLaporanSheet(
               context,
@@ -309,13 +309,13 @@ class _ActionButtonsRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           _ActionChip(
-            icon: SolarIconsBold.playlist,
+            icon: LucideIcons.listMusic,
             label: 'Tambah Laporan',
             onTap: () => showAddRecentRecordsSheet(context, folderId: folder.id),
           ),
           const SizedBox(width: 8),
           _ActionChip(
-            icon: SolarIconsBold.penNewSquare,
+            icon: LucideIcons.squarePen,
             label: 'Ubah Nama',
             onTap: () => showFolderFormSheet(context, existing: folder),
           ),

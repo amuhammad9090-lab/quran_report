@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Controller kecil buat [SpeedDialFab] -- dibutuhkan supaya dial ini bisa
 /// ditutup dari LUAR widgetnya sendiri, mis. lewat barrier transparan
@@ -108,7 +108,7 @@ class _SpeedDialFabState extends State<SpeedDialFab>
           animation: _ctrl,
           builder: (context, _) => _MiniAction(
             progress: _progress(1, 2),
-            icon: SolarIconsBold.addFolder,
+            icon: LucideIcons.folderPlus,
             label: 'Buat Folder',
             background: cs.secondaryContainer,
             foreground: cs.onSecondaryContainer,
@@ -120,7 +120,7 @@ class _SpeedDialFabState extends State<SpeedDialFab>
           animation: _ctrl,
           builder: (context, _) => _MiniAction(
             progress: _progress(0, 2),
-            icon: SolarIconsBold.documentAdd,
+            icon: LucideIcons.filePlus2,
             label: 'Buat Laporan',
             background: cs.primaryContainer,
             foreground: cs.onPrimaryContainer,
@@ -134,7 +134,7 @@ class _SpeedDialFabState extends State<SpeedDialFab>
             animation: _ctrl,
             builder: (context, _) => Transform.rotate(
               angle: _ctrl.value * 0.78539816339, // 45 derajat pas kebuka
-              child: const Icon(SolarIconsBold.addCircle),
+              child: const Icon(LucideIcons.circlePlus),
             ),
           ),
         ),

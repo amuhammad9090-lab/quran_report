@@ -10,7 +10,7 @@ import '../../widgets/misc_widgets.dart';
 import 'generate_rekap_bulanan_screen.dart';
 import 'generate_rekap_pekanan_screen.dart';
 import 'rekap_harian_detail_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Rekap semua record tahfizh & tahsin dalam SATU bulan, dengan navigasi
 /// bulan bebas (prev/next SELALU aktif, tidak dibatasi ke bulan yang
@@ -110,7 +110,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
-                  icon: SolarIconsBold.calendar,
+                  icon: LucideIcons.calendarDays,
                   title: 'Belum ada laporan',
                   subtitle: 'Tidak ada laporan tercatat di bulan ini.',
                 ),
@@ -125,7 +125,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                         child: SummaryStatCard(
                           label: 'Tahfizh',
                           value: '$totalTahfizh',
-                          icon: SolarIconsBold.book,
+                          icon: LucideIcons.bookOpen,
                           color: AppColors.tahfizhOn(context),
                         ),
                       ),
@@ -134,7 +134,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                         child: SummaryStatCard(
                           label: 'Tahsin',
                           value: '$totalTahsin',
-                          icon: SolarIconsBold.book,
+                          icon: LucideIcons.bookOpen,
                           color: AppColors.tahsinOn(context),
                         ),
                       ),
@@ -143,7 +143,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                         child: SummaryStatCard(
                           label: 'Total Baris',
                           value: '$totalBaris',
-                          icon: SolarIconsBold.list,
+                          icon: LucideIcons.list,
                           color: AppColors.purpleOn(context),
                         ),
                       ),
@@ -162,7 +162,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                           builder: (_) => GenerateRekapBulananScreen(month: _month),
                         ),
                       ),
-                      icon: const Icon(SolarIconsBold.magicStick, size: 18),
+                      icon: const Icon(LucideIcons.wandSparkles, size: 18),
                       label: const Text('Generate Rekap Bulanan (Pekan 1-Terakhir)'),
                     ),
                   ),
@@ -226,7 +226,7 @@ class _MonthSwitcher extends StatelessWidget {
               children: [
                 IconButton(
                   onPressed: onPrev,
-                  icon: const Icon(SolarIconsBold.altArrowLeft),
+                  icon: const Icon(LucideIcons.chevronLeft),
                   color: cs.primary,
                   tooltip: 'Bulan sebelumnya',
                 ),
@@ -240,7 +240,7 @@ class _MonthSwitcher extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: onNext,
-                  icon: const Icon(SolarIconsBold.altArrowRight),
+                  icon: const Icon(LucideIcons.chevronRight),
                   color: cs.primary,
                   tooltip: 'Bulan selanjutnya',
                 ),
@@ -382,7 +382,7 @@ class _PekanCard extends StatelessWidget {
                   AnimatedRotation(
                     turns: expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(SolarIconsBold.altArrowDown, color: cs.onSurfaceVariant),
+                    child: Icon(LucideIcons.chevronDown, color: cs.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -451,7 +451,7 @@ class _PekanExpandedBody extends StatelessWidget {
                           ),
                         ),
                       ),
-              icon: const Icon(SolarIconsBold.magicStick, size: 18),
+              icon: const Icon(LucideIcons.wandSparkles, size: 18),
               label: const Text('Generate Laporan Pekanan'),
             ),
           ),
@@ -512,7 +512,7 @@ class _DayRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            Icon(SolarIconsBold.altArrowRight, size: 18, color: cs.onSurfaceVariant),
+            Icon(LucideIcons.chevronRight, size: 18, color: cs.onSurfaceVariant),
           ],
         ),
       ),

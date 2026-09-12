@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/folder.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Kartu folder di section "Folder" pada tab Laporan.
 /// - Tap → buka halaman isi folder.
@@ -61,7 +61,7 @@ class FolderCard extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
                   child: Row(
                     children: [
-                      Icon(SolarIconsBold.folder, color: cs.secondary),
+                      Icon(LucideIcons.folder, color: cs.secondary),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -75,7 +75,7 @@ class FolderCard extends StatelessWidget {
                 ),
                 const Divider(height: 18, indent: 18, endIndent: 18),
                 ListTile(
-                  leading: Icon(SolarIconsBold.penNewSquare, color: cs.primary),
+                  leading: Icon(LucideIcons.squarePen, color: cs.primary),
                   title: const Text('Ubah Nama', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -83,7 +83,7 @@ class FolderCard extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading: Icon(SolarIconsBold.trashBinMinimalistic, color: cs.error),
+                  leading: Icon(LucideIcons.trash2, color: cs.error),
                   title: Text('Hapus Folder',
                       style: TextStyle(fontWeight: FontWeight.w600, color: cs.error)),
                   onTap: () {
@@ -129,7 +129,7 @@ class FolderCard extends StatelessWidget {
                         color: cs.secondary.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(SolarIconsBold.folder, color: cs.secondary, size: 22),
+                      child: Icon(LucideIcons.folder, color: cs.secondary, size: 22),
                     ),
                     const SizedBox(height: 10),
                     Text(

@@ -6,7 +6,7 @@ import '../../../data/services/profile_photo_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../widgets/avatar_image_provider.dart';
 import '../../widgets/misc_widgets.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Edit Profil — lebih dari sekadar ganti nama: ada juga ganti foto
 /// avatar (kamera/galeri) dan ganti kata sandi. Sebelumnya cuma dialog
@@ -115,7 +115,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(SolarIconsBold.camera),
+              leading: const Icon(LucideIcons.camera),
               title: const Text('Ambil dari Kamera'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -123,7 +123,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(SolarIconsBold.gallery),
+              leading: const Icon(LucideIcons.images),
               title: const Text('Pilih dari Galeri'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -132,7 +132,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             if (hasPhoto)
               ListTile(
-                leading: Icon(SolarIconsBold.trashBinMinimalistic, color: Theme.of(ctx).colorScheme.error),
+                leading: Icon(LucideIcons.trash2, color: Theme.of(ctx).colorScheme.error),
                 title: Text('Hapus Foto', style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -217,7 +217,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   width: 2.5,
                                 ),
                               ),
-                              child: Icon(SolarIconsBold.camera, size: 15, color: cs.onPrimary),
+                              child: Icon(LucideIcons.camera, size: 15, color: cs.onPrimary),
                             ),
                           ),
                         ],
@@ -234,7 +234,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 24),
                   FormSectionCard(
                     title: 'Informasi Profil',
-                    icon: SolarIconsBold.medalStar,
+                    icon: LucideIcons.medal,
                     child: TextField(
                       controller: _nameCtrl,
                       decoration: const InputDecoration(
@@ -264,7 +264,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         child: Row(
                           children: [
-                            SoftIconBox(icon: SolarIconsBold.lock, color: cs.primary),
+                            SoftIconBox(icon: LucideIcons.lock, color: cs.primary),
                             const SizedBox(width: 12),
                             const Expanded(
                               child: Text(
@@ -272,7 +272,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
                               ),
                             ),
-                            Icon(SolarIconsBold.altArrowRight, size: 18, color: cs.onSurfaceVariant),
+                            Icon(LucideIcons.chevronRight, size: 18, color: cs.onSurfaceVariant),
                           ],
                         ),
                       ),
@@ -445,7 +445,7 @@ class _PasswordField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         suffixIcon: IconButton(
-          icon: Icon(obscure ? SolarIconsBold.eye : SolarIconsBold.eyeClosed, size: 20),
+          icon: Icon(obscure ? LucideIcons.eye : LucideIcons.eyeOff, size: 20),
           onPressed: onToggleObscure,
         ),
       ),

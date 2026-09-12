@@ -9,7 +9,7 @@ import '../../widgets/misc_widgets.dart';
 import '../../widgets/santri_report_card.dart';
 import '../folder/move_to_folder_sheet.dart';
 import 'open_week_action.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Halaman "Hasil Pencarian" — beda dari list utama di tab Laporan yang
 /// cuma nyari kartu santri yang BELUM masuk folder mana pun, halaman ini
@@ -142,10 +142,10 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
               onChanged: provider.setSearch,
               decoration: InputDecoration(
                 hintText: 'Cari nama santri...',
-                prefixIcon: const Icon(SolarIconsBold.magnifier),
+                prefixIcon: const Icon(LucideIcons.search),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                  icon: const Icon(SolarIconsBold.closeCircle, size: 18),
+                  icon: const Icon(LucideIcons.circleX, size: 18),
                   onPressed: () {
                     _searchCtrl.clear();
                     provider.setSearch('');
@@ -161,7 +161,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
             children: [
               IconButton.filledTonal(
                 onPressed: () => showFilterSheet(context),
-                icon: const Icon(SolarIconsBold.tuning),
+                icon: const Icon(LucideIcons.slidersHorizontal),
                 style: IconButton.styleFrom(minimumSize: const Size(52, 52)),
               ),
               if (provider.hasActiveFilters)
@@ -235,7 +235,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                 padding: EdgeInsets.only(top: 24),
                 sliver: SliverToBoxAdapter(
                   child: EmptyState(
-                    icon: SolarIconsBold.magnifier,
+                    icon: LucideIcons.search,
                     title: 'Data tidak ditemukan',
                     subtitle: 'Coba ubah kata kunci atau filter pencarian.',
                   ),

@@ -12,7 +12,7 @@ import '../../widgets/misc_widgets.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
 import 'edit_profile_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Profile — identitas user yang login + statistik ringkas SCOPED ke
 /// assignment-nya (bukan angka global), sesuai spesifikasi bagian L/N.
@@ -154,7 +154,7 @@ class ProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _InfoRow(
-                            icon: SolarIconsBold.squareAcademicCap,
+                            icon: LucideIcons.graduationCap,
                             label: auth.currentSchool?.name ?? '-',
                             sub: auth.currentSchool?.city,
                           ),
@@ -164,7 +164,7 @@ class ProfileScreen extends StatelessWidget {
                                 children: [
                                   Divider(height: 22),
                                   _InfoRow(
-                                    icon: SolarIconsBold.usersGroupRounded,
+                                    icon: LucideIcons.usersRound,
                                     label: '-',
                                     sub: null,
                                   ),
@@ -174,7 +174,7 @@ class ProfileScreen extends StatelessWidget {
                               for (final a in user.assignments) ...[
                                 const Divider(height: 22),
                                 _InfoRow(
-                                  icon: SolarIconsBold.usersGroupRounded,
+                                  icon: LucideIcons.usersRound,
                                   label: 'Kelas ${a.kelas} • ${a.halaqoh}',
                                   sub: null,
                                 ),
@@ -182,7 +182,7 @@ class ProfileScreen extends StatelessWidget {
                           ] else ...[
                             const Divider(height: 22),
                             const _InfoRow(
-                              icon: SolarIconsBold.globus,
+                              icon: LucideIcons.globe,
                               label: 'Akses semua kelas & halaqoh',
                               sub: null,
                             ),
@@ -205,8 +205,8 @@ class ProfileScreen extends StatelessWidget {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                         secondary: Icon(
                           auth.adminModeActive
-                              ? SolarIconsBold.shieldUser
-                              : SolarIconsBold.shieldUser,
+                              ? LucideIcons.shieldUser
+                              : LucideIcons.shieldUser,
                           color: auth.adminModeActive ? cs.primary : cs.onSurfaceVariant,
                         ),
                         title: const Text('Mode Admin',
@@ -242,7 +242,7 @@ class ProfileScreen extends StatelessWidget {
                           child: StatPill(
                             label: 'Santri Diampu',
                             value: '$santriDiampu',
-                            icon: SolarIconsBold.usersGroupTwoRounded,
+                            icon: LucideIcons.users,
                             color: cs.primary,
                           ),
                         ),
@@ -251,7 +251,7 @@ class ProfileScreen extends StatelessWidget {
                           child: StatPill(
                             label: 'Laporan Hari Ini',
                             value: '${records.laporanBaruHariIni}',
-                            icon: SolarIconsBold.documentAdd,
+                            icon: LucideIcons.filePlus2,
                             color: AppColors.purpleOn(context),
                           ),
                         ),
@@ -267,7 +267,7 @@ class ProfileScreen extends StatelessWidget {
                           child: StatPill(
                             label: pekanLabel,
                             value: 'Aktif',
-                            icon: SolarIconsBold.calendar,
+                            icon: LucideIcons.calendarDays,
                             color: AppColors.blueOn(context),
                           ),
                         ),
@@ -276,7 +276,7 @@ class ProfileScreen extends StatelessWidget {
                           child: StatPill(
                             label: 'Baris Setoran',
                             value: '${records.totalBarisSetoran}',
-                            icon: SolarIconsBold.list,
+                            icon: LucideIcons.list,
                             color: AppColors.tahsinOn(context),
                           ),
                         ),
@@ -285,19 +285,19 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   _ProfileActionTile(
-                    icon: SolarIconsBold.penNewRound,
+                    icon: LucideIcons.penLine,
                     label: 'Edit Profil',
                     onTap: () => _openEditProfile(context),
                   ),
                   _ProfileActionTile(
-                    icon: SolarIconsBold.settings,
+                    icon: LucideIcons.settings,
                     label: 'Pengaturan',
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     ),
                   ),
                   _ProfileActionTile(
-                    icon: SolarIconsBold.export,
+                    icon: LucideIcons.upload,
                     label: 'Keluar',
                     destructive: true,
                     onTap: () => _logout(context),
@@ -374,7 +374,7 @@ class _ProfileActionTile extends StatelessWidget {
                   child: Text(label,
                       style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: color)),
                 ),
-                Icon(SolarIconsBold.altArrowRight, size: 18, color: cs.onSurfaceVariant),
+                Icon(LucideIcons.chevronRight, size: 18, color: cs.onSurfaceVariant),
               ],
             ),
           ),

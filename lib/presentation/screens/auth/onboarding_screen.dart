@@ -7,7 +7,7 @@ import '../../../data/services/app_prefs_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../home/main_shell.dart';
 import 'login_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class _OnboardingPage {
   final IconData icon;
@@ -18,17 +18,17 @@ class _OnboardingPage {
 
 const _pages = [
   _OnboardingPage(
-    icon: SolarIconsBold.book,
+    icon: LucideIcons.bookOpen,
     title: 'Catat hafalan santri\nlebih rapi',
     subtitle: 'Rekap capaian tahsin & tahfizh setiap santri dalam satu aplikasi.',
   ),
   _OnboardingPage(
-    icon: SolarIconsBold.usersGroupTwoRounded,
+    icon: LucideIcons.users,
     title: 'Fokus ke halaqoh\nmasing-masing',
     subtitle: 'Setiap guru pembimbing hanya melihat kelas & halaqoh yang menjadi tanggung jawabnya.',
   ),
   _OnboardingPage(
-    icon: SolarIconsBold.export,
+    icon: LucideIcons.upload,
     title: 'Siap dibagikan\nkapan saja',
     subtitle: 'Ekspor laporan ke PDF, Excel, atau Word dalam beberapa ketukan.',
   ),

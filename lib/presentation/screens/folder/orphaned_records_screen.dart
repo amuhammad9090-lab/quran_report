@@ -7,7 +7,7 @@ import '../../widgets/misc_widgets.dart';
 import '../../widgets/santri_report_card.dart';
 import '../laporan/open_week_action.dart';
 import 'move_to_folder_sheet.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Halaman "penyelamatan" kartu santri yang folder tujuannya sudah tidak
 /// ada lagi (lihat [RecordsProvider.orphanedFolderCards]) — laporannya
@@ -107,7 +107,7 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
       target.isEmpty
           ? 'Kartu "${card.nama}" dikeluarkan dari folder.'
           : 'Kartu "${card.nama}" dipindahkan.',
-      icon: SolarIconsBold.moveToFolder,
+      icon: LucideIcons.folderInput,
       onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
@@ -135,7 +135,7 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
     showAppSnackbar(
       ctx,
       '$count kartu dipindahkan.',
-      icon: SolarIconsBold.moveToFolder,
+      icon: LucideIcons.folderInput,
       onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
@@ -154,7 +154,7 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
     showAppSnackbar(
       ctx,
       '$count kartu dikeluarkan dari folder.',
-      icon: SolarIconsBold.removeFolder,
+      icon: LucideIcons.folderMinus,
       onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
@@ -188,7 +188,7 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
     showAppSnackbar(
       context,
       'Kartu "${card.nama}" dihapus.',
-      icon: SolarIconsBold.trashBinMinimalistic,
+      icon: LucideIcons.trash2,
       onFabVisibilityChanged: widget.onFabVisibilityChanged,
     );
   }
@@ -222,7 +222,7 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
                       : IconButton(
                           onPressed: _toggleSelectionMode,
                           icon: Icon(
-                            _selectionMode ? SolarIconsBold.closeCircle : SolarIconsBold.checklist,
+                            _selectionMode ? LucideIcons.circleX : LucideIcons.listChecks,
                           ),
                           tooltip: _selectionMode ? 'Batal pilih' : 'Pilih beberapa kartu',
                         ),
@@ -239,7 +239,7 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(SolarIconsBold.infoCircle,
+                          Icon(LucideIcons.info,
                               size: 20, color: Theme.of(context).colorScheme.error),
                           const SizedBox(width: 10),
                           Expanded(
@@ -263,7 +263,7 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
                   const SliverFillRemaining(
                     hasScrollBody: false,
                     child: EmptyState(
-                      icon: SolarIconsBold.checkCircle,
+                      icon: LucideIcons.circleCheck,
                       title: 'Semua sudah diselamatkan',
                       subtitle: 'Tidak ada lagi kartu dengan folder yang hilang.',
                     ),
@@ -306,13 +306,13 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
                   onCancel: _toggleSelectionMode,
                   actions: [
                     SelectionAction(
-                      icon: SolarIconsBold.removeFolder,
+                      icon: LucideIcons.folderMinus,
                       label: 'Keluarkan',
                       onTap: _selected.isEmpty ? null : _keluarkanSelected,
                       destructive: true,
                     ),
                     SelectionAction(
-                      icon: SolarIconsBold.moveToFolder,
+                      icon: LucideIcons.folderInput,
                       label: 'Pindahkan',
                       onTap: _selected.isEmpty ? null : () => _pindahkanSelected(cards),
                       filled: true,

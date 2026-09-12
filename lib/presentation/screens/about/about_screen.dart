@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/services/quran_engine_service.dart';
 import '../../widgets/misc_widgets.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -31,31 +31,31 @@ class AboutScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         const _InfoRow(
-                          icon: SolarIconsBold.user,
+                          icon: LucideIcons.user,
                           label: 'Developer',
                           value: 'Arie Muhammad',
                         ),
                         _rowDivider(context),
                         const _InfoRow(
-                          icon: SolarIconsBold.buildings,
+                          icon: LucideIcons.building2,
                           label: 'Studio',
                           value: 'MiraiLabs',
                         ),
                         _rowDivider(context),
                         const _InfoRow(
-                          icon: SolarIconsBold.cpu,
+                          icon: LucideIcons.cpu,
                           label: 'Technology',
                           value: 'Flutter • Dart • Provider • Hive • Firebase',
                         ),
                         _rowDivider(context),
                         const _InfoRow(
-                          icon: SolarIconsBold.flag,
+                          icon: LucideIcons.flag,
                           label: 'Focus',
                           value: 'Akurasi • Kemudahan • Kecepatan',
                         ),
                         _rowDivider(context),
                         _InfoRow(
-                          icon: SolarIconsBold.database,
+                          icon: LucideIcons.database,
                           label: 'Cakupan Dataset Baris',
                           value: engine.isLoaded
                               ? engine.coverageText()
@@ -111,7 +111,7 @@ class _HeroCard extends StatelessWidget {
               right: -20,
               top: -22,
               child: Icon(
-                SolarIconsBold.moonStars,
+                LucideIcons.moonStar,
                 size: 140,
                 color: Colors.white.withValues(alpha: 0.08),
               ),
@@ -120,7 +120,7 @@ class _HeroCard extends StatelessWidget {
               left: -22,
               bottom: -26,
               child: Icon(
-                SolarIconsBold.magicStick,
+                LucideIcons.wandSparkles,
                 size: 84,
                 color: Colors.white.withValues(alpha: 0.06),
               ),
@@ -220,7 +220,7 @@ class _AboutDescriptionCard extends StatelessWidget {
             Row(
               children: [
                 SoftIconBox(
-                  icon: SolarIconsBold.infoCircle,
+                  icon: LucideIcons.info,
                   color: cs.primary,
                   size: 16,
                   padding: 8,
@@ -307,7 +307,7 @@ class _Footer extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
-        Icon(SolarIconsBold.heart, color: cs.error, size: 20),
+        Icon(LucideIcons.heart, color: cs.error, size: 20),
         const SizedBox(height: 10),
         const Text(
           'Dibuat untuk kemudahan para Guru Al-Quran',

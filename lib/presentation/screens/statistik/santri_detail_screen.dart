@@ -7,7 +7,7 @@ import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/status_badge.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Riwayat lengkap satu santri, dikelompokkan per tanggal dalam card
 /// (senada gaya grouping di Home) — bukan list detail penuh seperti tab
@@ -44,7 +44,7 @@ class SantriDetailScreen extends StatelessWidget {
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
-                  icon: SolarIconsBold.inbox,
+                  icon: LucideIcons.inbox,
                   title: 'Belum ada laporan',
                   subtitle: 'Santri ini belum punya catatan laporan.',
                 ),
@@ -59,7 +59,7 @@ class SantriDetailScreen extends StatelessWidget {
                         child: SummaryStatCard(
                           label: 'Tahfizh',
                           value: '$totalTahfizh',
-                          icon: SolarIconsBold.book,
+                          icon: LucideIcons.bookOpen,
                           color: AppColors.tahfizhOn(context),
                         ),
                       ),
@@ -68,7 +68,7 @@ class SantriDetailScreen extends StatelessWidget {
                         child: SummaryStatCard(
                           label: 'Tahsin',
                           value: '$totalTahsin',
-                          icon: SolarIconsBold.book,
+                          icon: LucideIcons.bookOpen,
                           color: AppColors.tahsinOn(context),
                         ),
                       ),
@@ -77,7 +77,7 @@ class SantriDetailScreen extends StatelessWidget {
                         child: SummaryStatCard(
                           label: 'Total Baris',
                           value: '$totalBaris',
-                          icon: SolarIconsBold.list,
+                          icon: LucideIcons.list,
                           color: AppColors.purpleOn(context),
                         ),
                       ),

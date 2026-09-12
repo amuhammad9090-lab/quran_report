@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/folders_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import 'folder_form_sheet.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Bottom sheet pilih folder tujuan.
 Future<String?> showFolderPickerSheet(
@@ -80,9 +80,9 @@ class _FolderPickerSheet extends StatelessWidget {
                             final f = folders[i];
                             final isCurrent = f.id == currentFolderId;
                             return ListTile(
-                              leading: SoftIconBox(icon: SolarIconsBold.folder, color: cs.secondary),
+                              leading: SoftIconBox(icon: LucideIcons.folder, color: cs.secondary),
                               title: Text(f.nama, style: const TextStyle(fontWeight: FontWeight.w600)),
-                              trailing: isCurrent ? Icon(SolarIconsBold.checkCircle, color: cs.primary) : null,
+                              trailing: isCurrent ? Icon(LucideIcons.circleCheck, color: cs.primary) : null,
                               onTap: isCurrent ? null : () => Navigator.pop(context, f.id),
                             );
                           },
@@ -91,13 +91,13 @@ class _FolderPickerSheet extends StatelessWidget {
                 const SizedBox(height: 8),
                 if (currentFolderId != null)
                   ListTile(
-                    leading: SoftIconBox(icon: SolarIconsBold.removeFolder, color: cs.error),
+                    leading: SoftIconBox(icon: LucideIcons.folderMinus, color: cs.error),
                     title: const Text('Keluarkan dari Folder', style: TextStyle(fontWeight: FontWeight.w600)),
                     onTap: () => Navigator.pop(context, ''),
                   ),
                 const Divider(height: 20),
                 ListTile(
-                  leading: SoftIconBox(icon: SolarIconsBold.addFolder, color: cs.primary),
+                  leading: SoftIconBox(icon: LucideIcons.folderPlus, color: cs.primary),
                   title: const Text('Buat Folder Baru', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () async {
                     Navigator.pop(context);

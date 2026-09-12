@@ -59,6 +59,12 @@ void main() async {
     // punya batas waktu -- kalau sinyal lagi lemah/lambat pas app
     // dibuka, `await` ini bisa nggantung lama (SDK Firebase nunggu
     // cukup lama sebelum nyerah sendiri).
+    //
+    // Sekarang dikasih batas 8 detik: kalau kelamaan, app TETAP lanjut
+    // ke runApp() (fitur cloud jadi nonaktif sementara, sama seperti
+    // skenario gagal biasa -- lihat FirebaseBootstrapStatus &
+    // userMessage-nya), BUKAN bikin app kelihatan macet/nge-freeze di
+    // launcher.
     await _signInAnonymouslyIfNeeded(FirebaseAuth.instance)
         .timeout(const Duration(seconds: 8));
 

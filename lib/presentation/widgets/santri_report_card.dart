@@ -7,7 +7,7 @@ import '../../core/utils/week_utils.dart';
 import '../../providers/records_provider.dart';
 import 'misc_widgets.dart' show EditedBadge;
 import 'status_badge.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Kartu "1 santri = 1 card laporan utama" di tab Laporan. Nunjukin
 /// identitas, progres pekan BULAN BERJALAN, progress bar, dan ringkasan
@@ -168,7 +168,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
                 if (widget.onPindahkanKeFolder != null)
                   ListTile(
                     leading: Icon(
-                      widget.isInsideFolder ? SolarIconsBold.removeFolder : SolarIconsBold.moveToFolder,
+                      widget.isInsideFolder ? LucideIcons.folderMinus : LucideIcons.folderInput,
                       color: widget.isInsideFolder ? cs.error : cs.secondary,
                     ),
                     title: Text(
@@ -182,7 +182,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
                   ),
                 if (widget.onHapus != null)
                   ListTile(
-                    leading: Icon(SolarIconsBold.trashBinMinimalistic, color: cs.error),
+                    leading: Icon(LucideIcons.trash2, color: cs.error),
                     title: Text('Hapus',
                         style: TextStyle(fontWeight: FontWeight.w600, color: cs.error)),
                     onTap: () {
@@ -239,7 +239,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
           children: [
             Row(
               children: [
-                Icon(SolarIconsBold.calendar, size: 14, color: cs.onSurfaceVariant),
+                Icon(LucideIcons.calendarDays, size: 14, color: cs.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Text(
                   'Pekan $weekIndex • $rangeStr',
@@ -261,7 +261,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
             else ...[
               Row(
                 children: [
-                  Icon(SolarIconsBold.bookmark, size: 14, color: cs.primary),
+                  Icon(LucideIcons.bookmark, size: 14, color: cs.primary),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -285,7 +285,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
               width: double.infinity,
               child: FilledButton.tonalIcon(
                 onPressed: () => widget.onTapWeek(weekIndex),
-                icon: Icon(record == null ? SolarIconsBold.addCircle : SolarIconsBold.penNewRound, size: 17),
+                icon: Icon(record == null ? LucideIcons.circlePlus : LucideIcons.penLine, size: 17),
                 label: Text(record == null ? 'Buat Laporan' : 'Lihat / Ubah Laporan'),
               ),
             ),
@@ -441,7 +441,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
                   ),
                   child: Row(
                     children: [
-                      Icon(SolarIconsBold.bookmark, size: 14, color: cs.primary),
+                      Icon(LucideIcons.bookmark, size: 14, color: cs.primary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -463,7 +463,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(SolarIconsBold.calendar, size: 12, color: cs.onSurfaceVariant),
+                    Icon(LucideIcons.calendarDays, size: 12, color: cs.onSurfaceVariant),
                     const SizedBox(width: 5),
                     Text(
                       DateFormat('d MMM yyyy', 'id_ID').format(latest.tanggal),
@@ -562,7 +562,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
                   onPressed: (_) => widget.onHapus!(),
                   backgroundColor: Theme.of(context).colorScheme.errorContainer,
                   foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
-                  icon: SolarIconsBold.trashBinMinimalistic,
+                  icon: LucideIcons.trash2,
                   label: 'Hapus',
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -643,7 +643,7 @@ class _WeekChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                filled ? SolarIconsBold.checkCircle : (isCurrent ? SolarIconsBold.addCircle : Icons.circle_outlined),
+                filled ? LucideIcons.circleCheck : (isCurrent ? LucideIcons.circlePlus : Icons.circle_outlined),
                 size: 15,
                 color: accent,
               ),

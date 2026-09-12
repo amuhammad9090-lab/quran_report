@@ -6,7 +6,7 @@ import '../../../data/repositories/api_student_repository.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Layar ADMIN-ONLY buat ngedit kelas/halaqoh satu santri (mis. santri
 /// Tahsin yang udah mampu dipindah ke halaqoh Tahfizh) — LANGSUNG lewat
@@ -73,7 +73,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
           IconButton(
             icon: _refreshing
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(SolarIconsBold.refresh),
+                : const Icon(LucideIcons.refreshCw),
             onPressed: _refreshing ? null : _refresh,
             tooltip: 'Muat ulang dari cloud',
           ),
@@ -86,13 +86,13 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
             child: TextField(
               controller: _searchCtrl,
               onChanged: (v) => setState(() => _query = v),
-              decoration: fieldDecoration(context, icon: SolarIconsBold.magnifier, label: 'Cari nama santri'),
+              decoration: fieldDecoration(context, icon: LucideIcons.search, label: 'Cari nama santri'),
             ),
           ),
           Expanded(
             child: sorted.isEmpty
                 ? const EmptyState(
-                    icon: SolarIconsBold.usersGroupTwoRounded,
+                    icon: LucideIcons.users,
                     title: 'Belum ada data murid',
                     subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
                   )
@@ -102,10 +102,10 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                     itemBuilder: (context, i) {
                       final s = sorted[i];
                       return ListTile(
-                        leading: SoftIconBox(icon: SolarIconsBold.user, color: cs.primary),
+                        leading: SoftIconBox(icon: LucideIcons.user, color: cs.primary),
                         title: Text(s.nama, style: const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text('${s.kelas} • ${s.halaqoh}'),
-                        trailing: const Icon(SolarIconsBold.penNewRound),
+                        trailing: const Icon(LucideIcons.penLine),
                         onTap: () => _editStudent(context, s),
                       );
                     },
@@ -172,7 +172,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                   SelectField(
                     value: kelas,
                     label: 'Kelas baru',
-                    icon: SolarIconsBold.diploma,
+                    icon: LucideIcons.graduationCap,
                     options: allKelas,
                     onChanged: (v) => setSheetState(() {
                       kelas = v;
@@ -184,7 +184,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                     value: halaqoh,
                     label: 'Halaqoh baru',
                     hint: kelas == null ? 'Pilih kelas dulu' : null,
-                    icon: SolarIconsBold.usersGroupRounded,
+                    icon: LucideIcons.usersRound,
                     options: halaqohOptions,
                     enabled: kelas != null,
                     onChanged: (v) => setSheetState(() => halaqoh = v),
@@ -221,7 +221,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                       icon: saving
                           ? const SizedBox(
                               width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(SolarIconsBold.diskette),
+                          : const Icon(LucideIcons.save),
                       label: Text(saving ? 'Menyimpan...' : 'Simpan'),
                     ),
                   ),

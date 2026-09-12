@@ -10,7 +10,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../export/export_sheet.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Hasil "Generate" dari Rekap Bulanan — menghimpun laporan tiap santri
 /// dari Pekan 1 s/d Pekan terakhir bulan itu jadi SATU baris per santri,
@@ -69,7 +69,7 @@ class GenerateRekapBulananScreen extends StatelessWidget {
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
-                  icon: SolarIconsBold.magicStick,
+                  icon: LucideIcons.wandSparkles,
                   title: 'Belum ada capaian untuk digabung',
                   subtitle:
                   'Isi dulu laporan santri di salah satu Pekan bulan ini, baru rekap bulanan bisa di-generate.',
@@ -118,7 +118,7 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             AppActionChip(
-                              icon: SolarIconsBold.export,
+                              icon: LucideIcons.upload,
                               label: 'Export',
                               color: AppColors.deployOn(context),
                               tooltip: 'Export Kelas ${g.kelas} — Halaqoh ${g.halaqoh}',
