@@ -13,7 +13,7 @@ import '../profile/profile_screen.dart';
 import '../laporan/buat_laporan_sheet.dart';
 import '../export/export_sheet.dart';
 import '../notifications/notifications_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Tab "Home" — dashboard ringkasan. Daftar laporan penuh ada di tab
 /// "Laporan"; tile kategori di sini cuma set filter lalu pindah ke sana.
@@ -62,7 +62,7 @@ class BerandaTab extends StatelessWidget {
                     Expanded(
                       child: HeroActionItem(
                         label: 'Tambah\nLaporan',
-                        icon: SolarIconsBold.addCircle,
+                        icon: LucideIcons.circlePlus,
                         onTap: () => showBuatLaporanSheet(context),
                       ),
                     ),
@@ -76,7 +76,7 @@ class BerandaTab extends StatelessWidget {
                     Expanded(
                       child: HeroActionItem(
                         label: 'Ekspor\nData',
-                        icon: SolarIconsBold.export,
+                        icon: LucideIcons.upload,
                         onTap: () => showExportSheet(context),
                       ),
                     ),
@@ -93,7 +93,7 @@ class BerandaTab extends StatelessWidget {
                       child: StatItem(
                         label: 'Laporan Baru',
                         value: '${provider.laporanBaruHariIni}',
-                        icon: SolarIconsBold.documentAdd,
+                        icon: LucideIcons.filePlus2,
                         color: cs.primary,
                       ),
                     ),
@@ -102,7 +102,7 @@ class BerandaTab extends StatelessWidget {
                       child: StatItem(
                         label: 'Total Baris',
                         value: '${provider.totalBarisHariIni}',
-                        icon: SolarIconsBold.list,
+                        icon: LucideIcons.listOrdered,
                         color: AppColors.purpleOn(context),
                       ),
                     ),
@@ -111,7 +111,7 @@ class BerandaTab extends StatelessWidget {
                       child: StatItem(
                         label: 'Santri Aktif',
                         value: '${provider.santriAktifHariIni}',
-                        icon: SolarIconsBold.usersGroupTwoRounded,
+                        icon: LucideIcons.users,
                         color: AppColors.tahsinOn(context),
                       ),
                     ),
@@ -129,7 +129,7 @@ class BerandaTab extends StatelessWidget {
                         Expanded(
                           child: CategoryTile(
                             label: 'Tahfizh',
-                            icon: SolarIconsBold.book,
+                            icon: LucideIcons.bookOpen,
                             color: AppColors.tahfizhOn(context),
                             active: provider.filterStatus == HafalanStatus.tahfizh,
                             onTap: () => goToFiltered(HafalanStatus.tahfizh),
@@ -139,7 +139,7 @@ class BerandaTab extends StatelessWidget {
                         Expanded(
                           child: CategoryTile(
                             label: 'Tahsin',
-                            icon: SolarIconsBold.book,
+                            icon: LucideIcons.bookOpen,
                             color: AppColors.tahsinOn(context),
                             active: provider.filterStatus == HafalanStatus.tahsin,
                             onTap: () => goToFiltered(HafalanStatus.tahsin),
@@ -153,7 +153,7 @@ class BerandaTab extends StatelessWidget {
                         Expanded(
                           child: CategoryTile(
                             label: 'Semua Santri',
-                            icon: SolarIconsBold.usersGroupTwoRounded,
+                            icon: LucideIcons.users,
                             color: cs.primary,
                             active: !provider.hasActiveFilters,
                             onTap: () {
@@ -166,7 +166,7 @@ class BerandaTab extends StatelessWidget {
                         Expanded(
                           child: CategoryTile(
                             label: 'Filter Lainnya',
-                            icon: SolarIconsBold.tuning,
+                            icon: LucideIcons.slidersHorizontal,
                             color: AppColors.redOn(context),
                             onTap: () {
                               onLihatLaporan();
@@ -267,8 +267,8 @@ class BerandaTab extends StatelessWidget {
                   children: [
                     Icon(
                       unread > 0
-                          ? SolarIconsBold.bell
-                          : SolarIconsBold.bell,
+                          ? LucideIcons.bell
+                          : LucideIcons.bell,
                       size: 22,
                     ),
                     if (unread > 0)
