@@ -48,7 +48,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         source: source,
       );
       if (path != null) {
-        auth.updatePhotoPath(path);
+        await auth.updatePhotoPath(path);
       }
     } catch (_) {
       if (mounted) {
@@ -88,7 +88,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _removePhoto() async {
     final auth = context.read<AuthProvider>();
     final oldPath = auth.currentUser?.photoPath;
-    auth.updatePhotoPath(null);
+    await auth.updatePhotoPath(null);
     await ProfilePhotoService.instance.delete(oldPath);
   }
 

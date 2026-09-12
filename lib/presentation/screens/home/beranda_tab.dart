@@ -31,6 +31,12 @@ class BerandaTab extends StatelessWidget {
       onLihatLaporan();
     }
 
+    void goToToday() {
+      final now = DateTime.now();
+      provider.setFilterDate(DateTime(now.year, now.month, now.day));
+      onLihatLaporan();
+    }
+
     return SafeArea(
       bottom: false,
       child: RefreshIndicator(
@@ -86,7 +92,7 @@ class BerandaTab extends StatelessWidget {
               const SizedBox(height: 20),
               SectionCard(
                 title: 'Ringkasan Hari Ini',
-                onSeeAll: onLihatLaporan,
+                onSeeAll: goToToday,
                 child: Row(
                   children: [
                     Expanded(

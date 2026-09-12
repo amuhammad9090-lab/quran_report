@@ -250,27 +250,32 @@ class _MonthSwitcher extends StatelessWidget {
             // Ringkasan pekan dalam bulan ini (1..5) — pekan yang sesuai
             // tanggal HARI INI ditandai terisi/aktif (cuma kalau [month]
             // yang lagi dilihat memang bulan berjalan).
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
+            Row(
               children: List.generate(totalWeeks, (i) {
                 final weekIndex = i + 1;
                 final isNow = currentWeek == weekIndex;
-                return InkWell(
-                  onTap: () => onTapWeek(weekIndex),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isNow ? cs.primary : cs.surfaceContainerHighest.withValues(alpha: 0.4),
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: i == totalWeeks - 1 ? 0 : 8),
+                    child: InkWell(
+                      onTap: () => onTapWeek(weekIndex),
                       borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      'Pekan $weekIndex',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: isNow ? cs.onPrimary : cs.onSurfaceVariant,
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isNow ? cs.primary : cs.surfaceContainerHighest.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Pekan $weekIndex',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: isNow ? cs.onPrimary : cs.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     ),
                   ),

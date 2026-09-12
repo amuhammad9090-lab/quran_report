@@ -20,12 +20,19 @@ class LocalAuthRepository implements AuthRepository {
     // (bukan tiap _accounts() dipanggil), karena override cuma berubah
     // lewat updatePasswordHash di bawah yang juga langsung update cache.
     final overrides = AppPrefsService.instance.passwordOverrides;
+    // <-- BARU: sama seperti passwordOverrides -- foto profil juga
+    // ditimpa di atas seed/cache tiap kali akun dimuat ulang, biar
+    // selamat dari restart app (lihat AppPrefsService.photoOverrides).
+    // Kalau id-nya tidak ada di map ini, `photoPath` seed (biasanya null)
+    // dipakai apa adanya lewat copyWith -- itu sudah cukup buat
+    // merepresentasikan "tidak ada foto custom".
+    final photoOverrides = AppPrefsService.instance.photoOverrides;
     _cache = [
       for (final acc in seeded)
-        if (overrides.containsKey(acc.id))
-          acc.copyWith(passwordHash: overrides[acc.id])
-        else
-          acc,
+        acc.copyWith(
+          passwordHash: overrides[acc.id],
+          photoPath: photoOverrides[acc.id],
+        ),
     ];
     return _cache!;
   }
@@ -64,6 +71,19 @@ class LocalAuthRepository implements AuthRepository {
     // app di-kill total. Sekarang login pakai password baru tetap jalan
     // setelah logout ATAUPUN app ditutup & dibuka lagi dari awal.
     await AppPrefsService.instance.setPasswordOverride(userId, newHash);
+    return true;
+  }
+
+  @override
+  Future<bool> updatePhotoPath(String userId, String? photoPath) async {
+    final accounts = _accounts();
+    final index = accounts.indexWhere((acc) => acc.id == userId);
+    if (index == -1) return false;
+    accounts[index] = accounts[index].copyWith(photoPath: photoPath, clearPhoto: photoPath == null);
+    // Sama alasannya kayak updatePasswordHash: persist ke Hive supaya
+    // selamat dari app di-kill total, bukan cuma cache in-memory (lihat
+    // catatan bug fix di AppPrefsService.photoOverrides).
+    await AppPrefsService.instance.setPhotoOverride(userId, photoPath);
     return true;
   }
 }

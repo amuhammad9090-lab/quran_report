@@ -33,12 +33,13 @@ class _FolderPickerSheet extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final folders = context.watch<FoldersProvider>().all;
 
-    return SafeArea(
-      child: Container(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
-        child: Material(
-          color: Theme.of(context).bottomSheetTheme.backgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    return Container(
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+      child: Material(
+        color: Theme.of(context).bottomSheetTheme.backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: SafeArea(
+          top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
             child: Column(

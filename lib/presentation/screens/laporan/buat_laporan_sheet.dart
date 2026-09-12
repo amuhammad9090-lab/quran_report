@@ -197,10 +197,11 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
     final comboBelumLengkap =
         _kelas == null || _kelas!.trim().isEmpty || _halaqoh == null || _halaqoh!.trim().isEmpty;
 
-    return SafeArea(
-      child: Material(
-        color: Theme.of(context).bottomSheetTheme.backgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    return Material(
+      color: Theme.of(context).bottomSheetTheme.backgroundColor,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: SafeArea(
+        top: false,
         child: Padding(
           padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).viewInsets.bottom + 20),
           child: Column(

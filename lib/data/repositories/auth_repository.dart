@@ -19,4 +19,10 @@ abstract class AuthRepository {
   /// Ganti password (dalam bentuk hash — lihat [AuthHashService]) akun
   /// [userId]. Return true kalau akun ketemu & berhasil diupdate.
   Future<bool> updatePasswordHash(String userId, String newHash);
+
+  /// Ganti path foto profil (null = hapus foto) akun [userId], DAN
+  /// persist perubahannya (bukan cuma cache in-memory) — lihat catatan
+  /// bug fix di [AppPrefsService.photoOverrides]. Return true kalau akun
+  /// ketemu & berhasil diupdate.
+  Future<bool> updatePhotoPath(String userId, String? photoPath);
 }

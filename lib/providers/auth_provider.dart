@@ -183,12 +183,23 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Ganti foto profil (path lokal). Belum ada picker package (lihat
-  /// keputusan project) — dipakai kalau nanti mau disambungkan ke
-  /// image_picker atau upload backend, abstraction-nya sudah siap di sini.
-  void updatePhotoPath(String? path) {
-    if (_currentUser == null) return;
-    _currentUser = _currentUser!.copyWith(photoPath: path, clearPhoto: path == null);
+  /// Ganti foto profil (path lokal). Persist ke [_authRepo] (override Hive
+  /// per-device — lihat catatan bug fix lengkap di
+  /// `AppPrefsService.photoOverrides`), BUKAN cuma update in-memory
+  /// seperti sebelumnya — itu yang bikin foto baru "balik seperti semula"
+  /// begitu app ditutup total lalu dibuka lagi.
+  Future<void> updatePhotoPath(String? path) async {
+    final user = _currentUser;
+    if (user == null) return;
+    final ok = await _authRepo.updatePhotoPath(user.id, path);
+    if (!ok) return;
+    _currentUser = user.copyWith(photoPath: path, clearPhoto: path == null);
+    // Jaga konsistensi cache allAccounts, sama pola seperti changePassword
+    // di bawah — supaya guruPembimbingNameFor dkk tidak kepakai data foto
+    // basi dalam satu sesi yang sama.
+    _allAccounts = [
+      for (final acc in _allAccounts) if (acc.id == user.id) _currentUser! else acc,
+    ];
     notifyListeners();
   }
 

@@ -216,7 +216,16 @@ class AppTheme {
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        indicatorColor: colorScheme.primary.withValues(alpha: 0.14),
+        // <-- BUG FIX: sebelumnya alpha 0.14 dipakai SAMA di kedua tema.
+        // Di dark mode, `colorScheme.primary` hasil `ColorScheme.fromSeed`
+        // adalah warna TERANG (biar kontras di atas permukaan gelap) —
+        // alpha 0.14 dari warna terang di atas `scaffoldBackgroundColor`
+        // yang sudah gelap (`#171D23`) jatuh jadi nyaris tidak kelihatan,
+        // jadi pill indikator tab aktif (Home/Laporan/Statistik/
+        // Pengaturan) di bottom nav "ilang" pas dark mode walau tab-nya
+        // sebenarnya aktif. Dinaikin khusus utk dark mode biar tetap
+        // kebaca, light mode dibiarkan seperti semula.
+        indicatorColor: colorScheme.primary.withValues(alpha: isDark ? 0.24 : 0.14),
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),

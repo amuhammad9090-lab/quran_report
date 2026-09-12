@@ -139,15 +139,16 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
     final kelasOptions = _kelasOptions();
     final halaqohOptions = _halaqohOptions();
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).bottomSheetTheme.backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       child: SafeArea(
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).bottomSheetTheme.backgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 12, 20, 24 + MediaQuery.of(context).viewInsets.bottom),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

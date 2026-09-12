@@ -54,12 +54,13 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        child: Container(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-          child: Material(
-            color: Theme.of(context).bottomSheetTheme.backgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+        child: Material(
+          color: Theme.of(context).bottomSheetTheme.backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: SafeArea(
+            top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
               child: Column(

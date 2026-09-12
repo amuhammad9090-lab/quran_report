@@ -126,6 +126,7 @@ class RecordsProvider extends ChangeNotifier {
   String? _filterHalaqoh;
   HafalanStatus? _filterStatus;
   Keterangan? _filterKeterangan;
+  DateTime? _filterDate;
 
   /// Data MENTAH tanpa scope — HATI-HATI, hanya untuk kebutuhan internal
   /// (mis. admin tooling). UI biasa harus lewat getter lain di bawah yang
@@ -137,6 +138,7 @@ class RecordsProvider extends ChangeNotifier {
   String? get filterHalaqoh => _filterHalaqoh;
   HafalanStatus? get filterStatus => _filterStatus;
   Keterangan? get filterKeterangan => _filterKeterangan;
+  DateTime? get filterDate => _filterDate;
 
   AccessScope? get scope => _scope;
 
@@ -264,6 +266,12 @@ class RecordsProvider extends ChangeNotifier {
       if (_filterHalaqoh != null && r.halaqoh != _filterHalaqoh) return false;
       if (_filterStatus != null && r.status != _filterStatus) return false;
       if (_filterKeterangan != null && r.keterangan != _filterKeterangan) return false;
+      if (_filterDate != null &&
+          !(r.tanggal.year == _filterDate!.year &&
+              r.tanggal.month == _filterDate!.month &&
+              r.tanggal.day == _filterDate!.day)) {
+        return false;
+      }
       return true;
     }).toList();
   }
@@ -293,12 +301,18 @@ class RecordsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setFilterDate(DateTime? v) {
+    _filterDate = v;
+    notifyListeners();
+  }
+
   void clearFilters() {
     _searchQuery = '';
     _filterKelas = null;
     _filterHalaqoh = null;
     _filterStatus = null;
     _filterKeterangan = null;
+    _filterDate = null;
     notifyListeners();
   }
 
@@ -307,7 +321,8 @@ class RecordsProvider extends ChangeNotifier {
       _filterKelas != null ||
       _filterHalaqoh != null ||
       _filterStatus != null ||
-      _filterKeterangan != null;
+      _filterKeterangan != null ||
+      _filterDate != null;
 
   /// Simpan laporan baru/edit. Kalau user guru pembimbing (scope aktif, bukan
   /// admin) mencoba simpan untuk kelas/halaqoh di luar assignment-nya,

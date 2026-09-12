@@ -17,6 +17,17 @@ class FolderCard extends StatelessWidget {
   final VoidCallback onDelete;
   final void Function(List<String> recordIds)? onDropRecord;
 
+  /// Jumlah kartu DI DALAM folder ini yang cocok filter/pencarian aktif
+  /// (0/null kalau tidak ada filter aktif, atau tidak ada yang cocok) —
+  /// dipakai buat badge kecil di pojok kartu. Filter kategori (Tahfizh/
+  /// Tahsin/dll) di tab Laporan sengaja TIDAK meng-auto-expand isi folder
+  /// (lihat `LaporanTab._filteredCards`), jadi tanpa badge ini, santri
+  /// yang cocok filter tapi kartunya "nyangkut" di dalam folder jadi
+  /// nggak kelihatan sama sekali sampai foldernya dibuka manual. Badge ini
+  /// cuma penanda "ada yang cocok di dalam" — buka folder tetap wajib
+  /// buat lihat detailnya (BUKAN auto-expand).
+  final int matchingFilterCount;
+
   const FolderCard({
     super.key,
     required this.folder,
@@ -25,6 +36,7 @@ class FolderCard extends StatelessWidget {
     required this.onRename,
     required this.onDelete,
     this.onDropRecord,
+    this.matchingFilterCount = 0,
   });
 
   void _showActions(BuildContext context) {
@@ -112,41 +124,82 @@ class FolderCard extends StatelessWidget {
         return AnimatedScale(
           scale: hovering ? 1.05 : 1.0,
           duration: const Duration(milliseconds: 150),
-          child: Card(
-            color: hovering ? cs.secondaryContainer.withValues(alpha: 0.6) : null,
-            child: InkWell(
-              onTap: onTap,
-              onLongPress: () => _showActions(context),
-              borderRadius: BorderRadius.circular(20),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: cs.secondary.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(LucideIcons.folder, color: cs.secondary, size: 22),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Card(
+                color: hovering ? cs.secondaryContainer.withValues(alpha: 0.6) : null,
+                child: InkWell(
+                  onTap: onTap,
+                  onLongPress: () => _showActions(context),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: cs.secondary.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(LucideIcons.folder, color: cs.secondary, size: 22),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          folder.nama,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '$recordCount santri',
+                          style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      folder.nama,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '$recordCount santri',
-                      style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              // Badge "ada yang cocok filter di dalam" — cuma nongol kalau
+              // filter/pencarian lagi aktif DAN memang ada yang match.
+              // Sengaja tidak nge-auto-buka folder-nya, cuma penanda; buka
+              // folder tetap wajib buat lihat siapa aja yang cocok.
+              if (matchingFilterCount > 0)
+                Positioned(
+                  top: -6,
+                  right: -6,
+                  child: Tooltip(
+                    message:
+                        '$matchingFilterCount santri di folder ini cocok filter aktif',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      constraints: const BoxConstraints(minWidth: 20),
+                      decoration: BoxDecoration(
+                        color: cs.primary,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: Theme.of(context).cardTheme.color ??
+                              Theme.of(context).scaffoldBackgroundColor,
+                          width: 2,
+                        ),
+                      ),
+                      child: Text(
+                        '$matchingFilterCount',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: cs.onPrimary,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },

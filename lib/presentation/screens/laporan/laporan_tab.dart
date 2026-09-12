@@ -174,6 +174,33 @@ class _LaporanTabState extends State<LaporanTab> {
     );
   }
 
+  /// Predikat pencocokan search + filter kelas/halaqoh/status/keterangan/
+  /// tanggal untuk SATU kartu — dipisah dari [_filteredCards] supaya bisa
+  /// dipakai ulang buat menghitung berapa kartu di DALAM sebuah folder
+  /// yang cocok filter aktif (lihat [_matchingCountInFolder]), tanpa
+  /// duplikat logic-nya.
+  bool _cardMatchesFilters(
+      SantriCardInfo c, RecordsProvider provider, DateTime thisMonth, String q) {
+    if (q.isNotEmpty && !c.nama.toLowerCase().contains(q)) return false;
+    if (provider.filterKelas != null && c.kelas != provider.filterKelas) return false;
+    if (provider.filterHalaqoh != null && c.halaqoh != provider.filterHalaqoh) return false;
+    if (provider.filterStatus != null ||
+        provider.filterKeterangan != null ||
+        provider.filterDate != null) {
+      final recs = provider.recordsInMonth(thisMonth).where(
+              (r) => r.namaAnak.trim().toLowerCase() == c.nama.trim().toLowerCase());
+      final matches = recs.any((r) =>
+      (provider.filterStatus == null || r.status == provider.filterStatus) &&
+          (provider.filterKeterangan == null || r.keterangan == provider.filterKeterangan) &&
+          (provider.filterDate == null ||
+              (r.tanggal.year == provider.filterDate!.year &&
+                  r.tanggal.month == provider.filterDate!.month &&
+                  r.tanggal.day == provider.filterDate!.day)));
+      if (!matches) return false;
+    }
+    return true;
+  }
+
   /// Kartu santri yang cocok dengan pencarian & filter kelas/halaqoh aktif
   /// (dipakai bersama dengan Bottom Sheet Filter yang sudah ada).
   List<SantriCardInfo> _filteredCards(RecordsProvider provider) {
@@ -181,19 +208,27 @@ class _LaporanTabState extends State<LaporanTab> {
     final thisMonth = WeekUtils.ownerMonth(DateTime.now());
     return provider.laporanCards.where((c) {
       if (c.currentFolderId != null) return false;
-      if (q.isNotEmpty && !c.nama.toLowerCase().contains(q)) return false;
-      if (provider.filterKelas != null && c.kelas != provider.filterKelas) return false;
-      if (provider.filterHalaqoh != null && c.halaqoh != provider.filterHalaqoh) return false;
-      if (provider.filterStatus != null || provider.filterKeterangan != null) {
-        final recs = provider.recordsInMonth(thisMonth).where(
-                (r) => r.namaAnak.trim().toLowerCase() == c.nama.trim().toLowerCase());
-        final matches = recs.any((r) =>
-        (provider.filterStatus == null || r.status == provider.filterStatus) &&
-            (provider.filterKeterangan == null || r.keterangan == provider.filterKeterangan));
-        if (!matches) return false;
-      }
-      return true;
+      return _cardMatchesFilters(c, provider, thisMonth, q);
     }).toList();
+  }
+
+  /// Jumlah kartu DI DALAM folder [folderId] yang cocok filter/pencarian
+  /// aktif saat ini — dipakai buat badge di [FolderCard] (lihat
+  /// [_buildFolderSection]), supaya kartu yang "nyangkut" di dalam folder
+  /// (dan karena itu tidak ikut ditampilkan sebagai kartu lepas oleh
+  /// [_filteredCards]) tetap kelihatan ketauan ada yang cocok, tanpa harus
+  /// membuka folder itu satu-satu.
+  int _matchingCountInFolder(String folderId, RecordsProvider provider) {
+    // Null kalau tidak ada filter/pencarian aktif sama sekali -- badge-nya
+    // sengaja TIDAK ditampilkan dalam kondisi ini (lihat _buildFolderSection),
+    // jadi hitungannya juga tidak perlu dikerjakan.
+    if (!provider.hasActiveFilters) return 0;
+    final q = provider.searchQuery.trim().toLowerCase();
+    final thisMonth = WeekUtils.ownerMonth(DateTime.now());
+    return provider.laporanCards
+        .where((c) => c.currentFolderId == folderId)
+        .where((c) => _cardMatchesFilters(c, provider, thisMonth, q))
+        .length;
   }
 
   /// Buka form laporan untuk pekan [weekIndex] (dalam bulan berjalan) milik
@@ -458,6 +493,7 @@ class _LaporanTabState extends State<LaporanTab> {
                   child: FolderCard(
                     folder: f,
                     recordCount: provider.countInFolder(f.id),
+                    matchingFilterCount: _matchingCountInFolder(f.id, provider),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => FolderDetailScreen(

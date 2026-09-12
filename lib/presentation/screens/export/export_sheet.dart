@@ -313,17 +313,19 @@ class _ExportSheetState extends State<ExportSheet> {
             : widget.fixedRecords?.length ??
                 (_useFilteredOnly ? provider.filtered.length : provider.all.length);
 
-    return SafeArea(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).bottomSheetTheme.backgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).bottomSheetTheme.backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Center(
               child: Container(
                 width: 40,
@@ -466,6 +468,7 @@ class _ExportSheetState extends State<ExportSheet> {
               ],
             ],
           ),
+        ),
         ),
       );
   }

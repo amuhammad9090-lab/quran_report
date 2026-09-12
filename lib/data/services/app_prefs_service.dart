@@ -24,6 +24,7 @@ class AppPrefsService {
   static const _keyActivatedIdentityFolders = 'activated_report_identity_folders';
   static const _keyActivatedIdentityDisplay = 'activated_report_identity_display';
   static const _keyPasswordOverrides = 'password_overrides';
+  static const _keyPhotoOverrides = 'photo_overrides'; // <-- BARU
   static const _keyDownloadNotifPaths = 'download_notif_paths';
   static const _keyAdminModeActive = 'admin_mode_active'; // <-- BARU
 
@@ -280,6 +281,41 @@ class AppPrefsService {
     final current = passwordOverrides;
     current[userId] = newHash;
     await _box.put(_keyPasswordOverrides, jsonEncode(current));
+  }
+
+  // --- Override foto profil akun lokal ---
+  //
+  // BUG FIX: sama persis kasusnya kayak [passwordOverrides] di atas —
+  // sebelumnya ganti foto profil (AuthProvider.updatePhotoPath) CUMA
+  // update `_currentUser` in-memory, TIDAK PERNAH ditulis ke sini atau
+  // ke mana pun. File fotonya sendiri sudah benar tersimpan permanen di
+  // documents directory (lihat ProfilePhotoService), tapi REFERENSI path-
+  // nya di akun cuma hidup selama proses app masih jalan — begitu
+  // restoreSession() jalan lagi (app dibuka ulang dari awal / setelah
+  // di-kill total), akun dimuat ulang dari cache/seed yang TIDAK tahu
+  // soal foto baru itu, jadi kelihatannya "balik seperti semula". Sekarang
+  // path foto DISIMPAN di sini (Hive, persist ke disk) dan diterapkan di
+  // atas data akun tiap kali akun dimuat ulang, sama seperti
+  // [passwordOverrides].
+  Map<String, String> get photoOverrides {
+    final raw = _box.get(_keyPhotoOverrides);
+    if (raw == null || raw.trim().isEmpty) return {};
+    try {
+      final map = jsonDecode(raw) as Map;
+      return map.map((k, v) => MapEntry(k.toString(), v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setPhotoOverride(String userId, String? photoPath) async {
+    final current = photoOverrides;
+    if (photoPath == null) {
+      current.remove(userId);
+    } else {
+      current[userId] = photoPath;
+    }
+    await _box.put(_keyPhotoOverrides, jsonEncode(current));
   }
 
   // --- Mapping id notifikasi unduhan -> path file (buat DownloadNotificationService) ---

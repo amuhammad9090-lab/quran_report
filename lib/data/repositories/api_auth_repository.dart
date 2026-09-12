@@ -44,17 +44,28 @@ class ApiAuthRepository implements AuthRepository {
       .doc(kSchoolId)
       .collection('accounts');
 
-  List<UserAccount> _withPasswordOverrides(List<UserAccount> accounts) {
+  List<UserAccount> _withLocalOverrides(List<UserAccount> accounts) {
     final overrides = AppPrefsService.instance.passwordOverrides;
-    if (overrides.isEmpty) return accounts;
+    // <-- BARU: sama alasannya kayak passwordOverrides -- foto profil
+    // (AuthProvider.updatePhotoPath) juga cuma di-override LOKAL (Hive),
+    // TIDAK ditulis balik ke Firestore, biar tidak menambah kompleksitas
+    // sinkronisasi foto lintas-device (persis pola passwordOverrides).
+    // Kalau userId TIDAK ADA di map ini, `photoPath` dibiarkan apa
+    // adanya (null dari seed) -- itu sudah berarti "belum/tidak ada foto
+    // custom", sama seperti kalau fotonya baru saja dihapus.
+    final photoOverrides = AppPrefsService.instance.photoOverrides;
+    if (overrides.isEmpty && photoOverrides.isEmpty) return accounts;
     return [
       for (final acc in accounts)
-        if (overrides.containsKey(acc.id)) acc.copyWith(passwordHash: overrides[acc.id]) else acc,
+        acc.copyWith(
+          passwordHash: overrides[acc.id],
+          photoPath: photoOverrides[acc.id],
+        ),
     ];
   }
 
   Future<List<UserAccount>> _accounts() async {
-    if (_memCache != null) return _withPasswordOverrides(_memCache!);
+    if (_memCache != null) return _withLocalOverrides(_memCache!);
 
     final box = await _openBox();
 
@@ -71,14 +82,15 @@ class ApiAuthRepository implements AuthRepository {
           .toList();
       _memCache = cached;
       unawaited(_refreshInBackground());
-      return _withPasswordOverrides(cached);
+      return _withLocalOverrides(cached);
     }
 
     final seeded = kSeedAccountsJson.map(UserAccount.fromJson).toList();
     _memCache = seeded;
     unawaited(_refreshInBackground());
-    return _withPasswordOverrides(seeded);
+    return _withLocalOverrides(seeded);
   }
+
 
   Future<void> _refreshInBackground() async {
     try {
@@ -147,6 +159,18 @@ class ApiAuthRepository implements AuthRepository {
     final exists = (await _accounts()).any((acc) => acc.id == userId);
     if (!exists) return false;
     await AppPrefsService.instance.setPasswordOverride(userId, newHash);
+    return true;
+  }
+
+  @override
+  Future<bool> updatePhotoPath(String userId, String? photoPath) async {
+    final exists = (await _accounts()).any((acc) => acc.id == userId);
+    if (!exists) return false;
+    // Sama pola & alasannya kayak updatePasswordHash di atas -- lihat
+    // catatan bug fix lengkap di AppPrefsService.photoOverrides. Ditulis
+    // HANYA ke override Hive lokal, TIDAK ke Firestore (sama seperti
+    // password), jadi foto profil ini per-device.
+    await AppPrefsService.instance.setPhotoOverride(userId, photoPath);
     return true;
   }
 
