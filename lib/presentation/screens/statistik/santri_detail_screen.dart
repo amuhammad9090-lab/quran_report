@@ -7,6 +7,7 @@ import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/status_badge.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Riwayat lengkap satu santri, dikelompokkan per tanggal dalam card
 /// (senada gaya grouping di Home) — bukan list detail penuh seperti tab
@@ -43,7 +44,7 @@ class SantriDetailScreen extends StatelessWidget {
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
-                  icon: Icons.inbox_rounded,
+                  icon: SolarIconsBold.inbox,
                   title: 'Belum ada laporan',
                   subtitle: 'Santri ini belum punya catatan laporan.',
                 ),
@@ -58,7 +59,7 @@ class SantriDetailScreen extends StatelessWidget {
                         child: SummaryStatCard(
                           label: 'Tahfizh',
                           value: '$totalTahfizh',
-                          icon: Icons.auto_stories_rounded,
+                          icon: SolarIconsBold.book,
                           color: AppColors.tahfizhOn(context),
                         ),
                       ),
@@ -67,7 +68,7 @@ class SantriDetailScreen extends StatelessWidget {
                         child: SummaryStatCard(
                           label: 'Tahsin',
                           value: '$totalTahsin',
-                          icon: Icons.menu_book_rounded,
+                          icon: SolarIconsBold.book,
                           color: AppColors.tahsinOn(context),
                         ),
                       ),
@@ -76,7 +77,7 @@ class SantriDetailScreen extends StatelessWidget {
                         child: SummaryStatCard(
                           label: 'Total Baris',
                           value: '$totalBaris',
-                          icon: Icons.format_list_numbered_rounded,
+                          icon: SolarIconsBold.list,
                           color: AppColors.purpleOn(context),
                         ),
                       ),

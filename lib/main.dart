@@ -56,7 +56,9 @@ void main() async {
 
     // <-- BERUBAH: dibungkus [timeout]. Sebelumnya sign-in anonim (atau
     // reload/refresh token buat sesi yang udah ada) SAMA SEKALI gak
-    // punya batas waktu.
+    // punya batas waktu -- kalau sinyal lagi lemah/lambat pas app
+    // dibuka, `await` ini bisa nggantung lama (SDK Firebase nunggu
+    // cukup lama sebelum nyerah sendiri).
     await _signInAnonymouslyIfNeeded(FirebaseAuth.instance)
         .timeout(const Duration(seconds: 8));
 

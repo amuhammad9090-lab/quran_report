@@ -11,6 +11,7 @@ import '../../../data/services/firebase_bootstrap_status.dart';
 import '../../widgets/misc_widgets.dart';
 import '../about/about_screen.dart';
 import 'kelola_data_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -65,19 +66,19 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Tampilan',
                   children: [
                     _ThemeOption(
-                      icon: Icons.light_mode_rounded,
+                      icon: SolarIconsBold.sun,
                       label: 'Terang',
                       selected: themeProvider.mode == ThemeMode.light,
                       onTap: () => themeProvider.setMode(ThemeMode.light),
                     ),
                     _ThemeOption(
-                      icon: Icons.dark_mode_rounded,
+                      icon: SolarIconsBold.moon,
                       label: 'Gelap',
                       selected: themeProvider.mode == ThemeMode.dark,
                       onTap: () => themeProvider.setMode(ThemeMode.dark),
                     ),
                     _ThemeOption(
-                      icon: Icons.smartphone_rounded,
+                      icon: SolarIconsBold.iPhone,
                       label: 'Ikuti Sistem',
                       selected: themeProvider.mode == ThemeMode.system,
                       onTap: () => themeProvider.setMode(ThemeMode.system),
@@ -90,7 +91,7 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     ListTile(
                       leading: SoftIconBox(
-                        icon: Icons.cloud_upload_outlined,
+                        icon: SolarIconsBold.cloudUpload,
                         color: cs.primary,
                       ),
                       title: const Text('Backup ke Cloud'),
@@ -99,7 +100,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     ListTile(
                       leading: SoftIconBox(
-                        icon: Icons.cloud_download_outlined,
+                        icon: SolarIconsBold.cloudDownload,
                         color: cs.primary,
                       ),
                       title: const Text('Pulihkan dari Cloud'),
@@ -108,7 +109,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     ListTile(
                       leading: SoftIconBox(
-                        icon: Icons.delete_sweep_outlined,
+                        icon: SolarIconsBold.trashBinMinimalistic_2,
                         color: cs.error,
                       ),
                       title: const Text('Hapus Semua Data'),
@@ -123,10 +124,10 @@ class SettingsScreen extends StatelessWidget {
                     title: 'Kelola Sekolah (Admin)',
                     children: [
                       ListTile(
-                        leading: SoftIconBox(icon: Icons.manage_accounts_outlined, color: cs.primary),
+                        leading: SoftIconBox(icon: SolarIconsBold.userId, color: cs.primary),
                         title: const Text('Halaman Kelola'),
                         subtitle: const Text('Kelola guru & murid, export/import Excel, migrasi data'),
-                        trailing: const Icon(Icons.chevron_right_rounded),
+                        trailing: const Icon(SolarIconsBold.altArrowRight),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const KelolaDataScreen()),
                         ),
@@ -140,11 +141,11 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     ListTile(
                       leading: SoftIconBox(
-                        icon: Icons.info_outline_rounded,
+                        icon: SolarIconsBold.infoCircle,
                         color: cs.primary,
                       ),
                       title: const Text('Tentang Aplikasi'),
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const Icon(SolarIconsBold.altArrowRight),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const AboutScreen()),
                       ),
@@ -420,7 +421,7 @@ class _ThemeOption extends StatelessWidget {
         ),
       ),
       trailing: selected
-          ? Icon(Icons.check_circle_rounded, color: cs.primary)
+          ? Icon(SolarIconsBold.checkCircle, color: cs.primary)
           : Icon(Icons.circle_outlined,
           color: cs.onSurfaceVariant.withValues(alpha: 0.35)),
       onTap: onTap,

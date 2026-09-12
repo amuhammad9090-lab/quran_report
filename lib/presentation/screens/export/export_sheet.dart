@@ -11,6 +11,7 @@ import '../../../data/services/platform_file/exported_file.dart';
 import '../../../providers/records_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../widgets/misc_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 Future<void> showExportSheet(
     BuildContext context, {
@@ -383,7 +384,7 @@ class _ExportSheetState extends State<ExportSheet> {
                   ),
                 SizedBox(height: _isFixed ? 4 : 20),
                 ExportOptionTile(
-                  icon: Icons.picture_as_pdf_rounded,
+                  icon: SolarIconsBold.fileText,
                   color: AppColors.redOn(context),
                   title: 'PDF',
                   subtitle: 'Untuk cetak & bagikan cepat',
@@ -392,7 +393,7 @@ class _ExportSheetState extends State<ExportSheet> {
                 ),
                 const SizedBox(height: 10),
                 ExportOptionTile(
-                  icon: Icons.description_rounded,
+                  icon: SolarIconsBold.documentText,
                   color: AppColors.blueOn(context),
                   title: 'Word (.docx)',
                   subtitle: 'Bisa diedit lebih lanjut',
@@ -401,7 +402,7 @@ class _ExportSheetState extends State<ExportSheet> {
                 ),
                 const SizedBox(height: 10),
                 ExportOptionTile(
-                  icon: Icons.grid_on_rounded,
+                  icon: SolarIconsBold.widget,
                   color: AppColors.greenOn(context),
                   title: 'Excel (.xlsx)',
                   subtitle: 'Untuk rekap & olah data lanjutan',
@@ -418,7 +419,7 @@ class _ExportSheetState extends State<ExportSheet> {
                         color: cs.primary.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.check_rounded, color: cs.primary),
+                      child: Icon(SolarIconsBold.checkCircle, color: cs.primary),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -440,7 +441,7 @@ class _ExportSheetState extends State<ExportSheet> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: _share,
-                        icon: const Icon(Icons.ios_share_rounded, size: 18),
+                        icon: const Icon(SolarIconsBold.export, size: 18),
                         label: const Text('Bagikan'),
                       ),
                     ),
@@ -448,7 +449,7 @@ class _ExportSheetState extends State<ExportSheet> {
                     Expanded(
                       child: FilledButton.icon(
                         onPressed: _saveToDevice,
-                        icon: const Icon(Icons.download_rounded, size: 18),
+                        icon: const Icon(SolarIconsBold.download, size: 18),
                         label: const Text('Simpan'),
                       ),
                     ),
@@ -490,7 +491,7 @@ class _InlineMessageBanner extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.info_outline_rounded, size: 17, color: cs.primary),
+          Icon(SolarIconsBold.infoCircle, size: 17, color: cs.primary),
           const SizedBox(width: 10),
           Flexible(
             child: Text(message, style: const TextStyle(fontSize: 12.5)),

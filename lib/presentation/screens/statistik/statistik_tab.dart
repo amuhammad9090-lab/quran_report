@@ -9,6 +9,7 @@ import '../../widgets/misc_widgets.dart';
 import 'santri_list_screen.dart';
 import 'kehadiran_screen.dart';
 import 'rekap_bulanan_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Tab "Statistik" — angka ringkas + pintu masuk ke 3 halaman detail:
 /// Daftar Santri, Kehadiran, dan Rekap Bulanan.
@@ -112,7 +113,7 @@ class StatistikTab extends StatelessWidget {
                               const SizedBox(height: 14),
                               Row(
                                 children: [
-                                  Icon(Icons.calendar_month_rounded, size: 14, color: cs.onSurfaceVariant),
+                                  Icon(SolarIconsBold.calendar, size: 14, color: cs.onSurfaceVariant),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
@@ -120,7 +121,7 @@ class StatistikTab extends StatelessWidget {
                                       style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
                                     ),
                                   ),
-                                  Icon(Icons.chevron_right_rounded, size: 18, color: cs.onSurfaceVariant),
+                                  Icon(SolarIconsBold.altArrowRight, size: 18, color: cs.onSurfaceVariant),
                                 ],
                               ),
                             ],
@@ -230,7 +231,7 @@ class _AyatWeeklyChartCard extends StatelessWidget {
                       child: _MiniStatPill(
                         value: '$totalSantri',
                         label: 'Total Santri',
-                        icon: Icons.groups_2_rounded,
+                        icon: SolarIconsBold.usersGroupTwoRounded,
                         iconColor: cs.primary,
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const SantriListScreen()),
@@ -242,7 +243,7 @@ class _AyatWeeklyChartCard extends StatelessWidget {
                       child: _MiniStatPill(
                         value: '$totalHadir',
                         label: 'Total Hadir',
-                        icon: Icons.check_circle_rounded,
+                        icon: SolarIconsBold.checkCircle,
                         iconColor: AppColors.greenOn(context),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const KehadiranScreen()),
@@ -366,10 +367,12 @@ class _MiniStatPill extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
+              Text(value,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800, fontSize: 19, color: cs.onSurface)),
               if (onTap != null) ...[
                 const SizedBox(width: 2),
-                Icon(Icons.chevron_right_rounded, size: 16, color: cs.onSurfaceVariant),
+                Icon(SolarIconsBold.altArrowRight, size: 16, color: cs.onSurfaceVariant),
               ],
             ],
           ),

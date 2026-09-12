@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/services/quran_engine_service.dart';
 import '../../widgets/misc_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -30,31 +31,31 @@ class AboutScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         const _InfoRow(
-                          icon: Icons.person_outline_rounded,
+                          icon: SolarIconsBold.user,
                           label: 'Developer',
                           value: 'Arie Muhammad',
                         ),
                         _rowDivider(context),
                         const _InfoRow(
-                          icon: Icons.apartment_rounded,
+                          icon: SolarIconsBold.buildings,
                           label: 'Studio',
                           value: 'MiraiLabs',
                         ),
                         _rowDivider(context),
                         const _InfoRow(
-                          icon: Icons.memory_rounded,
+                          icon: SolarIconsBold.cpu,
                           label: 'Technology',
                           value: 'Flutter • Dart • Provider • Hive • Firebase',
                         ),
                         _rowDivider(context),
                         const _InfoRow(
-                          icon: Icons.flag_outlined,
+                          icon: SolarIconsBold.flag,
                           label: 'Focus',
                           value: 'Akurasi • Kemudahan • Kecepatan',
                         ),
                         _rowDivider(context),
                         _InfoRow(
-                          icon: Icons.dataset_rounded,
+                          icon: SolarIconsBold.database,
                           label: 'Cakupan Dataset Baris',
                           value: engine.isLoaded
                               ? engine.coverageText()
@@ -110,7 +111,7 @@ class _HeroCard extends StatelessWidget {
               right: -20,
               top: -22,
               child: Icon(
-                Icons.nights_stay_rounded,
+                SolarIconsBold.moonStars,
                 size: 140,
                 color: Colors.white.withValues(alpha: 0.08),
               ),
@@ -119,7 +120,7 @@ class _HeroCard extends StatelessWidget {
               left: -22,
               bottom: -26,
               child: Icon(
-                Icons.auto_awesome_rounded,
+                SolarIconsBold.magicStick,
                 size: 84,
                 color: Colors.white.withValues(alpha: 0.06),
               ),
@@ -219,7 +220,7 @@ class _AboutDescriptionCard extends StatelessWidget {
             Row(
               children: [
                 SoftIconBox(
-                  icon: Icons.info_outline_rounded,
+                  icon: SolarIconsBold.infoCircle,
                   color: cs.primary,
                   size: 16,
                   padding: 8,
@@ -234,7 +235,7 @@ class _AboutDescriptionCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             const Text(
-              'Quran Report adalah aplikasi pencatatan capaian hafalan '
+              'Laporan Hafalan adalah aplikasi pencatatan capaian hafalan '
               '(tahfizh) dan bacaan (tahsin) Al-Qur\'an santri, lengkap dengan '
               'generator baris setoran otomatis berbasis pemetaan baris mushaf '
               'rasm Utsmani (Madinah 15 baris).',
@@ -306,7 +307,7 @@ class _Footer extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
-        Icon(Icons.favorite_rounded, color: cs.error, size: 20),
+        Icon(SolarIconsBold.heart, color: cs.error, size: 20),
         const SizedBox(height: 10),
         const Text(
           'Dibuat untuk kemudahan para Guru Al-Quran',

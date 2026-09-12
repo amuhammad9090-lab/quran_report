@@ -6,6 +6,7 @@ import '../../../data/repositories/api_student_repository.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Layar ADMIN-ONLY buat ngedit kelas/halaqoh satu santri (mis. santri
 /// Tahsin yang udah mampu dipindah ke halaqoh Tahfizh) — LANGSUNG lewat
@@ -72,7 +73,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
           IconButton(
             icon: _refreshing
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.refresh_rounded),
+                : const Icon(SolarIconsBold.refresh),
             onPressed: _refreshing ? null : _refresh,
             tooltip: 'Muat ulang dari cloud',
           ),
@@ -85,13 +86,13 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
             child: TextField(
               controller: _searchCtrl,
               onChanged: (v) => setState(() => _query = v),
-              decoration: fieldDecoration(context, icon: Icons.search_rounded, label: 'Cari nama santri'),
+              decoration: fieldDecoration(context, icon: SolarIconsBold.magnifier, label: 'Cari nama santri'),
             ),
           ),
           Expanded(
             child: sorted.isEmpty
                 ? const EmptyState(
-                    icon: Icons.groups_2_outlined,
+                    icon: SolarIconsBold.usersGroupTwoRounded,
                     title: 'Belum ada data murid',
                     subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
                   )
@@ -101,10 +102,10 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                     itemBuilder: (context, i) {
                       final s = sorted[i];
                       return ListTile(
-                        leading: SoftIconBox(icon: Icons.person_outline_rounded, color: cs.primary),
+                        leading: SoftIconBox(icon: SolarIconsBold.user, color: cs.primary),
                         title: Text(s.nama, style: const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text('${s.kelas} • ${s.halaqoh}'),
-                        trailing: const Icon(Icons.edit_outlined),
+                        trailing: const Icon(SolarIconsBold.penNewRound),
                         onTap: () => _editStudent(context, s),
                       );
                     },
@@ -171,7 +172,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                   SelectField(
                     value: kelas,
                     label: 'Kelas baru',
-                    icon: Icons.class_outlined,
+                    icon: SolarIconsBold.diploma,
                     options: allKelas,
                     onChanged: (v) => setSheetState(() {
                       kelas = v;
@@ -183,7 +184,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                     value: halaqoh,
                     label: 'Halaqoh baru',
                     hint: kelas == null ? 'Pilih kelas dulu' : null,
-                    icon: Icons.groups_outlined,
+                    icon: SolarIconsBold.usersGroupRounded,
                     options: halaqohOptions,
                     enabled: kelas != null,
                     onChanged: (v) => setSheetState(() => halaqoh = v),
@@ -220,7 +221,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                       icon: saving
                           ? const SizedBox(
                               width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.save_outlined),
+                          : const Icon(SolarIconsBold.diskette),
                       label: Text(saving ? 'Menyimpan...' : 'Simpan'),
                     ),
                   ),

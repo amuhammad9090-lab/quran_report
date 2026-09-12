@@ -6,6 +6,7 @@ import '../../../data/services/profile_photo_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../widgets/avatar_image_provider.dart';
 import '../../widgets/misc_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Edit Profil — lebih dari sekadar ganti nama: ada juga ganti foto
 /// avatar (kamera/galeri) dan ganti kata sandi. Sebelumnya cuma dialog
@@ -114,7 +115,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
+              leading: const Icon(SolarIconsBold.camera),
               title: const Text('Ambil dari Kamera'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -122,7 +123,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: const Icon(SolarIconsBold.gallery),
               title: const Text('Pilih dari Galeri'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -131,7 +132,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             if (hasPhoto)
               ListTile(
-                leading: Icon(Icons.delete_outline_rounded, color: Theme.of(ctx).colorScheme.error),
+                leading: Icon(SolarIconsBold.trashBinMinimalistic, color: Theme.of(ctx).colorScheme.error),
                 title: Text('Hapus Foto', style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -216,7 +217,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   width: 2.5,
                                 ),
                               ),
-                              child: Icon(Icons.camera_alt_rounded, size: 15, color: cs.onPrimary),
+                              child: Icon(SolarIconsBold.camera, size: 15, color: cs.onPrimary),
                             ),
                           ),
                         ],
@@ -233,7 +234,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 24),
                   FormSectionCard(
                     title: 'Informasi Profil',
-                    icon: Icons.badge_outlined,
+                    icon: SolarIconsBold.medalStar,
                     child: TextField(
                       controller: _nameCtrl,
                       decoration: const InputDecoration(
@@ -263,7 +264,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         child: Row(
                           children: [
-                            SoftIconBox(icon: Icons.lock_outline_rounded, color: cs.primary),
+                            SoftIconBox(icon: SolarIconsBold.lock, color: cs.primary),
                             const SizedBox(width: 12),
                             const Expanded(
                               child: Text(
@@ -271,7 +272,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
                               ),
                             ),
-                            Icon(Icons.chevron_right_rounded, size: 18, color: cs.onSurfaceVariant),
+                            Icon(SolarIconsBold.altArrowRight, size: 18, color: cs.onSurfaceVariant),
                           ],
                         ),
                       ),
@@ -444,7 +445,7 @@ class _PasswordField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         suffixIcon: IconButton(
-          icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 20),
+          icon: Icon(obscure ? SolarIconsBold.eye : SolarIconsBold.eyeClosed, size: 20),
           onPressed: onToggleObscure,
         ),
       ),

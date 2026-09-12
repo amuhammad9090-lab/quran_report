@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/records_provider.dart';
 import '../../widgets/status_badge.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Bottom sheet "Tambah Laporan (Recent)" di halaman folder — pilih dari
 /// kartu santri yang sudah ada (belum ada di folder ini) buat dimasukkan
@@ -87,7 +88,7 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
                 onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(
                   hintText: 'Cari nama santri...',
-                  prefixIcon: Icon(Icons.search_rounded),
+                  prefixIcon: Icon(SolarIconsBold.magnifier),
                 ),
               ),
               const SizedBox(height: 10),

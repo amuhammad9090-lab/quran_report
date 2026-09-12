@@ -7,6 +7,7 @@ import '../../../data/repositories/api_auth_repository.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Layar ADMIN-ONLY buat ngedit nama tampilan & assignment kelas+halaqoh
 /// akun guru pembimbing — LANGSUNG lewat app, gak perlu edit
@@ -55,7 +56,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
           IconButton(
             icon: _refreshing
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.refresh_rounded),
+                : const Icon(SolarIconsBold.refresh),
             onPressed: _refreshing ? null : _refresh,
             tooltip: 'Muat ulang dari cloud',
           ),
@@ -63,7 +64,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
       ),
       body: sorted.isEmpty
           ? const EmptyState(
-              icon: Icons.badge_outlined,
+              icon: SolarIconsBold.medalStar,
               title: 'Belum ada akun guru',
               subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
             )
@@ -74,7 +75,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                 final acc = sorted[i];
                 return ListTile(
                   leading: SoftIconBox(
-                    icon: acc.isAdmin ? Icons.shield_outlined : Icons.person_outline_rounded,
+                    icon: acc.isAdmin ? SolarIconsBold.shield : SolarIconsBold.user,
                     color: cs.primary,
                   ),
                   title: Text(acc.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -83,7 +84,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                         ? '@${acc.username} • ${acc.role.label}'
                         : '@${acc.username} • ${acc.assignments.length} assignment',
                   ),
-                  trailing: const Icon(Icons.edit_outlined),
+                  trailing: const Icon(SolarIconsBold.penNewRound),
                   onTap: () => _editAccount(context, acc),
                 );
               },
@@ -142,7 +143,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: nameCtrl,
-                        decoration: fieldDecoration(ctx, icon: Icons.badge_outlined, label: 'Nama tampilan'),
+                        decoration: fieldDecoration(ctx, icon: SolarIconsBold.medalStar, label: 'Nama tampilan'),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -206,7 +207,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                           icon: saving
                               ? const SizedBox(
                                   width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : const Icon(Icons.save_outlined),
+                              : const Icon(SolarIconsBold.diskette),
                           label: Text(saving ? 'Menyimpan...' : 'Simpan'),
                         ),
                       ),

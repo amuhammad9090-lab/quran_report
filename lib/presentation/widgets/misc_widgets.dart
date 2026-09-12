@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Kotak ikon bertinta lembut — satu-satunya sumber gaya "ikon dalam kotak
 /// warna soft" yang dipakai di SELURUH aplikasi (Home, form laporan,
@@ -41,12 +42,12 @@ class SoftIconBox extends StatelessWidget {
 class EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String subtitle;
+  final String? subtitle;
   const EmptyState({
     super.key,
-    this.icon = Icons.inbox_rounded,
+    this.icon = SolarIconsBold.inbox,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
   });
 
   @override
@@ -72,12 +73,14 @@ class EmptyState extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                subtitle!,
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ),
       ),
@@ -329,7 +332,7 @@ class SelectField extends StatelessWidget {
       initialValue: safeValue,
       isExpanded: true,
       borderRadius: BorderRadius.circular(16),
-      icon: Icon(Icons.expand_more_rounded,
+      icon: Icon(SolarIconsBold.altArrowDown,
           color: isUsable ? cs.onSurfaceVariant : cs.onSurfaceVariant.withValues(alpha: 0.4)),
       decoration: fieldDecoration(
         context,
@@ -437,7 +440,7 @@ class WelcomeHeroCard extends StatelessWidget {
             right: -14,
             top: -6,
             child: Icon(
-              Icons.auto_stories_rounded,
+              SolarIconsBold.book,
               size: 96,
               color: Colors.white.withValues(alpha: 0.12),
             ),
@@ -787,7 +790,7 @@ class DateGroupCard extends StatelessWidget {
             Row(
               children: [
                 SoftIconBox(
-                  icon: Icons.calendar_today_rounded,
+                  icon: SolarIconsBold.calendar,
                   color: cs.primary,
                   size: 14,
                   padding: 7,
@@ -940,7 +943,7 @@ class EditedBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.edit_rounded, size: 9, color: cs.onSurfaceVariant),
+          Icon(SolarIconsBold.penNewRound, size: 9, color: cs.onSurfaceVariant),
           const SizedBox(width: 3),
           Text(
             'Diedit',
@@ -1060,7 +1063,7 @@ class PushedPageHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_rounded),
+            icon: const Icon(SolarIconsBold.arrowLeft),
           ),
           Expanded(
             child: Column(
@@ -1206,7 +1209,7 @@ class SelectionActionBar extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: onCancel,
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(SolarIconsBold.closeCircle),
                   tooltip: 'Batal',
                   visualDensity: VisualDensity.compact,
                   color: cs.onSurfaceVariant,
@@ -1241,7 +1244,7 @@ class SelectionActionBar extends StatelessWidget {
 ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showAppSnackbar(
     BuildContext context,
     String message, {
-      IconData icon = Icons.check_circle_rounded,
+      IconData icon = SolarIconsBold.checkCircle,
       ValueChanged<bool>? onFabVisibilityChanged,
     }) {
   final cs = Theme.of(context).colorScheme;
@@ -1317,7 +1320,7 @@ class InlineMessageBanner extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.info_outline_rounded, size: 17, color: cs.primary),
+          Icon(SolarIconsBold.infoCircle, size: 17, color: cs.primary),
           const SizedBox(width: 10),
           Flexible(
             child: Text(message, style: const TextStyle(fontSize: 12.5)),
@@ -1444,7 +1447,7 @@ class ExportOptionTile extends StatelessWidget {
               if (loading)
                 const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
               else
-                Icon(Icons.chevron_right_rounded, color: color),
+                Icon(SolarIconsBold.altArrowRight, color: color),
             ],
           ),
         ),

@@ -9,6 +9,7 @@ import '../../widgets/misc_widgets.dart';
 import '../../widgets/santri_report_card.dart';
 import '../folder/move_to_folder_sheet.dart';
 import 'open_week_action.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Halaman "Hasil Pencarian" — beda dari list utama di tab Laporan yang
 /// cuma nyari kartu santri yang BELUM masuk folder mana pun, halaman ini
@@ -141,10 +142,10 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
               onChanged: provider.setSearch,
               decoration: InputDecoration(
                 hintText: 'Cari nama santri...',
-                prefixIcon: const Icon(Icons.search_rounded),
+                prefixIcon: const Icon(SolarIconsBold.magnifier),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                  icon: const Icon(Icons.clear_rounded, size: 18),
+                  icon: const Icon(SolarIconsBold.closeCircle, size: 18),
                   onPressed: () {
                     _searchCtrl.clear();
                     provider.setSearch('');
@@ -160,7 +161,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
             children: [
               IconButton.filledTonal(
                 onPressed: () => showFilterSheet(context),
-                icon: const Icon(Icons.tune_rounded),
+                icon: const Icon(SolarIconsBold.tuning),
                 style: IconButton.styleFrom(minimumSize: const Size(52, 52)),
               ),
               if (provider.hasActiveFilters)
@@ -234,7 +235,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                 padding: EdgeInsets.only(top: 24),
                 sliver: SliverToBoxAdapter(
                   child: EmptyState(
-                    icon: Icons.search_off_rounded,
+                    icon: SolarIconsBold.magnifier,
                     title: 'Data tidak ditemukan',
                     subtitle: 'Coba ubah kata kunci atau filter pencarian.',
                   ),

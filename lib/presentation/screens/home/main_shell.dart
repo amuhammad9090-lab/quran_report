@@ -8,6 +8,7 @@ import '../statistik/statistik_tab.dart';
 import '../folder/folder_form_sheet.dart';
 import '../../widgets/speed_dial_fab.dart';
 import 'beranda_tab.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Shell utama aplikasi — bottom navigation 4 tab (Beranda, Laporan,
 /// Statistik, Pengaturan). Semua tab reuse screen/logic yang sudah ada,
@@ -131,23 +132,23 @@ class _MainShellState extends State<MainShell> {
                 onDestinationSelected: _switchTab,
                 destinations: const [
                   NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home_rounded),
+                    icon: Icon(SolarIconsBold.home),
+                    selectedIcon: Icon(SolarIconsBold.home),
                     label: 'Home',
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.calendar_month_outlined),
-                    selectedIcon: Icon(Icons.calendar_month_rounded),
+                    icon: Icon(SolarIconsBold.calendar),
+                    selectedIcon: Icon(SolarIconsBold.calendar),
                     label: 'Laporan',
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.bar_chart_outlined),
-                    selectedIcon: Icon(Icons.bar_chart_rounded),
+                    icon: Icon(SolarIconsBold.chart),
+                    selectedIcon: Icon(SolarIconsBold.chart),
                     label: 'Statistik',
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.settings_outlined),
-                    selectedIcon: Icon(Icons.settings_rounded),
+                    icon: Icon(SolarIconsBold.settings),
+                    selectedIcon: Icon(SolarIconsBold.settings),
                     label: 'Pengaturan',
                   ),
                 ],

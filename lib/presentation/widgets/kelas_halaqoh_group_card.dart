@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../providers/records_provider.dart';
 import 'status_badge.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Kartu rekap 1 kelompok Kelas+Halaqoh dalam suatu periode (pekan/bulan) —
 /// dipakai di Rekap Bulanan (termasuk drill-down per Pekan), section "Rekap
@@ -37,7 +38,7 @@ class KelasHalaqohGroupCard extends StatelessWidget {
                 IconButton(
                   tooltip: 'Ekspor rekap kelompok ini',
                   onPressed: onExport,
-                  icon: const Icon(Icons.ios_share_rounded, size: 20),
+                  icon: const Icon(SolarIconsBold.export, size: 20),
                 ),
               ],
             ),

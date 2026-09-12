@@ -7,6 +7,7 @@ import '../../../providers/folders_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/misc_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Bottom sheet buat folder baru, atau rename folder yang sudah ada kalau
 /// [existing] diisi. Muncul dengan animasi nyembul-dari-bawah bawaan
@@ -164,7 +165,7 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
               ),
               Row(
                 children: [
-                  SoftIconBox(icon: Icons.folder_rounded, color: cs.secondary),
+                  SoftIconBox(icon: SolarIconsBold.folder, color: cs.secondary),
                   const SizedBox(width: 12),
                   Text(
                     _isEdit ? 'Ubah Folder' : 'Buat Folder Baru',
@@ -183,7 +184,7 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
                       key: ValueKey('kelas_$_kelas'),
                       value: _kelas,
                       label: 'Kelas',
-                      icon: Icons.class_outlined,
+                      icon: SolarIconsBold.diploma,
                       options: kelasOptions,
                       errorText: _kelasError,
                       accent: cs.secondary,
@@ -196,7 +197,7 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
                       key: ValueKey('halaqoh_$_halaqoh'),
                       value: _halaqoh,
                       label: 'Halaqoh',
-                      icon: Icons.groups_outlined,
+                      icon: SolarIconsBold.usersGroupRounded,
                       options: halaqohOptions,
                       errorText: _halaqohError,
                       accent: cs.secondary,

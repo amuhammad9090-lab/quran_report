@@ -13,6 +13,7 @@ import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/weekly_santri_recap_table.dart';
 import '../export/export_sheet.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Hasil "Generate Laporan Pekanan" — menghimpun SEMUA laporan sepekan
 /// (semua hari, semua Kelas & Halaqoh), dikelompokkan per Kelas+Halaqoh
@@ -111,7 +112,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
-                  icon: Icons.auto_awesome_rounded,
+                  icon: SolarIconsBold.magicStick,
                   title: 'Belum ada laporan untuk digabung',
                   subtitle: 'Isi dulu laporan santri di salah satu hari pekan ini.',
                 ),
@@ -160,7 +161,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             AppActionChip(
-                              icon: Icons.ios_share_rounded,
+                              icon: SolarIconsBold.export,
                               label: 'Export',
                               color: AppColors.deployOn(context),
                               tooltip: 'Export Kelas ${groups[i].kelas} — Halaqoh ${groups[i].halaqoh}',
@@ -271,7 +272,7 @@ class _DeployChipState extends State<_DeployChip> {
   Widget build(BuildContext context) {
     final deployColor = AppColors.deployOn(context);
     return AppActionChip(
-      icon: Icons.cloud_upload_rounded,
+      icon: SolarIconsBold.cloudUpload,
       label: 'Kirim',
       color: deployColor,
       tooltip: widget.tooltip,

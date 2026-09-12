@@ -6,6 +6,7 @@ import '../../../providers/parent_notes_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../home/main_shell.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Login — logic-nya yang jadi fokus (bukan visual, karena layar ini
 /// belum ada sebelumnya jadi belum ada yang dianggap "FIX" untuk
@@ -95,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: fieldDecoration(
                       context,
-                      icon: Icons.person_outline_rounded,
+                      icon: SolarIconsBold.user,
                       label: 'Username',
                     ),
                     validator: (v) =>
@@ -109,13 +110,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     onFieldSubmitted: (_) => _submit(),
                     decoration: fieldDecoration(
                       context,
-                      icon: Icons.lock_outline_rounded,
+                      icon: SolarIconsBold.lock,
                       label: 'Kata Sandi',
                     ).copyWith(
                       suffixIcon: IconButton(
                         icon: Icon(_obscure
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded),
+                            ? SolarIconsBold.eyeClosed
+                            : SolarIconsBold.eye),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),

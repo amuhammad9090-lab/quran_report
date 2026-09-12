@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../data/models/parent_note.dart';
 import '../../../providers/parent_notes_provider.dart';
 import '../../widgets/misc_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Halaman Notifikasi. Menampilkan Catatan dari Orang Tua yang dikirim
 /// lewat Portal Ortu secara live lewat [ParentNotesProvider], dan
@@ -83,7 +84,7 @@ class NotificationsScreen extends StatelessWidget {
                     const Padding(
                       padding: EdgeInsets.only(top: 40),
                       child: EmptyState(
-                        icon: Icons.cloud_off_rounded,
+                        icon: SolarIconsBold.cloudCross,
                         title: 'Gagal Memuat Notifikasi',
                         subtitle:
                             'Periksa koneksi internet, lalu coba lagi. Data laporan lain tidak terpengaruh.',
@@ -93,7 +94,7 @@ class NotificationsScreen extends StatelessWidget {
                     const Padding(
                       padding: EdgeInsets.only(top: 40),
                       child: EmptyState(
-                        icon: Icons.notifications_none_rounded,
+                        icon: SolarIconsBold.bell,
                         title: 'Belum Ada Notifikasi',
                         subtitle:
                             'Catatan yang dikirim orang tua lewat Portal Ortu akan tampil di sini.',
@@ -135,7 +136,7 @@ class _SwipeBackground extends StatelessWidget {
       ),
       alignment: alignment,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Icon(Icons.notifications_off_rounded, color: cs.onErrorContainer, size: 20),
+      child: Icon(SolarIconsBold.bellOff, color: cs.onErrorContainer, size: 20),
     );
   }
 }

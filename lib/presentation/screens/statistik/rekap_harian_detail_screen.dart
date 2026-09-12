@@ -6,6 +6,7 @@ import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/export_style_records_table.dart';
 import '../../widgets/misc_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Detail laporan SATU HARI (mis. Senin) dalam sebuah Pekan — dibuka dari
 /// tap salah satu baris hari di dalam kartu "Pekan N" yang lagi di-expand
@@ -36,7 +37,7 @@ class RekapHarianDetailScreen extends StatelessWidget {
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
-                  icon: Icons.event_busy_rounded,
+                  icon: SolarIconsBold.calendar,
                   title: 'Belum ada laporan',
                   subtitle: 'Tidak ada laporan tercatat di hari ini.',
                 ),

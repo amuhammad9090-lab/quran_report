@@ -7,6 +7,7 @@ import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../../widgets/status_badge.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Rekap kehadiran — siapa saja hadir/izin sakit/izin lomba/izin
 /// pelatihan/alpa, dikelompokkan per tanggal. Bisa difilter per jenis
@@ -75,7 +76,7 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
-                  icon: Icons.event_busy_rounded,
+                  icon: SolarIconsBold.calendar,
                   title: 'Belum ada data',
                   subtitle: _filter != null
                       ? 'Belum ada catatan untuk keterangan ini.'

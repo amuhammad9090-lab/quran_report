@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Status capaian santri: Tahsin (belajar baca), Tahfizh (hafalan),
 /// gabungan Tahsin+Tahfizh, atau Muroja'ah/Tasmi' (mengulang hafalan lama).
@@ -16,10 +17,10 @@ enum HafalanStatus {
       };
 
   IconData get icon => switch (this) {
-        HafalanStatus.tahsin => Icons.menu_book_rounded,
-        HafalanStatus.tahfizh => Icons.auto_stories_rounded,
-        HafalanStatus.tahsinTahfizh => Icons.library_books_rounded,
-        HafalanStatus.murojaahTasmi => Icons.repeat_rounded,
+        HafalanStatus.tahsin => SolarIconsBold.book,
+        HafalanStatus.tahfizh => SolarIconsBold.book,
+        HafalanStatus.tahsinTahfizh => SolarIconsBold.library,
+        HafalanStatus.murojaahTasmi => SolarIconsBold.repeat,
       };
 
   // <-- BARU: dipakai SantriMonthlyRecap.keteranganSummaryText buat nandain
@@ -88,15 +89,15 @@ enum Keterangan {
       };
 
   IconData get icon => switch (this) {
-        Keterangan.hadir => Icons.check_circle_rounded,
-        Keterangan.izinSakit => Icons.local_hospital_rounded,
-        Keterangan.izin => Icons.description_rounded,
-        Keterangan.izinLomba => Icons.emoji_events_rounded,
-        Keterangan.izinPelatihan => Icons.school_rounded,
-        Keterangan.alpa => Icons.cancel_rounded,
+        Keterangan.hadir => SolarIconsBold.checkCircle,
+        Keterangan.izinSakit => SolarIconsBold.hospital,
+        Keterangan.izin => SolarIconsBold.documentText,
+        Keterangan.izinLomba => SolarIconsBold.cupStar,
+        Keterangan.izinPelatihan => SolarIconsBold.squareAcademicCap,
+        Keterangan.alpa => SolarIconsBold.closeCircle,
         Keterangan.tidakSetoran => Icons.edit_off_rounded,
-        Keterangan.tidakTahsin => Icons.menu_book_outlined,
-        Keterangan.tidakMurojaah => Icons.replay_outlined,
+        Keterangan.tidakTahsin => SolarIconsBold.book,
+        Keterangan.tidakMurojaah => SolarIconsBold.restart,
       };
 
   /// Tiga keterangan "sanksi" (santri HADIR tapi nggak setor/tahsin/

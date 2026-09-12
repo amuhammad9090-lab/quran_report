@@ -10,6 +10,7 @@ import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import 'generate_rekap_pekanan_screen.dart';
 import 'rekap_harian_detail_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Rekap satu Pekan DALAM BULAN (1-6) — dibuka dari Statistik → Rekap
 /// Bulanan → salah satu kartu "Pekan N" (baik dari [_MonthSwitcher] atau
@@ -57,7 +58,7 @@ class RekapPekanBulanScreen extends StatelessWidget {
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
-                  icon: Icons.calendar_view_week_rounded,
+                  icon: SolarIconsBold.calendar,
                   title: 'Belum ada laporan',
                   subtitle: 'Tidak ada laporan tercatat di pekan ini.',
                 ),
@@ -72,7 +73,7 @@ class RekapPekanBulanScreen extends StatelessWidget {
                         child: SummaryStatCard(
                           label: 'Tahfizh',
                           value: '$tahfizhCount',
-                          icon: Icons.auto_stories_rounded,
+                          icon: SolarIconsBold.book,
                           color: AppColors.tahfizhOn(context),
                         ),
                       ),
@@ -81,7 +82,7 @@ class RekapPekanBulanScreen extends StatelessWidget {
                         child: SummaryStatCard(
                           label: 'Tahsin',
                           value: '$tahsinCount',
-                          icon: Icons.menu_book_rounded,
+                          icon: SolarIconsBold.book,
                           color: AppColors.tahsinOn(context),
                         ),
                       ),
@@ -90,7 +91,7 @@ class RekapPekanBulanScreen extends StatelessWidget {
                         child: SummaryStatCard(
                           label: 'Total Baris',
                           value: '$totalBaris',
-                          icon: Icons.format_list_numbered_rounded,
+                          icon: SolarIconsBold.list,
                           color: AppColors.purpleOn(context),
                         ),
                       ),
@@ -127,7 +128,7 @@ class RekapPekanBulanScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      icon: const Icon(SolarIconsBold.magicStick, size: 18),
                       label: const Text('Generate Laporan Pekanan'),
                     ),
                   ),
@@ -241,7 +242,7 @@ class _DayCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+              Icon(SolarIconsBold.altArrowRight, color: cs.onSurfaceVariant),
             ],
           ),
         ),
