@@ -20,12 +20,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 /// Kelola Guru/Kelola Murid (edit satuan), export/import Excel (edit
 /// massal, satu file dua sheet: Murid & Guru), export kode seed (.dart),
 /// dan migrasi data bawaan APK ke cloud.
-///
-/// SATU-SATUNYA titik masuk dari Settings (ganti 3 tile terpisah yang
-/// sebelumnya langsung ada di sana: Kelola Data Murid, Kelola Akun Guru,
-/// Migrasi). Kelola Guru & Kelola Murid sendiri TIDAK berubah isinya --
-/// export/import yang sebelumnya sempat nempel di Kelola Data Murid
-/// sengaja dipindah ke sini biar satu tempat aja buat operasi massal.
 class KelolaDataScreen extends StatefulWidget {
   const KelolaDataScreen({super.key});
 
@@ -265,10 +259,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
     }
   }
 
-  // <-- Persis logic "Migrasi Data Guru & Murid ke Cloud" yang sebelumnya
-  // ada di Settings -- cuma dipindah tempat, perilakunya TIDAK diubah:
-  // sekali jalan, idempotent (upsert per id lewat .set, bukan nambah
-  // dobel), aman dipencet berkali-kali tanpa balik ke data lama.
+  // Migrasi Data Guru & Murid ke Cloud.
   void _confirmMigrateSeed(BuildContext context) {
     showDialog(
       context: context,
@@ -567,9 +558,7 @@ class _SeedCodeScreen extends StatelessWidget {
   }
 }
 
-/// Kartu section -- salinan kecil dari `_SectionCard` di settings_screen.dart
-/// (private ke file itu, jadi diduplikasi di sini) biar tampilan Halaman
-/// Kelola konsisten sama Pengaturan.
+/// Kartu section -- salinan kecil dari `_SectionCard` di settings_screen.dart.
 class _SectionCard extends StatelessWidget {
   final String title;
   final List<Widget> children;
