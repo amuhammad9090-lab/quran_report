@@ -34,7 +34,7 @@ class _MainShellState extends State<MainShell> {
 
   void _switchTab(int index) {
     if (index == _index) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
     _fabController.close();
     setState(() => _index = index);
   }
@@ -104,8 +104,6 @@ class _MainShellState extends State<MainShell> {
               ],
             ),
           ),
-          // Tab Laporan: FAB cuma "+", ditekan nyembul jadi 2 pilihan
-          // (Buat Folder / Buat Laporan).
           floatingActionButton: _index == 1 && !_laporanSelecting && _snackbarHidingFab == 0
               ? SpeedDialFab(
             controller: _fabController,
