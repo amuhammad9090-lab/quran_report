@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/week_utils.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/enums.dart';
@@ -13,6 +14,7 @@ import '../profile/profile_screen.dart';
 import '../laporan/buat_laporan_sheet.dart';
 import '../export/export_sheet.dart';
 import '../notifications/notifications_screen.dart';
+import '../statistik/rekap_bulanan_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Tab "Home" — dashboard ringkasan. Daftar laporan penuh ada di tab
@@ -31,10 +33,19 @@ class BerandaTab extends StatelessWidget {
       onLihatLaporan();
     }
 
-    void goToToday() {
+    void goToPekanIni() {
+      // <-- BERUBAH: sebelumnya tombol "Lihat Semua" di kartu "Ringkasan
+      // Hari Ini" cuma nge-set filter tanggal lalu pindah ke tab Laporan
+      // (list flat, filter tanggalnya juga invisible di situ).
       final now = DateTime.now();
-      provider.setFilterDate(DateTime(now.year, now.month, now.day));
-      onLihatLaporan();
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RekapBulananScreen(
+            initialMonth: WeekUtils.ownerMonth(now),
+            initialHighlightDay: now,
+          ),
+        ),
+      );
     }
 
     return SafeArea(
@@ -92,7 +103,7 @@ class BerandaTab extends StatelessWidget {
               const SizedBox(height: 20),
               SectionCard(
                 title: 'Ringkasan Hari Ini',
-                onSeeAll: goToToday,
+                onSeeAll: goToPekanIni,
                 child: Row(
                   children: [
                     Expanded(

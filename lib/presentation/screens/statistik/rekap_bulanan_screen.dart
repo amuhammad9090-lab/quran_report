@@ -13,18 +13,19 @@ import 'rekap_harian_detail_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Rekap semua record tahfizh & tahsin dalam SATU bulan, dengan navigasi
-/// bulan bebas (prev/next SELALU aktif, tidak dibatasi ke bulan yang
-/// sudah punya data — guru pembimbing perlu bisa maju ke bulan depan yang
-/// masih kosong buat mulai nyatet laporan di sana). Dibuka dari card
-/// "Distribusi Capaian" di tab Statistik, default ke bulan berjalan.
-///
-/// Halaman "Pekan N" terpisah (RekapPekanBulanScreen) SUDAH DIHAPUS —
-/// daftar hari & tombol "Generate Laporan Pekanan" sekarang langsung
-/// ada di DALAM tiap kartu "Pekan N" di bawah (tap kartu buat expand,
-/// lihat [_PekanCard]).
+/// bulan bebas (prev/next SELALU aktif).
 class RekapBulananScreen extends StatefulWidget {
   final DateTime initialMonth;
-  const RekapBulananScreen({super.key, required this.initialMonth});
+
+  /// BARU: kalau diisi, layar ini otomatis EXPAND + auto-scroll ke kartu
+  /// "Pekan N" yang memuat tanggal ini begitu dibuka.
+  final DateTime? initialHighlightDay;
+
+  const RekapBulananScreen({
+    super.key,
+    required this.initialMonth,
+    this.initialHighlightDay,
+  });
 
   @override
   State<RekapBulananScreen> createState() => _RekapBulananScreenState();
@@ -39,7 +40,19 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
   @override
   void initState() {
     super.initState();
-    _month = DateTime(widget.initialMonth.year, widget.initialMonth.month);
+    final highlight = widget.initialHighlightDay;
+    if (highlight != null) {
+      final owner = WeekUtils.ownerMonth(highlight);
+      _month = DateTime(owner.year, owner.month);
+      _expandedWeek = WeekUtils.weekOfMonth(highlight);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 260), () {
+          if (mounted) _gotoWeek(_expandedWeek!);
+        });
+      });
+    } else {
+      _month = DateTime(widget.initialMonth.year, widget.initialMonth.month);
+    }
   }
 
   void _gotoMonth(int monthDelta) {
