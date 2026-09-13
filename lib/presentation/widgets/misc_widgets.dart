@@ -213,9 +213,6 @@ InputDecoration fieldDecoration(
   final color = accent ?? cs.primary;
   final fill = Theme.of(context).inputDecorationTheme.fillColor;
   return InputDecoration(
-    // Nggak pakai labelText (itu yang bikin teks "terbang" ke atas pas
-    // kolom di-tap) — pakai hintText aja, tetap kelihatan selama kosong,
-    // baru ilang begitu user isi.
     hintText: hint != null ? '$label ($hint)' : label,
     errorText: errorText,
     filled: true,
@@ -322,10 +319,6 @@ class SelectField extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final color = accent ?? cs.primary;
-    // Kalau value sekarang bukan bagian dari options (mis. kelas/halaqoh
-    // baru dipilih & santri lama nggak termasuk di halaqoh itu lagi),
-    // jangan kirim value asing ke DropdownButtonFormField — bisa assert
-    // error. Tampilkan kosong aja (biarkan hintText yang muncul).
     final safeValue = (value != null && options.contains(value)) ? value : null;
     final isUsable = enabled && options.isNotEmpty;
     return DropdownButtonFormField<String>(
@@ -374,8 +367,6 @@ class FormSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // Pakai Card resmi (dari cardTheme) — konsisten sama SectionCard di
-    // Home dan semua card lain, bukan bikin shadow/border manual sendiri.
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -547,8 +538,6 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // Pakai widget Card resmi (dari cardTheme) — bukan Container manual —
-    // biar shadow/radius-nya 100% sama dengan semua card lain di aplikasi.
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -840,13 +829,7 @@ class RecordSummaryRow extends StatelessWidget {
   final String capaianText;
   final Widget keteranganChip;
   final VoidCallback? onTap;
-  // Nampilin badge kecil "Diedit" di sebelah label status kalau laporan
-  // ini pernah diubah setelah pertama dibuat (lihat SantriRecord.isEdited).
   final bool isEdited;
-  // <-- BARU: catatan laporan (kalau ada) -- ditampilin di bawah
-  // capaianText, dipakai khusus di layar read-only (SantriDetailScreen)
-  // biar "riwayat capaian + catatan + status" kebaca lengkap tanpa perlu
-  // buka form edit sama sekali.
   final String? catatan;
 
   const RecordSummaryRow({

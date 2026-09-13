@@ -57,76 +57,87 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Halaman Kelola')),
       body: AbsorbPointer(
         absorbing: _busy,
         child: Stack(
           children: [
-            ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              children: [
-                _SectionCard(
-                  title: 'Kelola Data',
-                  children: [
-                    ListTile(
-                      leading: SoftIconBox(icon: LucideIcons.medal, color: cs.primary),
-                      title: const Text('Kelola Guru'),
-                      subtitle: const Text('Ubah nama & assignment kelas/halaqoh guru pembimbing'),
-                      trailing: const Icon(LucideIcons.chevronRight),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const KelolaGuruScreen()),
-                      ),
+            SafeArea(
+              child: CustomScrollView(
+                slivers: [
+                  const PushedPageHeader(
+                    title: 'Halaman Kelola',
+                    titleFontSize: 17,
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    sliver: SliverList.list(
+                      children: [
+                        _SectionCard(
+                          title: 'Kelola Data',
+                          children: [
+                            ListTile(
+                              leading: SoftIconBox(icon: LucideIcons.medal, color: cs.primary),
+                              title: const Text('Kelola Guru'),
+                              subtitle: const Text('Ubah nama & assignment kelas/halaqoh guru pembimbing'),
+                              trailing: const Icon(LucideIcons.chevronRight),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const KelolaGuruScreen()),
+                              ),
+                            ),
+                            ListTile(
+                              leading: SoftIconBox(icon: LucideIcons.users, color: cs.primary),
+                              title: const Text('Kelola Murid'),
+                              subtitle: const Text('Pindah kelas/halaqoh (mis. naik Tahsin → Tahfizh)'),
+                              trailing: const Icon(LucideIcons.chevronRight),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const KelolaMuridScreen()),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        _SectionCard(
+                          title: 'Export & Import',
+                          children: [
+                            ListTile(
+                              leading: SoftIconBox(icon: LucideIcons.fileDown, color: cs.primary),
+                              title: const Text('Export ke Excel'),
+                              subtitle: const Text('Satu file .xlsx, sheet "Murid" & "Guru"'),
+                              onTap: () => _withBusy(() => _exportExcel(context)),
+                            ),
+                            ListTile(
+                              leading: SoftIconBox(icon: LucideIcons.cloudUpload, color: cs.primary),
+                              title: const Text('Import dari Excel'),
+                              subtitle: const Text('Upload balik file yang sudah diedit, ada preview dulu'),
+                              onTap: () => _withBusy(() => _importExcel(context)),
+                            ),
+                            ListTile(
+                              leading: SoftIconBox(icon: LucideIcons.code, color: cs.primary),
+                              title: const Text('Export sebagai kode seed (.dart)'),
+                              subtitle: const Text('Buat developer, sebelum build APK berikutnya'),
+                              onTap: () => _withBusy(() => _exportSeedCode(context)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        _SectionCard(
+                          title: 'Migrasi',
+                          children: [
+                            ListTile(
+                              leading: SoftIconBox(icon: LucideIcons.cloud, color: cs.primary),
+                              title: const Text('Migrasi Data Guru & Murid ke Cloud'),
+                              subtitle: const Text(
+                                'Sekali jalan — pindahin data bawaan APK ke cloud, aman dipencet berkali-kali',
+                              ),
+                              onTap: () => _confirmMigrateSeed(context),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    ListTile(
-                      leading: SoftIconBox(icon: LucideIcons.users, color: cs.primary),
-                      title: const Text('Kelola Murid'),
-                      subtitle: const Text('Pindah kelas/halaqoh (mis. naik Tahsin → Tahfizh)'),
-                      trailing: const Icon(LucideIcons.chevronRight),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const KelolaMuridScreen()),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                _SectionCard(
-                  title: 'Export & Import',
-                  children: [
-                    ListTile(
-                      leading: SoftIconBox(icon: LucideIcons.fileDown, color: cs.primary),
-                      title: const Text('Export ke Excel'),
-                      subtitle: const Text('Satu file .xlsx, sheet "Murid" & "Guru"'),
-                      onTap: () => _withBusy(() => _exportExcel(context)),
-                    ),
-                    ListTile(
-                      leading: SoftIconBox(icon: LucideIcons.cloudUpload, color: cs.primary),
-                      title: const Text('Import dari Excel'),
-                      subtitle: const Text('Upload balik file yang sudah diedit, ada preview dulu'),
-                      onTap: () => _withBusy(() => _importExcel(context)),
-                    ),
-                    ListTile(
-                      leading: SoftIconBox(icon: LucideIcons.code, color: cs.primary),
-                      title: const Text('Export sebagai kode seed (.dart)'),
-                      subtitle: const Text('Buat developer, sebelum build APK berikutnya'),
-                      onTap: () => _withBusy(() => _exportSeedCode(context)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                _SectionCard(
-                  title: 'Migrasi',
-                  children: [
-                    ListTile(
-                      leading: SoftIconBox(icon: LucideIcons.cloud, color: cs.primary),
-                      title: const Text('Migrasi Data Guru & Murid ke Cloud'),
-                      subtitle: const Text(
-                        'Sekali jalan — pindahin data bawaan APK ke cloud, aman dipencet berkali-kali',
-                      ),
-                      onTap: () => _confirmMigrateSeed(context),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
             if (_busy)
               const Positioned.fill(

@@ -27,10 +27,6 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
   @override
   void initState() {
     super.initState();
-    // <-- Beda dari StudentsProvider.load() biasa (yang cache-first buat
-    // startup cepat, lihat ApiStudentRepository.getAll) -- di sini admin
-    // BARU MAU EDIT, jadi wajar nunggu data ter-anyar dari Firestore
-    // dulu (ApiStudentRepository.refresh, ada timeout 10 detik).
     _refresh();
   }
 
@@ -67,51 +63,58 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
       });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kelola Data Murid'),
-        actions: [
-          IconButton(
-            icon: _refreshing
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(LucideIcons.refreshCw),
-            onPressed: _refreshing ? null : _refresh,
-            tooltip: 'Muat ulang dari cloud',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: (v) => setState(() => _query = v),
-              decoration: fieldDecoration(context, icon: LucideIcons.search, label: 'Cari nama santri'),
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            PushedPageHeader(
+              title: 'Kelola Data Murid',
+              titleFontSize: 17,
+              trailing: IconButton(
+                icon: _refreshing
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(LucideIcons.refreshCw),
+                onPressed: _refreshing ? null : _refresh,
+                tooltip: 'Muat ulang dari cloud',
+              ),
             ),
-          ),
-          Expanded(
-            child: sorted.isEmpty
-                ? const EmptyState(
-                    icon: LucideIcons.users,
-                    title: 'Belum ada data murid',
-                    subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    itemCount: sorted.length,
-                    itemBuilder: (context, i) {
-                      final s = sorted[i];
-                      return ListTile(
-                        leading: SoftIconBox(icon: LucideIcons.user, color: cs.primary),
-                        title: Text(s.nama, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${s.kelas} • ${s.halaqoh}'),
-                        trailing: const Icon(LucideIcons.penLine),
-                        onTap: () => _editStudent(context, s),
-                      );
-                    },
-                  ),
-          ),
-        ],
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (v) => setState(() => _query = v),
+                  decoration: fieldDecoration(context, icon: LucideIcons.search, label: 'Cari nama santri'),
+                ),
+              ),
+            ),
+            if (sorted.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: EmptyState(
+                  icon: LucideIcons.users,
+                  title: 'Belum ada data murid',
+                  subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.only(bottom: 24),
+                sliver: SliverList.builder(
+                  itemCount: sorted.length,
+                  itemBuilder: (context, i) {
+                    final s = sorted[i];
+                    return ListTile(
+                      leading: SoftIconBox(icon: LucideIcons.user, color: cs.primary),
+                      title: Text(s.nama, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text('${s.kelas} • ${s.halaqoh}'),
+                      trailing: const Icon(LucideIcons.penLine),
+                      onTap: () => _editStudent(context, s),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -119,12 +122,6 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
   Future<void> _editStudent(BuildContext context, Student student) async {
     final studentsProvider = context.read<StudentsProvider>();
     final authProvider = context.read<AuthProvider>();
-
-    // Daftar kelas & halaqoh yang VALID diambil dari data murid+guru yang
-    // SUDAH ADA saat ini (bukan diketik bebas) — biar gak ada typo yang
-    // bikin santri "hilang" karena kelas/halaqoh-nya nggak cocok sama
-    // assignment guru manapun (lihat AccessScope — pencocokan kelas &
-    // halaqoh itu EXACT STRING MATCH).
     final allKelas = <String>{
       ...studentsProvider.all.map((s) => s.kelas),
       ...authProvider.allAccounts.expand((a) => a.assignments.map((x) => x.kelas)),

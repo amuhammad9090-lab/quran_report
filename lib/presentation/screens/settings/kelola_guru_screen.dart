@@ -27,8 +27,6 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
   @override
   void initState() {
     super.initState();
-    // <-- Sama alasannya kayak KelolaMuridScreen: admin BARU MAU EDIT,
-    // wajar nunggu data ter-anyar dulu (bukan cache-first kayak startup).
     _refresh();
   }
 
@@ -50,45 +48,56 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
     final sorted = [...accounts]..sort((a, b) => a.displayName.compareTo(b.displayName));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kelola Akun Guru'),
-        actions: [
-          IconButton(
-            icon: _refreshing
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(LucideIcons.refreshCw),
-            onPressed: _refreshing ? null : _refresh,
-            tooltip: 'Muat ulang dari cloud',
-          ),
-        ],
-      ),
-      body: sorted.isEmpty
-          ? const EmptyState(
-              icon: LucideIcons.medal,
-              title: 'Belum ada akun guru',
-              subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.only(bottom: 24),
-              itemCount: sorted.length,
-              itemBuilder: (context, i) {
-                final acc = sorted[i];
-                return ListTile(
-                  leading: SoftIconBox(
-                    icon: acc.isAdmin ? LucideIcons.shield : LucideIcons.user,
-                    color: cs.primary,
-                  ),
-                  title: Text(acc.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text(
-                    acc.assignments.isEmpty
-                        ? '@${acc.username} • ${acc.role.label}'
-                        : '@${acc.username} • ${acc.assignments.length} assignment',
-                  ),
-                  trailing: const Icon(LucideIcons.penLine),
-                  onTap: () => _editAccount(context, acc),
-                );
-              },
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            PushedPageHeader(
+              title: 'Kelola Akun Guru',
+              titleFontSize: 17,
+              trailing: IconButton(
+                icon: _refreshing
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(LucideIcons.refreshCw),
+                onPressed: _refreshing ? null : _refresh,
+                tooltip: 'Muat ulang dari cloud',
+              ),
             ),
+            if (sorted.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: EmptyState(
+                  icon: LucideIcons.medal,
+                  title: 'Belum ada akun guru',
+                  subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.only(bottom: 24),
+                sliver: SliverList.builder(
+                  itemCount: sorted.length,
+                  itemBuilder: (context, i) {
+                    final acc = sorted[i];
+                    return ListTile(
+                      leading: SoftIconBox(
+                        icon: acc.isAdmin ? LucideIcons.shield : LucideIcons.user,
+                        color: cs.primary,
+                      ),
+                      title: Text(acc.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        acc.assignments.isEmpty
+                            ? '@${acc.username} • ${acc.role.label}'
+                            : '@${acc.username} • ${acc.assignments.length} assignment',
+                      ),
+                      trailing: const Icon(LucideIcons.penLine),
+                      onTap: () => _editAccount(context, acc),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
