@@ -21,3 +21,11 @@ ImageProvider? resolveAvatarImage(String? photoPath) {
     return null;
   }
 }
+
+/// No-op di Web — [photoPath] di sini selalu data URI (`MemoryImage`), dan
+/// `MemoryImage` sudah otomatis TIDAK PERNAH stale (cache key-nya
+/// berdasarkan isi `Uint8List`-nya sendiri, bukan path), jadi tidak ada
+/// yang perlu di-evict. Fungsi ini tetap ada biar pemanggil (mis.
+/// `edit_profile_screen.dart`) tidak perlu tahu/peduli platform yang lagi
+/// jalan (lihat catatan lengkap versi io di `avatar_image_provider_io.dart`).
+void evictAvatarImageCache(String? photoPath) {}

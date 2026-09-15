@@ -584,7 +584,12 @@ class _SectionCard extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4),
           child: SectionLabel(title),
         ),
+        // BUG FIX: sama persis kayak _SectionCard di settings_screen.dart
+        // -- lihat catatan lengkap di sana. Card ini juga perlu clip
+        // biar ripple ListTile di dalamnya gak nembus keluar sudut
+        // rounded-nya.
         Card(
+          clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(

@@ -368,7 +368,17 @@ class _SectionCard extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4),
           child: SectionLabel(title),
         ),
+        // BUG FIX: sebelumnya `Card` ini gak nge-clip isinya sama sekali
+        // (clipBehavior bawaan = Clip.none), jadi efek ripple/highlight
+        // tap dari `ListTile` di dalamnya digambar KOTAK LURUS PENUH,
+        // nembus keluar ngelewatin sudut card yang melengkung (kelihatan
+        // "nyembul kotak" pas item paling atas/bawah di-tap). `Clip.
+        // antiAlias` maksa semua yang digambar di dalam Card -- termasuk
+        // ripple ListTile -- kepotong PAS ngikutin shape card-nya sendiri
+        // (rounded 20, dari cardTheme di app_theme.dart), jadi gak
+        // kurang atau lebih dari lengkungannya.
         Card(
+          clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(

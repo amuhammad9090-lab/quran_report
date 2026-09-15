@@ -43,12 +43,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _savingPhoto = true);
     try {
+      final oldPath = user.photoPath;
       final path = await ProfilePhotoService.instance.pickAndSave(
         userId: user.id,
         source: source,
       );
       if (path != null) {
         await auth.updatePhotoPath(path);
+        // BUG FIX: `saveProfilePhoto` nyimpen ke path yang SAMA tiap kali
+        // (deterministik per userId), jadi `FileImage` di CircleAvatar
+        // masih nunjuk ke decode LAMA yang ke-cache di path itu kalau
+        // gak di-evict manual -- lihat penjelasan lengkap di
+        // `evictAvatarImageCache` (avatar_image_provider_io.dart). Evict
+        // KEDUANYA (path baru DAN lama, kalau kebetulan beda ekstensi)
+        // biar aman di semua kasus.
+        evictAvatarImageCache(path);
+        if (oldPath != null && oldPath != path) evictAvatarImageCache(oldPath);
       }
     } catch (_) {
       if (mounted) {
@@ -90,6 +100,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final oldPath = auth.currentUser?.photoPath;
     await auth.updatePhotoPath(null);
     await ProfilePhotoService.instance.delete(oldPath);
+    evictAvatarImageCache(oldPath);
   }
 
   void _showPhotoOptions() {

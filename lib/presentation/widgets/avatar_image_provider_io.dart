@@ -20,6 +20,24 @@ ImageProvider? resolveAvatarImage(String? photoPath) {
   return FileImage(File(photoPath));
 }
 
+/// BUG FIX: ganti/hapus foto profil sebelumnya nggak langsung kelihatan di
+/// UI (baru update abis app di-kill total) — penyebabnya `FileImage`
+/// nge-cache hasil decode gambar pakai KEY YANG CUMA DIBEDAKAN DARI PATH
+/// FILE-nya (lihat `FileImageKey`), BUKAN dari isi file. Sementara
+/// `ProfilePhotoService`/`saveProfilePhoto` SENGAJA nyimpen ke path yang
+/// SAMA PERSIS tiap kali user ganti foto (deterministik per userId, biar
+/// gampang di-manage & gak numpuk file lama) — jadi begitu file di path
+/// itu ditimpa isinya, `PaintingBinding.imageCache` masih nyimpen decode
+/// LAMA di bawah key path yang sama itu & terus makein itu, walau byte di
+/// disk udah beda (termasuk abis di-crop ulang, hasilnya kelihatan sama
+/// terus). Cache itu cuma kehapus kalau proses app-nya bener2 restart
+/// (makanya "keganti pas RAM dibersihin"). Panggil ini SETELAH file
+/// ditimpa/dihapus supaya Flutter kepaksa decode ulang dari disk.
+void evictAvatarImageCache(String? photoPath) {
+  if (photoPath == null || photoPath.isEmpty || photoPath.startsWith('data:')) return;
+  PaintingBinding.instance.imageCache.evict(FileImage(File(photoPath)));
+}
+
 Uint8List? _decodeDataUri(String dataUri) {
   final commaIndex = dataUri.indexOf(',');
   if (commaIndex == -1) return null;

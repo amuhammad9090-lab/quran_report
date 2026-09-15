@@ -4,3 +4,6 @@ import 'package:flutter/widgets.dart';
 /// dart:html — selalu null (pemanggil jatuh ke fallback inisial nama),
 /// bukan crash.
 ImageProvider? resolveAvatarImage(String? photoPath) => null;
+
+/// Fallback aman — lihat `resolveAvatarImage` di atas, alasan sama.
+void evictAvatarImageCache(String? photoPath) {}
