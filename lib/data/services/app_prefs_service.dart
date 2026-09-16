@@ -27,6 +27,8 @@ class AppPrefsService {
   static const _keyPhotoOverrides = 'photo_overrides'; // <-- BARU
   static const _keyDownloadNotifPaths = 'download_notif_paths';
   static const _keyAdminModeActive = 'admin_mode_active'; // <-- BARU
+  static const _keyStudentsLastSync = 'students_last_sync'; // <-- BARU
+  static const _keyStudentsMetaVersion = 'students_meta_version'; // <-- BARU
 
   late Box<String> _box;
 
@@ -348,5 +350,46 @@ class AppPrefsService {
     final current = downloadNotifPaths;
     if (current.remove('$notifId') == null) return;
     await _box.put(_keyDownloadNotifPaths, jsonEncode(current));
+  }
+
+  // --- Sinkronisasi metadata Students (lihat ApiStudentRepository) ---
+  //
+  // <-- BARU: dua nilai kecil buat ngehindarin full `students.get()`
+  // (±302 dokumen) tiap kali app dibuka / tiap tekan refresh manual.
+  //
+  // [studentsLastSync] = kapan terakhir kali kita BERHASIL memastikan
+  // cache Students lokal sinkron dengan Firestore (baik itu karena
+  // full fetch, ATAU karena metadata check bilang "tidak ada
+  // perubahan") -- dipakai buat cooldown background refresh (lihat
+  // `_backgroundRefreshInterval` di ApiStudentRepository). SENGAJA
+  // tidak diupdate kalau sync gagal (offline/timeout), biar begitu
+  // koneksi balik, background refresh berikutnya tetap dicoba lagi
+  // (bukan malah nunggu 6 jam lagi dari percobaan yang gagal).
+  //
+  // [studentsMetaVersion] = nilai `updatedAt` (milliseconds since
+  // epoch) dari dokumen `schools/{id}/metadata/students` TERAKHIR yang
+  // kita lihat -- dibandingkan dengan versi server tiap manual/
+  // background refresh; kalau sama, TIDAK perlu `students.get()` penuh
+  // (cukup 1 baca dokumen metadata).
+  DateTime? get studentsLastSync {
+    final raw = _box.get(_keyStudentsLastSync);
+    if (raw == null) return null;
+    final millis = int.tryParse(raw);
+    if (millis == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(millis);
+  }
+
+  Future<void> setStudentsLastSync(DateTime time) async {
+    await _box.put(_keyStudentsLastSync, time.millisecondsSinceEpoch.toString());
+  }
+
+  int? get studentsMetaVersion {
+    final raw = _box.get(_keyStudentsMetaVersion);
+    if (raw == null) return null;
+    return int.tryParse(raw);
+  }
+
+  Future<void> setStudentsMetaVersion(int version) async {
+    await _box.put(_keyStudentsMetaVersion, version.toString());
   }
 }

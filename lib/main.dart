@@ -29,18 +29,33 @@ Future<void> _signInAnonymouslyIfNeeded(FirebaseAuth auth) async {
     await auth.signInAnonymously();
     return;
   }
+
   try {
     await cached.reload();
-    final refreshedUser = auth.currentUser;
-    if (refreshedUser == null) {
+    if (auth.currentUser == null) {
       await auth.signInAnonymously();
-    } else {
-      await refreshedUser.getIdToken(true);
     }
-  } catch (_) {
-    await auth.signOut();
-    await auth.signInAnonymously();
+  } catch (e) {
+    if (_isDefinitelyInvalidUser(e)) {
+      await auth.signOut();
+      await auth.signInAnonymously();
+    }
   }
+}
+
+/// True HANYA kalau [error] adalah [FirebaseAuthException] dengan kode
+/// yang secara eksplisit berarti user/sesi memang sudah tidak valid lagi.
+bool _isDefinitelyInvalidUser(Object error) {
+  if (error is! FirebaseAuthException) return false;
+  const invalidUserCodes = {
+    'user-not-found',
+    'user-disabled',
+    'user-token-expired',
+    'invalid-user-token',
+    'user-mismatch',
+    'tokens-expired',
+  };
+  return invalidUserCodes.contains(error.code);
 }
 
 void main() async {

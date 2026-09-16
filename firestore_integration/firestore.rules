@@ -115,6 +115,21 @@ service cloud.firestore {
       match /appMeta/{docId} {
         allow read, write: if isGuruApp();
       }
+      // <-- BARU (audit optimasi Firestore read, BAGIAN B/C): dokumen
+      // metadata ringan (mis. `metadata/students`, field `version` int)
+      // dipakai ApiStudentRepository buat cek "ada perubahan data
+      // student atau tidak" TANPA baca seluruh koleksi `students`.
+      // Tanpa rule ini, `metadata/{docId}` TIDAK COCOK match manapun di
+      // atas -- default Firestore Rules adalah DENY, jadi baca/tulis ke
+      // sini akan gagal permission-denied (app tetap jalan karena ada
+      // fallback try-catch di ApiStudentRepository, cuma optimasinya
+      // TIDAK AKTIF -- selalu jatuh ke full fetch). Trust boundary-nya
+      // disamakan dengan `appMeta`/`students` di atas (isGuruApp() =
+      // sesi app guru mana pun, karena semuanya sama-sama anonim -- lihat
+      // catatan panjang soal ini di collection `parentNotes` di bawah).
+      match /metadata/{docId} {
+        allow read, write: if isGuruApp();
+      }
       // Folder laporan (organisasi guru) — dipakai fitur mirror-backup &
       // "Pulihkan dari Cloud" di app guru (StorageService.upsertFolder/
       // deleteFolder/restoreFoldersFromFirestore). Cuma app guru yang
