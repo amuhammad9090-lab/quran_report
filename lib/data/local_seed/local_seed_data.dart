@@ -1,23 +1,6 @@
 /// Seed data lokal — di-generate dari `data_guru_dan_murid.xlsx` (sheet
 /// `Accounts` & `Students`), sesuai format yang didokumentasikan di
 /// `EXCEL_FORMAT.md`.
-///
-/// SENGAJA ditaruh sebagai konstanta Dart (bukan file asset JSON) supaya
-/// tidak perlu mendaftarkan asset baru di pubspec.yaml. Untuk migrasi ke
-/// backend produksi nanti, ganti seluruh `LocalAuthRepository`/
-/// `LocalStudentRepository` dengan implementasi `Api...Repository` —
-/// kode yang memanggil repository ini (provider, UI) tidak perlu berubah.
-///
-/// PENTING soal `assignments`: kelas & halaqoh SELALU pasangan
-/// (lihat `KelasHalaqoh`), sesuai data sekolah asli — satu guru
-/// pembimbing bisa punya beberapa assignment, tapi tiap assignment
-/// adalah kombinasi kelas+halaqoh SPESIFIK, bukan kelas manapun x
-/// halaqoh manapun dari daftar masing-masing.
-///
-/// Password asli (plaintext, HANYA ada di file Excel sumber, tidak
-/// pernah disimpan di sini): lihat `EXCEL_FORMAT.md` / catat sendiri
-/// dari file Excel-nya. `passwordHash` di bawah adalah hasil
-/// `AuthHashService.instance.hash(passwordAsli)`.
 library;
 
 const List<Map<String, dynamic>> kSeedSchoolsJson = [
