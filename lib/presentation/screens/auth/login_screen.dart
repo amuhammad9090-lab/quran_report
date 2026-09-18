@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/auth_provider.dart';
-import '../../../providers/parent_notes_provider.dart'; // <-- BARU
+import '../../../providers/parent_notes_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/misc_widgets.dart';
 import '../home/main_shell.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-/// Login — logic-nya yang jadi fokus (bukan visual, karena layar ini
-/// belum ada sebelumnya jadi belum ada yang dianggap "FIX" untuk
-/// dipertahankan; kalau nanti ada desain resmi, tinggal ganti body-nya,
-/// pemanggilan AuthProvider.login() di bawah ini tetap sama).
+/// Login — SATU-SATUNYA cara masuk sekarang adalah "Masuk dengan Google"
+/// (lihat AuthProvider.signInWithGoogle).
+///
+/// <-- BERUBAH (migrasi auth: Anonymous -> Google Sign-In): dulu ada
+/// form Username + Kata Sandi (dicek lewat AuthProvider.login ke
+/// Firestore `accounts`). SESUAI flow migrasi (Splash -> cek
+/// currentUser -> "Masuk dengan Google" -> ...), form itu diganti SATU
+/// tombol Google -- desain header (logo app + logo sekolah, teks
+/// pembuka) SENGAJA dipertahankan APA ADANYA (bukan redesign), cuma
+/// bagian form-nya yang diganti.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -20,22 +25,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _usernameCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  bool _obscure = true;
-
-  @override
-  void dispose() {
-    _usernameCtrl.dispose();
-    _passwordCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _submitGoogle() async {
     final auth = context.read<AuthProvider>();
-    final success = await auth.login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+    final success = await auth.signInWithGoogle();
     if (!mounted) return;
     if (success) {
       context.read<RecordsProvider>().updateScope(auth.scope);
@@ -43,9 +35,9 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainShell()),
       );
-    } else {
+    } else if (auth.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(auth.error ?? 'Login gagal.')),
+        SnackBar(content: Text(auth.error!)),
       );
     }
   }
@@ -57,87 +49,101 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const AppIconMark(size: 68, borderRadius: 18),
-                        const SizedBox(width: 14),
-                        Container(height: 40, width: 1, color: cs.outlineVariant),
-                        const SizedBox(width: 14),
-                        const SmpitLogoBadge(size: 64, borderRadius: 14),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Masuk ke Quran Report',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Khusus Guru Pembimbing & Admin yang terdaftar.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                  ),
-                  const SizedBox(height: 28),
-                  TextFormField(
-                    controller: _usernameCtrl,
-                    textInputAction: TextInputAction.next,
-                    decoration: fieldDecoration(
-                      context,
-                      icon: LucideIcons.user,
-                      label: 'Username',
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passwordCtrl,
-                    obscureText: _obscure,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _submit(),
-                    decoration: fieldDecoration(
-                      context,
-                      icon: LucideIcons.lock,
-                      label: 'Kata Sandi',
-                    ).copyWith(
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscure
-                            ? LucideIcons.eyeOff
-                            : LucideIcons.eye),
-                        onPressed: () => setState(() => _obscure = !_obscure),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const AppIconMark(size: 68, borderRadius: 18),
+                            const SizedBox(width: 14),
+                            Container(height: 40, width: 1, color: cs.outlineVariant),
+                            const SizedBox(width: 14),
+                            const SmpitLogoBadge(size: 64, borderRadius: 14),
+                          ],
+                        ),
                       ),
-                    ),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Wajib diisi' : null,
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Masuk ke Quran Report',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Khusus Guru Pembimbing & Admin yang terdaftar.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                      ),
+                      const SizedBox(height: 36),
+                      SizedBox(
+                        height: 52,
+                        child: FilledButton(
+                          onPressed: auth.isLoggingIn ? null : _submitGoogle,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E8E3E),
+                            disabledBackgroundColor: const Color(0xFF1E8E3E).withValues(alpha: 0.5),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: auth.isLoggingIn
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 22,
+                                      height: 22,
+                                      alignment: Alignment.center,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Text(
+                                        'G',
+                                        style: TextStyle(
+                                          color: Color(0xFF1E8E3E),
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Masuk dengan Google',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: auth.isLoggingIn ? null : _submit,
-                    child: auth.isLoggingIn
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Masuk'),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

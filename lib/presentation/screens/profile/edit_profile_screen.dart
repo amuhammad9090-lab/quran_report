@@ -262,33 +262,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: const Text('Simpan Perubahan'),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  const SectionLabel('Keamanan'),
-                  const SizedBox(height: 10),
-                  Material(
-                    color: Theme.of(context).cardTheme.color,
-                    borderRadius: BorderRadius.circular(16),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => showChangePasswordDialog(context),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                        child: Row(
-                          children: [
-                            SoftIconBox(icon: LucideIcons.lock, color: cs.primary),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text(
-                                'Ganti Kata Sandi',
-                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-                              ),
-                            ),
-                            Icon(LucideIcons.chevronRight, size: 18, color: cs.onSurfaceVariant),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  // <-- BERUBAH (migrasi auth: Anonymous -> Google
+                  // Sign-In): section "Keamanan" (tile "Ganti Kata
+                  // Sandi") DIHAPUS dari sini -- sejak login pakai Google
+                  // (bukan username+password lagi), mengganti
+                  // `passwordHash` lokal sudah tidak berpengaruh ke
+                  // apapun (tidak ada lagi jalur login yang
+                  // mengeceknya), jadi menampilkannya cuma akan
+                  // membingungkan guru. [showChangePasswordDialog] &
+                  // [AuthProvider.changePassword] SENGAJA TIDAK dihapus
+                  // (bukan brutal delete) -- cuma pemicunya di UI ini
+                  // yang dicabut, lihat laporan migrasi.
                 ],
               ),
             ),

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -21,43 +20,7 @@ import 'providers/records_provider.dart';
 import 'providers/students_provider.dart';
 import 'providers/theme_provider.dart';
 
-// <-- BARU: helper ini, dipisah dari main() biar bisa dibungkus
-// [Future.timeout] (lihat catatan panjang di main()).
-Future<void> _signInAnonymouslyIfNeeded(FirebaseAuth auth) async {
-  final cached = auth.currentUser;
-  if (cached == null) {
-    await auth.signInAnonymously();
-    return;
-  }
-
-  try {
-    await cached.reload();
-    if (auth.currentUser == null) {
-      await auth.signInAnonymously();
-    }
-  } catch (e) {
-    if (_isDefinitelyInvalidUser(e)) {
-      await auth.signOut();
-      await auth.signInAnonymously();
-    }
-  }
-}
-
-/// True HANYA kalau [error] adalah [FirebaseAuthException] dengan kode
-/// yang secara eksplisit berarti user/sesi memang sudah tidak valid lagi.
-bool _isDefinitelyInvalidUser(Object error) {
-  if (error is! FirebaseAuthException) return false;
-  const invalidUserCodes = {
-    'user-not-found',
-    'user-disabled',
-    'user-token-expired',
-    'invalid-user-token',
-    'user-mismatch',
-    'tokens-expired',
-  };
-  return invalidUserCodes.contains(error.code);
-}
-
+// <-- BERUBAH (migrasi auth: Anonymous -> Google Sign-In).
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -69,12 +32,8 @@ void main() async {
       debugPrint('Firebase app "[DEFAULT]" sudah ada duluan (native/hot-restart) -- pakai yang itu.');
     }
 
-    // <-- BERUBAH: dibungkus [timeout]. Sebelumnya sign-in anonim (atau
-    // reload/refresh token buat sesi yang udah ada) SAMA SEKALI gak
-    // punya batas waktu.
-    await _signInAnonymouslyIfNeeded(FirebaseAuth.instance)
-        .timeout(const Duration(seconds: 8));
-
+    // <-- BERUBAH: [FirebaseBootstrapStatus.ready] sekarang murni berarti
+    // "Firebase Core berhasil di-initialize" (SDK siap dipakai)
     FirebaseBootstrapStatus.markReady();
     if (kIsWeb) {
       FirebaseFirestore.instance.settings = const Settings(
@@ -83,7 +42,7 @@ void main() async {
       );
     }
   } catch (e, st) {
-    debugPrint('Firebase init/sign-in anonim GAGAL (atau timeout jaringan): $e');
+    debugPrint('Firebase.initializeApp() GAGAL: $e');
     debugPrint('$st');
     FirebaseBootstrapStatus.markFailed(e);
   }

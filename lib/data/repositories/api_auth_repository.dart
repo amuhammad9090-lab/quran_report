@@ -44,6 +44,21 @@ class ApiAuthRepository implements AuthRepository {
       .doc(kSchoolId)
       .collection('accounts');
 
+  /// <-- BARU (migrasi auth). Koleksi "index" kecil: dokumen ID = email
+  /// Google (huruf kecil semua), isinya cuma `{accountId: '...'}` --
+  /// SATU-SATUNYA alasan koleksi ini ada adalah supaya Firestore Security
+  /// Rules bisa mengecek "email Google yang login ini terdaftar atau
+  /// tidak" lewat `exists()`/`get()` pada PATH LANGSUNG (rules TIDAK bisa
+  /// menjalankan query `where(googleEmail == ...)` terhadap koleksi
+  /// `accounts`, yang document ID-nya id akun seperti 'usr_02', bukan
+  /// email). Lihat comment lengkap di firestore.rules (`isGuruApp()`) dan
+  /// laporan migrasi soal langkah manual bootstrap yang WAJIB dilakukan
+  /// sekali di Firebase Console sebelum admin pertama bisa login.
+  CollectionReference<Map<String, dynamic>> get _accountsByEmailCollection => FirebaseFirestore.instance
+      .collection('schools')
+      .doc(kSchoolId)
+      .collection('accountsByEmail');
+
   List<UserAccount> _withLocalOverrides(List<UserAccount> accounts) {
     final overrides = AppPrefsService.instance.passwordOverrides;
     // <-- BARU: sama alasannya kayak passwordOverrides -- foto profil
@@ -151,6 +166,65 @@ class ApiAuthRepository implements AuthRepository {
     return null;
   }
 
+  /// <-- BARU (migrasi auth: Anonymous -> Google Sign-In). Whitelist
+  /// check: cari akun yang [UserAccount.googleEmail]-nya cocok [email]
+  /// (case-insensitive -- keduanya dibandingkan dalam bentuk lowercase).
+  /// Dipakai [AuthProvider.signInWithGoogle] & [AuthProvider.restoreSession]
+  /// SESUDAH Firebase Authentication sendiri berhasil (Google login
+  /// valid) -- ini murni langkah AUTHORIZATION terpisah: "Firebase Auth
+  /// menjawab siapa user ini, Firestore account menjawab apakah dia
+  /// boleh pakai Quran Report" (lihat spesifikasi migrasi). Null berarti
+  /// authentication SUKSES tapi authorization GAGAL (akun Google itu
+  /// belum di-mapping admin lewat KelolaGuruScreen/[updateGoogleEmail])
+  /// -- caller HARUS menampilkan pesan "akun belum terdaftar", BUKAN
+  /// menganggap ini error jaringan.
+  ///
+  /// Pakai [_accounts()] yang sama seperti [login]/[findById] (cache
+  /// Hive-dulu + background refresh) -- supaya guru yang SUDAH PERNAH
+  /// login sebelumnya tetap bisa restore session walau offline (lihat
+  /// [AuthProvider.restoreSession]), TANPA mengubah pola cache/cooldown
+  /// Firestore read yang sudah dioptimasi (lihat audit sebelumnya --
+  /// method ini TIDAK menambah Firestore read baru, cuma baca dari cache
+  /// yang sama dengan [login]/[allAccounts]).
+  @override
+  Future<UserAccount?> findByGoogleEmail(String email) async {
+    final normalized = email.trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+
+    for (final acc in await _accounts()) {
+      if (acc.googleEmail != null && acc.googleEmail == normalized) return acc;
+    }
+
+    // <-- BARU (fix bug nyata dari lapangan, migrasi auth). [_accounts()]
+    // cache-first (lihat dokumentasinya) bisa BASI persis di momen paling
+    // krusial: begitu admin baru saja mendaftarkan/mengubah
+    // [UserAccount.googleEmail] guru ini di Firestore (lewat KelolaGuruScreen
+    // ATAU manual di Console), device guru itu SENDIRI (apalagi kalau
+    // sebelumnya sudah pernah buka app & punya cache akun dari SEBELUM
+    // field itu ada/berubah) belum tentu sudah sempat nge-refresh cache
+    // lokalnya duluan. Tanpa fallback ini, percobaan Google Sign-In
+    // PERTAMA guru itu bakal salah ditolak "belum terdaftar" walau
+    // sebenarnya SUDAH terdaftar di Firestore -- baru berhasil di
+    // percobaan KEDUA (setelah background refresh dari percobaan pertama
+    // sempat selesai). Sekarang: begitu tidak ketemu di cache, langsung
+    // coba SATU KALI full refresh paksa dulu sebelum benar-benar
+    // menyerah -- supaya percobaan PERTAMA pun langsung berhasil, guru
+    // tidak perlu tahu-menahu soal cache/refresh sama sekali.
+    try {
+      final fresh = await refresh();
+      for (final acc in fresh) {
+        if (acc.googleEmail != null && acc.googleEmail == normalized) return acc;
+      }
+    } catch (_) {
+      // Offline/gagal refresh (mis. accountsByEmail belum ke-setup jadi
+      // permission-denied, atau memang tidak ada internet) -- tetap
+      // null, caller (AuthProvider.signInWithGoogle) sudah tau artinya
+      // "authorization gagal", entah karena memang belum terdaftar atau
+      // karena refresh-nya sendiri gagal.
+    }
+    return null;
+  }
+
   @override
   Future<List<UserAccount>> allAccounts() async => List.unmodifiable(await _accounts());
 
@@ -191,6 +265,60 @@ class ApiAuthRepository implements AuthRepository {
     final box = await _openBox();
     await box.put(account.id, jsonEncode(updated.toJson()));
 
+    if (_memCache != null) {
+      _memCache = [for (final a in _memCache!) if (a.id == account.id) updated else a];
+    }
+  }
+
+  /// <-- BARU (migrasi auth: Anonymous -> Google Sign-In). Mapping/ubah
+  /// email Google yang di-whitelist buat akun ini -- SATU-SATUNYA cara
+  /// admin memberi (atau mencabut, lewat [newGoogleEmail] = null) akses
+  /// login Google ke seorang guru. HANYA dipanggil dari layar admin
+  /// (Kelola Akun Guru) — pengecekan role dilakukan di layer UI, sama
+  /// seperti [updateAssignments].
+  ///
+  /// Menjaga DUA dokumen tetap sinkron dalam SATU batch atomic:
+  /// 1. `accounts/{account.id}.googleEmail` -- buat ditampilkan di UI &
+  ///    dibaca [findByGoogleEmail] dari CLIENT.
+  /// 2. `accountsByEmail/{email}` -- "index" kecil yang dibaca Firestore
+  ///    Security Rules sendiri (lihat [_accountsByEmailCollection]) buat
+  ///    memutuskan apakah request ini boleh lewat `isGuruApp()`.
+  ///
+  /// Kalau [newGoogleEmail] beda dari email lama akun ini, entry index
+  /// yang LAMA dihapus (supaya email lama itu tidak "nyangkut" tetap bisa
+  /// dipakai login ke akun ini sesudah diganti). Melempar [StateError]
+  /// kalau email yang mau dipakai SUDAH di-mapping ke akun LAIN (satu
+  /// email Google cuma boleh dipetakan ke satu akun guru).
+  Future<void> updateGoogleEmail(UserAccount account, String? newGoogleEmail) async {
+    final normalized = newGoogleEmail?.trim().toLowerCase();
+    final normalizedOrNull = (normalized == null || normalized.isEmpty) ? null : normalized;
+    final oldEmail = account.googleEmail;
+
+    if (normalizedOrNull != null && normalizedOrNull != oldEmail) {
+      final existing =
+          await _accountsByEmailCollection.doc(normalizedOrNull).get().timeout(const Duration(seconds: 10));
+      if (existing.exists && existing.data()?['accountId'] != account.id) {
+        throw StateError('Email Google ini sudah dipakai akun lain.');
+      }
+    }
+
+    final updated = account.copyWith(
+      googleEmail: normalizedOrNull,
+      clearGoogleEmail: normalizedOrNull == null,
+    );
+
+    final batch = FirebaseFirestore.instance.batch();
+    batch.set(_collection.doc(account.id), updated.toJson());
+    if (oldEmail != null && oldEmail != normalizedOrNull) {
+      batch.delete(_accountsByEmailCollection.doc(oldEmail));
+    }
+    if (normalizedOrNull != null) {
+      batch.set(_accountsByEmailCollection.doc(normalizedOrNull), {'accountId': account.id});
+    }
+    await batch.commit().timeout(const Duration(seconds: 15));
+
+    final box = await _openBox();
+    await box.put(account.id, jsonEncode(updated.toJson()));
     if (_memCache != null) {
       _memCache = [for (final a in _memCache!) if (a.id == account.id) updated else a];
     }

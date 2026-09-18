@@ -47,6 +47,25 @@ class UserAccount {
   /// fallback avatar inisial nama.
   final String? photoPath;
 
+  /// <-- BARU (migrasi auth: Anonymous -> Google Sign-In). Email Google
+  /// yang di-WHITELIST admin buat akun ini (lihat KelolaGuruScreen &
+  /// ApiAuthRepository.updateGoogleEmail) -- INI yang jadi identifier
+  /// utama buat memetakan Firebase User (hasil Google Sign-In) ke
+  /// [UserAccount] yang benar (lihat AuthProvider.signInWithGoogle &
+  /// ApiAuthRepository.findByGoogleEmail), BUKAN [username]/[passwordHash]
+  /// lagi (dua field itu TETAP ada, TIDAK dihapus, tapi sudah tidak
+  /// dipakai jalur login manapun sejak migrasi ini -- lihat laporan
+  /// migrasi auth).
+  ///
+  /// Selalu disimpan huruf kecil semua & sudah di-trim (lihat
+  /// [ApiAuthRepository.updateGoogleEmail]) supaya perbandingan dengan
+  /// email dari Firebase User (yang juga di-lowercase dulu sebelum
+  /// dibandingkan) konsisten. Null/kosong = akun ini BELUM di-mapping
+  /// admin ke akun Google manapun -- guru itu TIDAK BISA login sampai
+  /// admin mengisi field ini (lihat BAGIAN 5/6 spesifikasi migrasi: akun
+  /// Google TIDAK otomatis dapat akses hanya karena berhasil login).
+  final String? googleEmail;
+
   const UserAccount({
     required this.id,
     required this.username,
@@ -56,6 +75,7 @@ class UserAccount {
     this.assignments = const [],
     required this.schoolId,
     this.photoPath,
+    this.googleEmail,
   });
 
   bool get isAdmin => role == UserRole.admin;
@@ -74,6 +94,8 @@ class UserAccount {
     List<KelasHalaqoh>? assignments,
     String? photoPath,
     bool clearPhoto = false,
+    String? googleEmail,
+    bool clearGoogleEmail = false,
   }) {
     return UserAccount(
       id: id,
@@ -84,6 +106,7 @@ class UserAccount {
       assignments: assignments ?? this.assignments,
       schoolId: schoolId,
       photoPath: clearPhoto ? null : (photoPath ?? this.photoPath),
+      googleEmail: clearGoogleEmail ? null : (googleEmail ?? this.googleEmail),
     );
   }
 
@@ -96,6 +119,7 @@ class UserAccount {
         'assignments': assignments.map((a) => a.toJson()).toList(),
         'schoolId': schoolId,
         'photoPath': photoPath,
+        'googleEmail': googleEmail, // <-- BARU
       };
 
   factory UserAccount.fromJson(Map<String, dynamic> json) {
@@ -131,6 +155,15 @@ class UserAccount {
       // tidak crash kalau field belum ada (backward compatible).
       schoolId: json['schoolId'] as String? ?? 'smpit_al_madinah_tanjungpinang',
       photoPath: json['photoPath'] as String?,
+      // <-- BARU: null (atau field belum ada sama sekali) di data lama
+      // berarti "belum pernah di-mapping admin" -- itu memang perilaku
+      // yang diinginkan, BUKAN bug (lihat dokumentasi field ini). String
+      // kosong dianggap sama dengan null, biar tidak ada whitelist entry
+      // yang keliru "cocok" dengan email kosong.
+      googleEmail: switch ((json['googleEmail'] as String?)?.trim().toLowerCase()) {
+        null || '' => null,
+        final email => email,
+      },
     );
   }
 }

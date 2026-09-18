@@ -57,6 +57,18 @@ class LocalAuthRepository implements AuthRepository {
     return null;
   }
 
+  // <-- BARU (migrasi auth): implementasi seed-only, dipakai kalau
+  // [AuthProvider] di-construct tanpa Firestore (mis. test lokal) --
+  // lihat dokumentasi lengkap di [ApiAuthRepository.findByGoogleEmail].
+  @override
+  Future<UserAccount?> findByGoogleEmail(String email) async {
+    final normalized = email.trim().toLowerCase();
+    for (final acc in _accounts()) {
+      if (acc.googleEmail != null && acc.googleEmail == normalized) return acc;
+    }
+    return null;
+  }
+
   @override
   Future<List<UserAccount>> allAccounts() async => List.unmodifiable(_accounts());
 

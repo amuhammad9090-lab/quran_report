@@ -12,7 +12,28 @@
           "package_name": "com.mirailabs.quran_report"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "110737865436-jb0h398junssgusr175tea91pji4q27j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mirailabs.quran_report",
+            "certificate_hash": "5cdd1456d9fa3964ed585b3a824e7aec9f78f86c"
+          }
+        },
+        {
+          "client_id": "110737865436-qeju2gtjuut8ng6481uo77nq9987svnh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mirailabs.quran_report",
+            "certificate_hash": "de269d3693c623ae3b5856f27df56038e7237b6f"
+          }
+        },
+        {
+          "client_id": "110737865436-gf5jku5b4f1kmfq29gp3rflm00acm3q3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDs1M0fxMZLh0hL2sLXsSicgHzohHbe344"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "110737865436-gf5jku5b4f1kmfq29gp3rflm00acm3q3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "110737865436-bvrqracbodi1dg2g39aapea3f7ocinda.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.quranReportParent"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +64,12 @@
           "package_name": "com.mirailabs.quran_report_parent"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "110737865436-gf5jku5b4f1kmfq29gp3rflm00acm3q3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDs1M0fxMZLh0hL2sLXsSicgHzohHbe344"
@@ -39,7 +77,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "110737865436-gf5jku5b4f1kmfq29gp3rflm00acm3q3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "110737865436-bvrqracbodi1dg2g39aapea3f7ocinda.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.quranReportParent"
+              }
+            }
+          ]
         }
       }
     }

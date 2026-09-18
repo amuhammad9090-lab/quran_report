@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
+import '../../../providers/auth_provider.dart';
+import '../../../providers/parent_notes_provider.dart';
+import '../../../providers/records_provider.dart';
 import '../settings/settings_screen.dart';
 import '../laporan/laporan_tab.dart';
 import '../laporan/buat_laporan_sheet.dart';
@@ -20,16 +24,59 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _index = 0;
   bool _laporanSelecting = false;
   int _snackbarHidingFab = 0;
   final _fabController = SpeedDialController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _fabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // BUG FIX: guru yang assignment kelas/halaqoh-nya diubah admin lewat
+    // "Kelola Akun Guru" TIDAK LANGSUNG ke-refresh di device guru itu
+    // sendiri -- `AuthProvider.reloadAccounts()` sebelumnya CUMA dipanggil
+    // dari sisi admin (buat nyegerin cache admin sendiri kalau akunnya
+    // sendiri yang diedit), jadi kalau si guru lagi login di device/tab
+    // LAIN pas assignment-nya diubah, `currentUser.assignments`-nya di
+    // situ tetap versi LAMA sampai session-nya bener2 di-restart (logout
+    // + login lagi) -- makanya daftar santri kelas yang baru
+    // ditambahkan/diaktifkan lagi jadi kelihatan tapi TIDAK BISA di-tap
+    // (AccessScope.canAccessStudent masih ngecek assignment lama).
+    //
+    // Ini KHUSUS kerasa parah di versi WEB, karena tab browser bisa
+    // dibiarkan terbuka berjam-jam tanpa pernah "restart" app sama sekali
+    // (beda sama app mobile yang lebih sering ke-kill/dibuka ulang secara
+    // alami). Sekarang: begitu tab/app ini balik ke foreground
+    // (`resumed` -- Flutter Web juga sudah lapor state ini lewat Page
+    // Visibility API), assignment guru itu di-refresh ulang dari
+    // Firestore/cache, dan scope yang udah kepakai di RecordsProvider/
+    // ParentNotesProvider ikut di-sync ulang -- TANPA perlu logout-login
+    // manual lagi.
+    if (state == AppLifecycleState.resumed) {
+      _refreshAssignmentsIfLoggedIn();
+    }
+  }
+
+  Future<void> _refreshAssignmentsIfLoggedIn() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.currentUser == null) return;
+    await auth.reloadAccounts();
+    if (!mounted) return;
+    context.read<RecordsProvider>().updateScope(auth.scope);
+    context.read<ParentNotesProvider>().updateScope(auth.scope);
   }
 
   void _switchTab(int index) {

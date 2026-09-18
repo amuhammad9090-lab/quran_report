@@ -78,16 +78,24 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                   itemCount: sorted.length,
                   itemBuilder: (context, i) {
                     final acc = sorted[i];
+                    // <-- BARU (migrasi auth): tanda kecil kalau akun ini
+                    // BELUM di-mapping email Google -- berarti guru
+                    // tersebut belum/tidak bisa login sama sekali (lihat
+                    // dokumentasi UserAccount.googleEmail).
+                    final noGoogleEmail = acc.googleEmail == null;
                     return ListTile(
                       leading: SoftIconBox(
                         icon: acc.isAdmin ? LucideIcons.shield : LucideIcons.user,
-                        color: cs.primary,
+                        color: noGoogleEmail ? cs.error : cs.primary,
                       ),
                       title: Text(acc.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
-                        acc.assignments.isEmpty
-                            ? '@${acc.username} • ${acc.role.label}'
-                            : '@${acc.username} • ${acc.assignments.length} assignment',
+                        [
+                          '@${acc.username}',
+                          if (acc.assignments.isNotEmpty) '${acc.assignments.length} assignment' else acc.role.label,
+                          if (noGoogleEmail) 'belum ada email Google' else acc.googleEmail!,
+                        ].join(' • '),
+                        style: noGoogleEmail ? TextStyle(color: cs.error) : null,
                       ),
                       trailing: const Icon(LucideIcons.penLine),
                       onTap: () => _editAccount(context, acc),
@@ -124,6 +132,14 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
       ..sort((a, b) => a.label.compareTo(b.label));
 
     final nameCtrl = TextEditingController(text: account.displayName);
+    // <-- BARU (migrasi auth: Anonymous -> Google Sign-In). Ini
+    // SATU-SATUNYA tempat admin men-daftarkan (whitelist) email Google
+    // seorang guru -- tanpa ini, guru itu TIDAK BISA login sama sekali
+    // (lihat AuthRepository.findByGoogleEmail & ApiAuthRepository.
+    // updateGoogleEmail). Kosongkan field ini buat MENCABUT akses login
+    // Google guru tersebut (assignment/data laporannya TIDAK ikut
+    // terhapus, cuma tidak bisa login lagi sampai diisi ulang).
+    final googleEmailCtrl = TextEditingController(text: account.googleEmail ?? '');
     final selected = {for (final a in account.assignments) a.key};
     var saving = false;
 
@@ -153,6 +169,22 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                       TextField(
                         controller: nameCtrl,
                         decoration: fieldDecoration(ctx, icon: LucideIcons.medal, label: 'Nama tampilan'),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: googleEmailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        decoration: fieldDecoration(
+                          ctx,
+                          icon: LucideIcons.mail,
+                          label: 'Email Google (buat login)',
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Guru login pakai akun Google ini. Kosongkan untuk mencabut akses login.',
+                        style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 11.5),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -197,6 +229,33 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                                       account,
                                       displayName: nameCtrl.text.trim(),
                                       assignments: newAssignments,
+                                    );
+                                    // <-- BARU (migrasi auth): simpan
+                                    // mapping email Google TERPISAH dari
+                                    // updateAssignments di atas (dua
+                                    // dokumen Firestore berbeda yang
+                                    // perlu di-jaga sinkron -- lihat
+                                    // dokumentasi ApiAuthRepository.
+                                    // updateGoogleEmail).
+                                    //
+                                    // PENTING: pakai account HASIL
+                                    // updateAssignments barusan (via
+                                    // findById, yang bacanya dari cache
+                                    // yang SUDAH ke-update) sebagai
+                                    // referensi -- BUKAN `account` yang
+                                    // lama (dari sebelum sheet ini
+                                    // dibuka). Kalau pakai yang lama,
+                                    // updateGoogleEmail akan menulis
+                                    // ULANG accounts/{id} dengan
+                                    // displayName/assignments yang SUDAH
+                                    // BASI, menimpa balik perubahan yang
+                                    // baru saja disimpan updateAssignments
+                                    // di atas.
+                                    final refreshed = await ApiAuthRepository.instance.findById(account.id) ?? account;
+                                    final newEmail = googleEmailCtrl.text.trim();
+                                    await ApiAuthRepository.instance.updateGoogleEmail(
+                                      refreshed,
+                                      newEmail.isEmpty ? null : newEmail,
                                     );
                                     if (!ctx.mounted) return;
                                     await authProvider.reloadAccounts();

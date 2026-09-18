@@ -13,6 +13,34 @@
 // Trade-off: daftar admin di-hardcode di rules (perlu re-deploy rules
 // kalau mau tambah/hapus admin) — untuk 1 sekolah dengan 1-2 admin,
 // ini lebih simpel daripada infra Cloud Functions.
+//
+// PERUBAHAN DESAIN #3 (migrasi auth app GURU: Anonymous -> Google
+// Sign-In): app guru (project `quran_report`, BEDA dari Portal Ortu di
+// atas) dulu login ANONIM sebagai bootstrap identity doang -- SEMUA
+// sesi anonim otomatis dianggap `isGuruApp()` (lihat definisi lama di
+// bawah, dihapus), tanpa ada cara membedakan "guru yang mana" atau
+// bahkan "beneran guru atau bukan" (siapa pun yang install app ini
+// otomatis lolos). Sekarang app guru login BENERAN pakai Google
+// Sign-In -- `isGuruApp()` diganti jadi "email Google yang login ini
+// terdaftar di whitelist `accountsByEmail` sekolah ini" (lihat definisi
+// baru & koleksi `accountsByEmail` di bawah). Guru Google yang TIDAK
+// di-whitelist admin (lewat KelolaGuruScreen di app, field
+// UserAccount.googleEmail) DITOLAK di level RULES ini, bukan cuma level
+// UI seperti sebelumnya -- ini LEBIH KETAT dari desain anonim yang lama,
+// bukan lebih longgar.
+//
+// >>> WAJIB DILAKUKAN SEKALI SECARA MANUAL SEBELUM DEPLOY RULES INI <<<
+// Rules baru ini membutuhkan MINIMAL SATU dokumen `accountsByEmail`
+// supaya ADMIN PERTAMA bisa login (chicken-and-egg: admin butuh sudah
+// terdaftar buat bisa memakai fitur "Kelola Akun Guru" yang mendaftarkan
+// guru lain). Buat manual lewat Firebase Console > Firestore Database >
+// koleksi `schools/{schoolId}/accountsByEmail`, buat 1 dokumen dengan:
+//   - Document ID = email Google admin, HURUF KECIL SEMUA
+//     (mis. "budi.admin@gmail.com")
+//   - Field `accountId` (string) = id dokumen admin di collection
+//     `accounts` (mis. "usr_01" -- cek di Firestore/local_seed_data.dart)
+// Setelah itu admin bisa login & pakai app buat mendaftarkan email
+// Google guru-guru lain seperti biasa, tidak perlu sentuh Console lagi.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -31,18 +59,30 @@ service cloud.firestore {
             'admin@quranreport-admin.app'
           ];
       }
-      // app guru pakai auth lokalnya sendiri (bukan Firebase Auth), jadi
-      // butuh identitas di mata Firestore buat bisa nulis. Sign-in
-      // ANONIM dipakai khusus untuk ini — santri/admin SELALU login
-      // pakai email+password (isAdmin()/myAccount() di atas), jadi
-      // provider anonim = pasti bukan mereka, aman dibedakan.
+      // <-- BERUBAH (PERUBAHAN DESAIN #3 di atas -- migrasi auth app
+      // guru: Anonymous -> Google Sign-In). DULU: `request.auth != null
+      // && request.auth.token.firebase.sign_in_provider == 'anonymous'`
+      // -- app guru pakai sign-in anonim sebagai bootstrap identity
+      // doang (santri/admin Portal Ortu SELALU login email+password,
+      // jadi provider anonim dulu aman dipakai buat "pasti app guru,
+      // bukan mereka" -- TAPI tidak bisa bedain guru yang mana, atau
+      // bahkan orang asing yang cuma install app ini).
       //
-      // DIPINDAH ke atas (sebelumnya didefinisikan di bawah match
-      // santriAccounts/students) karena sekarang dipakai juga di rule
-      // kedua match itu — lihat catatan "BERUBAH" di masing-masing.
+      // SEKARANG: app guru login BENERAN pakai Google Sign-In (lihat
+      // AuthProvider.signInWithGoogle di project quran_report) --
+      // isGuruApp() jadi berarti "user ini login pakai Google, DAN
+      // emailnya ada di whitelist `accountsByEmail` sekolah ini" (guru
+      // yang di-daftarkan admin lewat KelolaGuruScreen ->
+      // ApiAuthRepository.updateGoogleEmail). `exists()` di bawah ini
+      // adalah operasi rules-internal (BUKAN request client biasa),
+      // jadi TIDAK butuh `allow read` terpisah di collection
+      // `accountsByEmail` supaya bisa dipakai di sini -- lihat match
+      // block-nya sendiri di bawah untuk akses langsung dari client.
       function isGuruApp() {
         return request.auth != null &&
-          request.auth.token.firebase.sign_in_provider == 'anonymous';
+          request.auth.token.firebase.sign_in_provider == 'google.com' &&
+          request.auth.token.email != null &&
+          exists(/databases/$(database)/documents/schools/$(schoolId)/accountsByEmail/$(request.auth.token.email.lower()));
       }
       // Collection `accounts` (data guru/admin: username, passwordHash
       // awal, displayName, assignments kelas+halaqoh, flag isAdmin) —
@@ -55,6 +95,25 @@ service cloud.firestore {
       // collection ini — santri/admin Portal Ortu tidak pernah butuh
       // data guru.
       match /accounts/{accountId} {
+        allow read, write: if isGuruApp();
+      }
+      // <-- BARU (PERUBAHAN DESAIN #3). Koleksi "index" kecil: document
+      // ID = email Google (huruf kecil semua), isinya cuma
+      // `{accountId: '...'}` -- lihat ApiAuthRepository.updateGoogleEmail
+      // & fungsi isGuruApp() di atas yang MEMBACA koleksi ini (via
+      // exists(), operasi rules-internal, tidak butuh allow read
+      // terpisah untuk itu). `allow read, write: if isGuruApp()` di sini
+      // SENGAJA disamakan trust boundary-nya dengan `accounts` di atas
+      // (guru mana pun yang sudah terdaftar boleh baca/tulis, sama
+      // seperti sebelum migrasi ini SEMUA sesi anonim yang sama-sama
+      // "isGuruApp()" juga boleh baca/tulis SEMUA `accounts` -- bukan
+      // batasan baru yang lebih longgar, cuma dipertahankan sama).
+      // Pembatasan "cuma admin yang boleh mendaftarkan guru baru" tetap
+      // di level UI (KelolaGuruScreen), BUKAN di rules ini -- konsisten
+      // dengan bagaimana `accounts`/`students` dkk sudah didesain
+      // sebelum migrasi ini (lihat BAGIAN I di laporan audit
+      // sebelumnya soal client-side gating bukan security boundary).
+      match /accountsByEmail/{email} {
         allow read, write: if isGuruApp();
       }
       // Akun santri (Portal Ortu):

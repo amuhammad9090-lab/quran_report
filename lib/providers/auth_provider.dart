@@ -1,4 +1,11 @@
+// <-- PENTING: `hide AuthProvider` -- package `firebase_auth` punya
+// class abstract-nya SENDIRI bernama `AuthProvider` (induk dari
+// `GoogleAuthProvider` dkk), yang akan bentrok nama dengan `class
+// AuthProvider extends ChangeNotifier` di file ini kalau tidak
+// disembunyikan (sama pola importnya seperti main.dart).
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../core/access/access_scope.dart';
 import '../data/models/school.dart';
@@ -13,6 +20,25 @@ import '../data/services/auth_hash_service.dart';
 /// restore saat app dibuka. Disuntik dengan implementasi repository lewat
 /// constructor supaya gampang diganti implementasi backend nanti tanpa
 /// mengubah provider ini sama sekali.
+///
+/// <-- BERUBAH (migrasi auth: Anonymous -> Google Sign-In). Authentication
+/// (siapa user ini) sekarang Google Sign-In lewat Firebase Auth
+/// ([signInWithGoogle]/[restoreSession]/[logout] di bawah) -- BUKAN lagi
+/// Firebase Anonymous Auth (yang cuma bootstrap identity Firestore, tidak
+/// tahu-menahu siapa gurunya, lihat main.dart versi sebelumnya) DAN BUKAN
+/// lagi username+password ([login] di bawah TETAP ada, tidak dihapus,
+/// tapi TIDAK ADA LAGI pemanggil dari UI -- lihat LoginScreen).
+///
+/// Authorization (boleh/tidaknya akses Quran Report, role, assignment)
+/// TETAP SAMA PERSIS seperti sebelumnya: [UserAccount] dari
+/// `schools/{id}/accounts` lewat [_authRepo], [AccessScope] dihitung dari
+/// situ. SATU-SATUNYA yang berubah adalah BAGAIMANA kita tahu
+/// [UserAccount] mana yang sedang login -- dulu dari [AppPrefsService.
+/// sessionUserId] (id akun yang disimpan manual pas [login] sukses),
+/// sekarang dari [FirebaseAuth.currentUser.email] dicocokkan ke
+/// [UserAccount.googleEmail] lewat [AuthRepository.findByGoogleEmail]
+/// (lihat dokumentasi lengkap di situ soal kenapa ini dua langkah
+/// authentication+authorization yang terpisah).
 class AuthProvider extends ChangeNotifier {
   // <-- BERUBAH: default-nya sekarang [ApiAuthRepository] (Firestore +
   // cache Hive lokal buat login offline, fallback ke seed kalau belum
@@ -27,6 +53,13 @@ class AuthProvider extends ChangeNotifier {
 
   final AuthRepository _authRepo;
   final SchoolRepository _schoolRepo;
+
+  // <-- BARU (migrasi auth). Instance tunggal, dipakai [signInWithGoogle]
+  // & [logout] -- SENGAJA bukan `GoogleSignIn()` baru tiap dipanggil,
+  // supaya state "akun mana yang terakhir kepilih" konsisten (mis. kalau
+  // signIn() gagal di tengah jalan, instance yang sama dipakai lagi buat
+  // retry/logout, bukan instance baru yang belum tahu apa-apa).
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: const ['email']);
 
   UserAccount? _currentUser;
   School? _currentSchool;
@@ -76,28 +109,62 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Dipanggil sekali di startup (sebelum runApp, sama seperti provider
-  /// lain di project ini) — coba pulihkan session dari [AppPrefsService]
-  /// supaya user tidak perlu login ulang tiap buka app.
+  /// lain di project ini) — coba pulihkan session.
+  ///
+  /// <-- BERUBAH (migrasi auth): dulu sumber kebenaran "siapa yang lagi
+  /// login" adalah [AppPrefsService.sessionUserId] (id akun yang kita
+  /// simpan sendiri pas [login] sukses). Sekarang sumber kebenarannya
+  /// [FirebaseAuth.currentUser] -- Firebase SDK sendiri yang menyimpan &
+  /// memulihkan session Google ini (persis instruksi migrasi: "Firebase
+  /// Auth harus mempertahankan session Google... Startup berikutnya:
+  /// currentUser != null -> gunakan session -> load account ->
+  /// dashboard"). [AppPrefsService.sessionUserId]/[clearSession] TIDAK
+  /// dihapus (lihat AppPrefsService), cuma tidak dipakai lagi di sini.
+  ///
+  /// Dipakai [FirebaseAuth.authStateChanges().first] (BUKAN langsung baca
+  /// [FirebaseAuth.currentUser]) supaya di Flutter Web (yang restore
+  /// session-nya sedikit async, beda dari Android/iOS yang biasanya udah
+  /// siap sinkron) kita tidak salah kira "belum login" padahal session-nya
+  /// masih dalam proses dipulihkan SDK. Dikasih timeout pendek sebagai
+  /// jaring pengaman (fallback ke [FirebaseAuth.currentUser] apa adanya)
+  /// kalau stream itu karena suatu hal tidak kunjung emit.
   Future<void> restoreSession() async {
     _restoring = true;
     _adminModeActive = AppPrefsService.instance.adminModeActive;
     _allAccounts = await _authRepo.allAccounts();
-    final userId = AppPrefsService.instance.sessionUserId;
-    if (userId != null) {
-      final user = await _authRepo.findById(userId);
+
+    final firebaseUser = await FirebaseAuth.instance.authStateChanges().first.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => FirebaseAuth.instance.currentUser,
+        );
+    final email = firebaseUser?.email?.trim().toLowerCase();
+
+    if (firebaseUser != null && email != null && email.isNotEmpty) {
+      final user = await _authRepo.findByGoogleEmail(email);
       if (user != null) {
         _currentUser = user;
         _currentSchool = await _schoolRepo.findById(user.schoolId);
       } else {
-        // Session nyimpen id yang udah nggak valid (mis. akun dihapus) —
-        // bersihin biar nggak nyangkut mencoba login otomatis terus.
-        await AppPrefsService.instance.clearSession();
+        // Authentication Firebase-nya valid, tapi TIDAK ADA akun yang
+        // di-whitelist admin untuk email ini (mis. dicabut admin sejak
+        // login terakhir) -- authorization gagal, JANGAN anggap
+        // "berhasil login" dan JANGAN diam-diam bikin anonymous fallback
+        // (dilarang eksplisit oleh spesifikasi migrasi). Sign-out
+        // Firebase + Google SEKARANG juga, supaya user diarahkan balik
+        // ke Login Screen dan tombol "Masuk dengan Google" berikutnya
+        // menampilkan account picker lagi (bukan diam-diam pakai sesi
+        // yang sama yang sudah terbukti tidak terdaftar).
+        await _signOutFirebaseAndGoogle();
       }
     }
+
     _restoring = false;
     notifyListeners();
   }
 
+  /// <-- BERUBAH: sudah tidak dipanggil dari [LoginScreen] manapun sejak
+  /// migrasi ke Google Sign-In (lihat [signInWithGoogle]) -- SENGAJA
+  /// TIDAK dihapus, lihat dokumentasi lengkap di [AuthRepository.login].
   Future<bool> login(String username, String password) async {
     _loggingIn = true;
     _error = null;
@@ -117,6 +184,102 @@ class AuthProvider extends ChangeNotifier {
     _loggingIn = false;
     notifyListeners();
     return true;
+  }
+
+  /// <-- BARU (migrasi auth: Anonymous -> Google Sign-In). SATU-SATUNYA
+  /// jalur login sekarang (lihat [LoginScreen]). Alurnya SESUAI
+  /// spesifikasi migrasi:
+  ///
+  /// Google Sign-In -> Google credential -> FirebaseAuth.signInWithCredential
+  /// -> Firebase User (siapa?) -> [AuthRepository.findByGoogleEmail]
+  /// (boleh akses?) -> [UserAccount]/[AccessScope] -> Dashboard.
+  ///
+  /// Return `true` kalau berhasil (email Google terdaftar & dapat
+  /// [UserAccount]). Return `false` untuk SEMUA kegagalan lain (user
+  /// batal pilih akun, tidak ada internet, error Firebase, ATAU
+  /// authentication sukses tapi authorization gagal) -- [error] diisi
+  /// pesan yang sesuai tiap kasus supaya UI bisa membedakannya kalau
+  /// perlu, TIDAK PERNAH membuat anonymous fallback dalam kondisi
+  /// apapun.
+  Future<bool> signInWithGoogle() async {
+    _loggingIn = true;
+    _error = null;
+    notifyListeners();
+
+    late final UserCredential credential;
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // User membatalkan pemilihan akun (menutup dialog picker) --
+        // BUKAN error, cukup balik ke Login Screen apa adanya.
+        _loggingIn = false;
+        _error = null;
+        notifyListeners();
+        return false;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final oauthCredential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      credential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+    } on FirebaseAuthException catch (_) {
+      _loggingIn = false;
+      _error = 'Gagal masuk dengan Google. Silakan coba lagi.';
+      notifyListeners();
+      return false;
+    } catch (_) {
+      // Payung buat error platform Google Sign-In (network/PlatformException
+      // dkk) -- SENGAJA tidak dibedakan detail kodenya di sini (beda-beda
+      // per platform), yang penting: TIDAK signOut user existing (tidak
+      // ada yang perlu di-signOut, belum pernah signIn), TIDAK bikin
+      // anonymous user, cukup laporkan gagal.
+      _loggingIn = false;
+      _error = 'Gagal masuk dengan Google. Periksa koneksi internet Anda.';
+      notifyListeners();
+      return false;
+    }
+
+    final firebaseUser = credential.user;
+    final email = firebaseUser?.email?.trim().toLowerCase();
+    if (firebaseUser == null || email == null || email.isEmpty) {
+      _loggingIn = false;
+      _error = 'Akun Google ini tidak memiliki alamat email yang valid.';
+      notifyListeners();
+      return false;
+    }
+
+    final user = await _authRepo.findByGoogleEmail(email);
+    if (user == null) {
+      // Authentication SUKSES, authorization GAGAL (lihat dokumentasi
+      // panjang di AuthRepository.findByGoogleEmail) -- account Firestore
+      // TIDAK otomatis dibuat, role TIDAK otomatis diberikan. Sign-out
+      // supaya sesi Google/Firebase yang tidak berhak ini tidak
+      // "menggantung" -- percobaan berikutnya menampilkan account picker
+      // lagi (mis. kalau user salah pilih akun Google).
+      await _signOutFirebaseAndGoogle();
+      _loggingIn = false;
+      _error = 'Tidak ada akses. Akun Google ini ($email) belum terdaftar sebagai pengguna Quran Report.';
+      notifyListeners();
+      return false;
+    }
+
+    _currentUser = user;
+    _currentSchool = await _schoolRepo.findById(user.schoolId);
+    _loggingIn = false;
+    _error = null;
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> _signOutFirebaseAndGoogle() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
   }
 
   /// Cari nama guru pembimbing yang mengampu pasangan Kelas+Halaqoh
@@ -176,10 +339,18 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// <-- BERUBAH (migrasi auth). Dulu cuma bersihin [AppPrefsService.
+  /// sessionUserId]. Sekarang HARUS signOut dari Firebase Auth & Google
+  /// Sign-In juga (lihat [_signOutFirebaseAndGoogle]) -- SESUAI
+  /// spesifikasi migrasi bagian LOGOUT: "JANGAN: signOut() ->
+  /// signInAnonymously()... User harus login kembali menggunakan
+  /// Google." TIDAK ADA pemanggilan signInAnonymously/anonymous fallback
+  /// apapun di sini maupun di [_signOutFirebaseAndGoogle].
   Future<void> logout() async {
     _currentUser = null;
     _currentSchool = null;
     await AppPrefsService.instance.clearSession();
+    await _signOutFirebaseAndGoogle();
     notifyListeners();
   }
 

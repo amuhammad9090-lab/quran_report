@@ -1,20 +1,24 @@
 // <-- BARU (seluruh file)
 //
-// Sebelumnya, kegagalan `Firebase.initializeApp()` /
-// `FirebaseAuth.instance.signInAnonymously()` di main.dart ditelan diam-
-// diam lewat `catch (_) {}` -- kalau sign-in anonim gagal (mis. provider
-// "Anonymous" belum diaktifkan di Firebase Console > Authentication >
-// Sign-in method), app tetap lanjut jalan TANPA login sama sekali, dan
-// SEMUA operasi Firestore (backup, restore, notifikasi) gagal
-// permission-denied -- karena semua rule di firestore.rules butuh
-// `request.auth != null`. Errornya sendiri tidak pernah kelihatan di
-// mana pun, jadi kelihatannya seperti masalah rules padahal sebenarnya
-// app belum pernah berhasil "login" ke Firebase sama sekali.
+// Awalnya, kegagalan `Firebase.initializeApp()` di main.dart ditelan
+// diam-diam lewat `catch (_) {}` -- app tetap lanjut jalan TANPA
+// Firebase SAMA SEKALI, dan SEMUA operasi Firestore (backup, restore,
+// notifikasi) gagal permission-denied/unavailable tanpa pesan yang jelas
+// ke mana pun. Static holder ini dicek di layar yang punya fitur cloud
+// (mis. Settings > Backup/Pulihkan) supaya bisa kasih pesan yang lebih
+// tepat sasaran ketimbang "Cek koneksi internet" generik.
 //
-// Static holder ini dicek di layar yang punya fitur cloud (mis. Settings
-// > Backup/Pulihkan) supaya bisa kasih pesan yang lebih tepat sasaran
-// ketimbang "Cek koneksi internet" generik saat penyebabnya sebenarnya
-// auth, bukan jaringan.
+// <-- BERUBAH (migrasi auth: Anonymous -> Google Sign-In): [ready] DULU
+// juga ikut memverifikasi sign-in anonim berhasil (SDK Firebase Auth
+// otomatis login diam-diam di setiap startup, lihat main.dart versi
+// sebelumnya) -- jadi `ready == false` dulu bisa juga berarti "provider
+// Anonymous belum diaktifkan di Firebase Console". SEKARANG sign-in
+// tidak lagi terjadi otomatis di startup (interaktif, lewat Google
+// Sign-In di Login Screen -- lihat AuthProvider.signInWithGoogle), jadi
+// [ready] MURNI berarti "Firebase.initializeApp() berhasil" (SDK-nya
+// siap dipakai). Belum login (Google) BUKAN kegagalan bootstrap --
+// itu kondisi normal yang ditangani Login Screen sendiri, bukan status
+// ini. [userMessage] disesuaikan supaya tidak lagi menyebut "Anonymous".
 class FirebaseBootstrapStatus {
   FirebaseBootstrapStatus._();
 
@@ -33,7 +37,7 @@ class FirebaseBootstrapStatus {
 
   /// Pesan siap-pakai buat SnackBar/dialog kalau `ready == false`.
   static String get userMessage =>
-      'Fitur cloud (backup, restore, notifikasi) tidak aktif: autentikasi Firebase gagal '
-      '($error). Ini biasanya karena provider "Anonymous" belum diaktifkan di Firebase '
-      'Console > Authentication > Sign-in method -- restart app setelah diaktifkan.';
+      'Fitur cloud (backup, restore, notifikasi) tidak aktif: inisialisasi Firebase gagal '
+      '($error). Coba restart app -- kalau masih gagal, periksa koneksi internet & '
+      'konfigurasi Firebase project (google-services.json/firebase_options.dart).';
 }
