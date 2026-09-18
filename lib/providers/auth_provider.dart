@@ -4,6 +4,7 @@
 // AuthProvider extends ChangeNotifier` di file ini kalau tidak
 // disembunyikan (sama pola importnya seperti main.dart).
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -208,23 +209,43 @@ class AuthProvider extends ChangeNotifier {
 
     late final UserCredential credential;
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        // User membatalkan pemilihan akun (menutup dialog picker) --
-        // BUKAN error, cukup balik ke Login Screen apa adanya.
+      if (kIsWeb) {
+        // <-- BARU: google_sign_in.signIn() SUDAH TIDAK DIDUKUNG di
+        // Flutter Web sejak Google migrasi ke Google Identity Services
+        // (GIS) -- imperative signIn() SELALU throw di web, apapun
+        // kondisi internetnya, makanya user Web/PWA (mis. Chrome Android)
+        // sebelumnya selalu kena pesan salah kaprah "Periksa koneksi
+        // internet Anda". Fix: di web pakai FirebaseAuth signInWithPopup
+        // langsung (skip google_sign_in sama sekali di jalur ini), yang
+        // memang jalur resmi Firebase Auth buat web.
+        credential = await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
+      } else {
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          // User membatalkan pemilihan akun (menutup dialog picker) --
+          // BUKAN error, cukup balik ke Login Screen apa adanya.
+          _loggingIn = false;
+          _error = null;
+          notifyListeners();
+          return false;
+        }
+
+        final googleAuth = await googleUser.authentication;
+        final oauthCredential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        credential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+      }
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'popup-closed-by-user' || e.code == 'cancelled-popup-request') {
+        // Sama seperti googleUser == null di atas: user nutup popup
+        // Google sendiri (di web) -- BUKAN error.
         _loggingIn = false;
         _error = null;
         notifyListeners();
         return false;
       }
-
-      final googleAuth = await googleUser.authentication;
-      final oauthCredential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      credential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
-    } on FirebaseAuthException catch (_) {
       _loggingIn = false;
       _error = 'Gagal masuk dengan Google. Silakan coba lagi.';
       notifyListeners();
