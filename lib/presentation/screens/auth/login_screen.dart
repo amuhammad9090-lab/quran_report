@@ -86,56 +86,77 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                       ),
                       const SizedBox(height: 36),
+                      // <-- BERUBAH: warna tombol disamain sama gradient
+                      // WelcomeHeroCard di Beranda (lihat misc_widgets.dart)
+                      // -- SENGAJA pakai warna fixed yang sama persis (bukan
+                      // dari Theme/ColorScheme), soalnya hero itu sendiri
+                      // juga fixed dark-green baik di light maupun dark mode
+                      // -- jadi tombol ini ikut konsisten otomatis di kedua
+                      // mode tanpa perlu dibedain per-theme.
                       SizedBox(
                         height: 52,
-                        child: FilledButton(
-                          onPressed: auth.isLoggingIn ? null : _submitGoogle,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E8E3E),
-                            disabledBackgroundColor: const Color(0xFF1E8E3E).withValues(alpha: 0.5),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: auth.isLoggingIn
+                                  ? const [Color(0xFF0B3B2E), Color(0xFF0E5C46)]
+                                      .map((c) => c.withValues(alpha: 0.5))
+                                      .toList()
+                                  : const [Color(0xFF0B3B2E), Color(0xFF0E5C46)],
+                            ),
                           ),
-                          child: auth.isLoggingIn
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      width: 22,
-                                      height: 22,
-                                      alignment: Alignment.center,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Text(
-                                        'G',
-                                        style: TextStyle(
-                                          color: Color(0xFF1E8E3E),
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 13,
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: auth.isLoggingIn ? null : _submitGoogle,
+                              child: Center(
+                                child: auth.isLoggingIn
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation(Colors.white),
                                         ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 22,
+                                            height: 22,
+                                            alignment: Alignment.center,
+                                            decoration: const BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Text(
+                                              'G',
+                                              style: TextStyle(
+                                                color: Color(0xFF0E5C46),
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          const Text(
+                                            'Masuk dengan Google',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 15,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text(
-                                      'Masuk dengan Google',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 15,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],

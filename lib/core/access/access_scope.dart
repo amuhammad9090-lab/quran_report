@@ -1,3 +1,4 @@
+import '../../data/models/folder.dart';
 import '../../data/models/kelas_halaqoh.dart';
 import '../../data/models/santri_record.dart';
 import '../../data/models/student.dart';
@@ -62,5 +63,17 @@ class AccessScope {
   List<Student> scopeStudents(List<Student> all) {
     if (isAdmin) return all;
     return all.where(canAccessStudent).toList();
+  }
+
+  // <-- BARU: folder BUKAN di-scope lewat kelas+halaqoh (satu folder bisa
+  // aja isinya campur beberapa kelas/halaqoh), tapi lewat SIAPA yang
+  // bikin ([ReportFolder.ownerId]) -- mode admin (isAdmin==true) tetap
+  // lihat SEMUA folder (termasuk punya guru lain), mode guru cuma lihat
+  // folder buatannya sendiri. Folder lama yang ownerId-nya null (dibuat
+  // sebelum field ini ada) SENGAJA tetap kelihatan buat semua orang --
+  // lihat dokumentasi di ReportFolder.ownerId.
+  List<ReportFolder> scopeFolders(List<ReportFolder> all) {
+    if (isAdmin) return all;
+    return all.where((f) => f.ownerId == null || f.ownerId == user.id).toList();
   }
 }

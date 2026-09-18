@@ -30,9 +30,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 /// tertulis di laporan hariannya) dan kolom Baris di-SUM dari SEMUA
 /// laporan santri itu sepekan (lihat
 /// ExportService.weeklyRowsGroupedBySantriFor). Kolom "Hari/Tanggal"
-/// SELALU menunjukkan tanggal laporan TERAKHIR dibuat dalam pekan itu
-/// (bukan tanggal masing-masing laporan) — sesuai permintaan biar rekap
-/// pekanan menunjukkan "per kapan" gabungan ini dibuat.
+/// menunjukkan tanggal laporan TERAKHIR MILIK SANTRI ITU SENDIRI dalam
+/// pekan tsb — jadi tiap santri bisa beda tanggal sesuai kapan dia
+/// terakhir setor. (Dulu semua baris dipaksa memakai SATU tanggal
+/// lintas kelas; lihat catatan bug di [_lastFilledLabel].)
 ///
 /// Hasil export-nya 1 dokumen berisi semua grup (1 tabel per Kelas+
 /// Halaqoh, bukan 1 tabel besar gabungan) + baris Guru Pembimbing per
@@ -52,7 +53,30 @@ class GenerateRekapPekananScreen extends StatelessWidget {
     required this.range,
   });
 
-  String? _lastTanggalLabel(List<SantriRecord> all) {
+  /// Label tanggal laporan TERAKHIR di pekan ini, digabung dari SEMUA
+  /// kelas/halaqoh — HANYA untuk teks informasi di header layar
+  /// ("terakhir diisi ..."), BUKAN untuk mengisi kolom Hari/Tanggal
+  /// tiap baris santri.
+  ///
+  /// --- CATATAN BUG "semua santri & semua kelas tanggalnya sama" ---
+  /// Dulu nilai ini dikirim sebagai `fixedTanggalLabel` ke
+  /// [WeeklySantriRecapTable], `showExportSheet`, DAN
+  /// `weeklyRowsGroupedBySantriFor` — akibatnya SATU tanggal (tanggal
+  /// laporan paling akhir di seluruh pekan, lintas kelas) menimpa kolom
+  /// Hari/Tanggal SEMUA baris. Jadi kalau ada kelas lain yang setor hari
+  /// Rabu, santri yang sebenarnya setor hari Selasa pun ikut tertulis
+  /// Rabu — di preview, di hasil export, DAN di rekap yang dikirim ke
+  /// Portal Ortu (`tanggalLabel` di dokumen `weeklyRecaps`).
+  ///
+  /// SEKARANG: `fixedTanggalLabel` sengaja TIDAK dipakai lagi di layar
+  /// ini (dibiarkan null), supaya
+  /// [ExportService.weeklyRowsGroupedBySantriFor] memakai perilaku
+  /// fallback-nya yang memang sudah benar: tanggal laporan TERAKHIR
+  /// MILIK SANTRI ITU SENDIRI di pekan tsb. Parameternya sendiri tidak
+  /// dihapus dari ExportService/WeeklySantriRecapTable karena masih
+  /// dipakai layar lain (Rekap Harian) yang memang butuh 1 tanggal
+  /// seragam.
+  String? _lastFilledLabel(List<SantriRecord> all) {
     if (all.isEmpty) return null;
     final latest = all.reduce((a, b) => a.tanggal.isAfter(b.tanggal) ? a : b);
     return ExportService.instance.hariTanggalTextFor(latest.tanggal);
@@ -74,7 +98,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
         if (byDate != 0) return byDate;
         return a.namaAnak.toLowerCase().compareTo(b.namaAnak.toLowerCase());
       });
-    final fixedTanggalLabel = _lastTanggalLabel(sorted);
+    final lastFilledLabel = _lastFilledLabel(sorted);
     final groups = recordsProvider.groupByKelasHalaqoh(sorted);
     final periodeText = WeekUtils.periodeLabel(weekIndex, range);
 
@@ -94,10 +118,9 @@ class GenerateRekapPekananScreen extends StatelessWidget {
     // tanpa nge-generate rows-nya dua kali per grup.
     final weeklyRowsPerGroup = [
       for (final g in groups)
-        ExportService.instance.weeklyRowsGroupedBySantriFor(
-          g.records,
-          fixedTanggalLabel: fixedTanggalLabel,
-        ),
+        // TANPA fixedTanggalLabel — tiap santri pakai tanggal laporan
+        // terakhirnya sendiri (lihat catatan bug di [_lastFilledLabel]).
+        ExportService.instance.weeklyRowsGroupedBySantriFor(g.records),
     ];
 
     return Scaffold(
@@ -123,7 +146,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                 sliver: SliverToBoxAdapter(
                   child: Text(
                     '${sorted.length} laporan • ${groups.length} kelompok Kelas/Halaqoh'
-                        '${fixedTanggalLabel != null ? ' • terakhir diisi $fixedTanggalLabel' : ''}',
+                        '${lastFilledLabel != null ? ' • terakhir diisi $lastFilledLabel' : ''}',
                     style: TextStyle(
                       fontSize: 12.5,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -171,9 +194,10 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                                 judul: 'Laporan Pekanan - Kelas ${groups[i].kelas} '
                                     'Halaqoh ${groups[i].halaqoh} - Pekan $weekIndex $bulanLabel',
                                 periode: '$periodeText'
-                                    '${fixedTanggalLabel != null ? ' (terakhir diisi $fixedTanggalLabel)' : ''}',
+                                    '${lastFilledLabel != null ? ' (terakhir diisi $lastFilledLabel)' : ''}',
                                 includeTanggal: true,
-                                fixedTanggalLabel: fixedTanggalLabel,
+                                // fixedTanggalLabel SENGAJA tidak diisi —
+                                // tiap santri pakai tanggalnya sendiri.
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -194,6 +218,8 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                                 ),
                                 rows: weeklyRowsPerGroup[i],
                                 deployedByNama: authProvider.currentUser?.displayName,
+                                weekStart: range.start,
+                                weekEnd: range.end,
                               ),
                             ),
                           ],
@@ -201,7 +227,8 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                       ),
                       WeeklySantriRecapTable(
                         records: groups[i].records,
-                        fixedTanggalLabel: fixedTanggalLabel,
+                        // fixedTanggalLabel SENGAJA tidak diisi — lihat
+                        // catatan bug di [_lastFilledLabel].
                       ),
                       const SizedBox(height: 20),
                     ],

@@ -125,7 +125,7 @@ class _FolderFormSheetState extends State<FolderFormSheet> {
     if (_isEdit) {
       await provider.rename(widget.existing!.id, nama);
     } else {
-      await provider.create(nama);
+      await provider.create(nama, ownerId: _scope?.user.id);
     }
     if (mounted) Navigator.pop(context);
   }

@@ -298,7 +298,12 @@ class _LaporanTabState extends State<LaporanTab> {
     final provider = context.watch<RecordsProvider>();
     final foldersProvider = context.watch<FoldersProvider>();
     final cards = _filteredCards(provider);
-    final folders = foldersProvider.all;
+    // <-- BARU: folder di-scope pakai AccessScope yang sama dengan santri
+    // record (RecordsProvider.scope) -- mode guru cuma lihat folder
+    // buatannya sendiri, mode admin lihat semua. Kalau scope belum ada
+    // (mis. sedang restore session) fallback ke semua folder apa adanya.
+    final scope = provider.scope;
+    final folders = scope == null ? foldersProvider.all : scope.scopeFolders(foldersProvider.all);
     final orphanedCount =
         provider.orphanedFolderCards(folders.map((f) => f.id).toSet()).length;
 

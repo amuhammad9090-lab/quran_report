@@ -65,6 +65,14 @@ class WeeklyRecapDeployService {
     required String? guruPembimbing,
     required List<SantriWeeklyRow> rows,
     required String? deployedByNama,
+    /// Rentang tanggal pekan yang direkap. Ikut disimpan supaya Portal
+    /// Ortu bisa memvalidasi apakah snapshot ini masih sesuai dengan
+    /// laporan harian yang ada (lihat `weeklyRecapIsLikelyStale` &
+    /// `weeklyRecapIsOutdated` di app Portal Ortu) — tanpa 2 field ini,
+    /// portal tidak punya cara tahu rekap mana yang sudah kedaluwarsa
+    /// gara-gara laporannya diedit/dihapus setelah deploy.
+    DateTime? weekStart,
+    DateTime? weekEnd,
   }) async {
     if (rows.isEmpty) return;
 
@@ -107,6 +115,8 @@ class WeeklyRecapDeployService {
         'catatan': r.catatan,
         'deployedAt': FieldValue.serverTimestamp(),
         'deployedByNama': deployedByNama,
+        if (weekStart != null) 'weekStart': Timestamp.fromDate(weekStart),
+        if (weekEnd != null) 'weekEnd': Timestamp.fromDate(weekEnd),
       });
     }
 
