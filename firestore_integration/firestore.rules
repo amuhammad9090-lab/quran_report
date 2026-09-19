@@ -130,6 +130,23 @@ service cloud.firestore {
       match /santriAccounts/{accountId} {
         allow read: if isAdmin() || (request.auth != null && request.auth.uid == accountId);
         allow write: if isAdmin();
+        // <-- BARU: orang tua (uid == id dokumennya sendiri) boleh update
+        // foto profil PUNYA SENDIRI — dipakai fitur ganti/hapus foto di
+        // AccountScreen (Portal Ortu), lewat
+        // FirestoreSantriAccountRepository.updatePhoto().
+        //
+        // SENGAJA dibatasi HANYA ke 2 field ini pakai
+        // `diff(...).affectedKeys().hasOnly([...])` — TANPA batasan ini,
+        // orang tua yang device/koneksinya sudah kepegang bisa nulis
+        // field APA SAJA di dokumen ini, termasuk `studentId`. Kalau
+        // `studentId` bisa ditimpa bebas, orang tua bisa "pindah" nunjuk
+        // ke ID santri lain dan ke-baca sebagai anaknya sendiri di semua
+        // rule lain yang pakai `myAccount().studentId`/`myStudent()`
+        // (santriRecords, parentNotes, weeklyRecaps) — jadi ini bukan
+        // cuma soal rapi, ini yang mencegah orang tua lain bisa
+        // mengintip data akademik santri lain.
+        allow update: if request.auth != null && request.auth.uid == accountId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoBase64', 'photoUpdatedAt']);
       }
       // Data master santri:
       //  - santri baca datanya sendiri

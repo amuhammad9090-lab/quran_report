@@ -26,6 +26,7 @@ class AppPrefsService {
   static const _keyPasswordOverrides = 'password_overrides';
   static const _keyPhotoOverrides = 'photo_overrides'; // <-- BARU
   static const _keyDownloadNotifPaths = 'download_notif_paths';
+  static const _keyPendingParentReplyNoteId = 'pending_parent_reply_note_id';
   static const _keyAdminModeActive = 'admin_mode_active'; // <-- BARU
   static const _keyStudentsLastSync = 'students_last_sync'; // <-- BARU
   static const _keyStudentsMetaVersion = 'students_meta_version'; // <-- BARU
@@ -350,6 +351,26 @@ class AppPrefsService {
     final current = downloadNotifPaths;
     if (current.remove('$notifId') == null) return;
     await _box.put(_keyDownloadNotifPaths, jsonEncode(current));
+  }
+
+  // --- noteId ParentNotes yang lagi "pending" dibuka (buat
+  // ParentReplyNotificationService) ---
+  //
+  // Sama alasannya dengan [downloadNotifPaths] di atas: kalau notifikasi
+  // balasan orang tua di-tap SETELAH app sempat ditutup total, proses
+  // Dart yang baru nggak punya state in-memory apapun dari sebelumnya --
+  // noteId-nya perlu disimpan ke disk dulu (bukan cuma payload lewat
+  // `flutter_local_notifications`, yang di titik cold-start itu memang
+  // sudah cukup lewat `getNotificationAppLaunchDetails`, tapi field ini
+  // dipakai buat pembersihan/tracking eksplisit di sisi service).
+  String? get pendingParentReplyNoteId => _box.get(_keyPendingParentReplyNoteId);
+
+  Future<void> setPendingParentReplyNoteId(String noteId) async {
+    await _box.put(_keyPendingParentReplyNoteId, noteId);
+  }
+
+  Future<void> removePendingParentReplyNoteId() async {
+    await _box.delete(_keyPendingParentReplyNoteId);
   }
 
   // --- Sinkronisasi metadata Students (lihat ApiStudentRepository) ---

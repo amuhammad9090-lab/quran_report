@@ -72,8 +72,21 @@ class AccessScope {
   // folder buatannya sendiri. Folder lama yang ownerId-nya null (dibuat
   // sebelum field ini ada) SENGAJA tetap kelihatan buat semua orang --
   // lihat dokumentasi di ReportFolder.ownerId.
+  // <-- BERUBAH (fix susulan): dulu cuma cek `ownerId == user.id`, yang
+  // TERNYATA salah -- toggle Mode Admin/Guru itu akun yang SAMA
+  // ([adminModeActive], bukan akun terpisah), jadi folder yang dibuat
+  // akun ini sendiri pas Mode Admin aktif tetap lolos cek itu walau
+  // sekarang lagi Mode Guru. Sekarang dicek juga [f.createdAsAdmin] --
+  // folder yang dibuat selagi Mode Admin aktif (createdAsAdmin == true)
+  // SELALU disembunyikan dari Mode Guru, SIAPAPUN pembuatnya (termasuk
+  // akun sendiri). Folder lama (createdAsAdmin == null) tetap
+  // diperlakukan seperti [ownerId] null -- global/tetap kelihatan,
+  // demi kompatibilitas folder sebelum field ini ada.
   List<ReportFolder> scopeFolders(List<ReportFolder> all) {
     if (isAdmin) return all;
-    return all.where((f) => f.ownerId == null || f.ownerId == user.id).toList();
+    return all
+        .where((f) => f.createdAsAdmin != true)
+        .where((f) => f.ownerId == null || f.ownerId == user.id)
+        .toList();
   }
 }

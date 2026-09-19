@@ -8,6 +8,7 @@ import '../core/utils/text_utils.dart';
 import '../data/models/kelas_halaqoh.dart';
 import '../data/models/parent_note.dart';
 import '../data/services/parent_note_service.dart';
+import '../data/services/parent_reply_notification_service.dart';
 
 /// State notifikasi "Catatan dari Orang Tua" (bell icon di Home + halaman
 /// Notifikasi). Men-scope hasilnya persis seperti [RecordsProvider]
@@ -55,6 +56,25 @@ class ParentNotesProvider extends ChangeNotifier {
   /// [_resubscribe]/[_halaqohVariants]. Key = "kelas|halaqohVariant".
   final Map<String, StreamSubscription<List<ParentNote>>> _pairSubs = {};
   final Map<String, List<ParentNote>> _pairNotes = {};
+
+  // <-- BARU: deteksi catatan yang BENAR-BENAR baru, buat trigger
+  // [ParentReplyNotificationService] (lihat dokumentasi lengkap di
+  // [_handleIncomingSnapshot]). Global buat SELURUH umur provider ini
+  // (tidak direset tiap resubscribe/ganti mode admin-guru) -- sengaja,
+  // supaya catatan yang sudah pernah kelihatan sekali TIDAK PERNAH
+  // memicu notifikasi lagi cuma gara-gara listener-nya dibuat ulang.
+  final Set<String> _seenNoteIds = {};
+
+  // Per-subscription (bukan global) -- true kalau subscription itu
+  // sudah sempat menerima snapshot pertamanya. Snapshot PERTAMA suatu
+  // subscription baru selalu berisi data yang SUDAH ADA sejak awal
+  // (bukan "baru datang"), jadi sengaja tidak dianggap sebagai catatan
+  // baru walau id-nya belum ada di [_seenNoteIds] -- kalau tidak,
+  // setiap kali resubscribe (login, toggle Mode Admin, dst.) akan salah
+  // memicu notifikasi buat semua catatan lama yang belum pernah dilihat
+  // scope itu.
+  bool _adminFirstSnapshotDone = false;
+  final Map<String, bool> _pairFirstSnapshotDone = {};
 
   /// True kalau stream Firestore-nya sempat gagal (mis. device offline).
   /// Dipakai halaman Notifikasi buat nampilin pesan yang sesuai, BUKAN
@@ -182,6 +202,8 @@ class ParentNotesProvider extends ChangeNotifier {
     if (scope.isAdmin) {
       _adminSub = ParentNoteService.instance.watchAll().listen(
         (notes) {
+          _handleIncomingSnapshot(notes, isFirstSnapshot: !_adminFirstSnapshotDone);
+          _adminFirstSnapshotDone = true;
           _all = notes;
           _hasError = false;
           notifyListeners();
@@ -209,10 +231,13 @@ class ParentNotesProvider extends ChangeNotifier {
         final key = '${assignment.kelas}|$halaqohVariant';
         if (_pairSubs.containsKey(key)) continue; // jangan duplicate listener
         _pairNotes[key] = const [];
+        _pairFirstSnapshotDone[key] = false;
         _pairSubs[key] = ParentNoteService.instance
             .watchForPair(assignment.kelas, halaqohVariant)
             .listen(
           (notes) {
+            _handleIncomingSnapshot(notes, isFirstSnapshot: !(_pairFirstSnapshotDone[key] ?? false));
+            _pairFirstSnapshotDone[key] = true;
             _pairNotes[key] = notes;
             _hasError = false;
             _recomputeMergedNotes();
@@ -260,14 +285,49 @@ class ParentNotesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// <-- BARU: dipanggil dari SETIAP snapshot listener Firestore yang
+  /// SUDAH ADA (admin & tiap pair guru) -- BUKAN listener/query tambahan
+  /// (B15: "tidak ada listener tambahan yang tidak perlu"), cuma numpang
+  /// baca hasil listener yang memang sudah didengarkan buat keperluan
+  /// [notes]/[unreadCount] itu sendiri.
+  ///
+  /// [isFirstSnapshot]=true berarti ini snapshot PERTAMA dari
+  /// subscription ybs (lihat [_adminFirstSnapshotDone]/
+  /// [_pairFirstSnapshotDone]) -- semua id-nya dicatat ke [_seenNoteIds]
+  /// TANPA memicu notifikasi (itu data lama, bukan "baru datang").
+  /// Snapshot BERIKUTNYA baru dibandingkan ke [_seenNoteIds] global --
+  /// id yang belum pernah tercatat = catatan yang BENAR-BENAR baru saja
+  /// dikirim orang tua, dan itu yang memicu
+  /// [ParentReplyNotificationService.notifyNewReply].
+  ///
+  /// SENGAJA tidak peduli `isRead`/`dismissed` di sini -- catatan yang
+  /// baru saja dibuat Portal Ortu selalu `isRead: false, dismissed:
+  /// false` (lihat model), jadi setiap id baru pasti memang balasan baru
+  /// yang belum pernah dilihat siapa pun.
+  void _handleIncomingSnapshot(List<ParentNote> notes, {required bool isFirstSnapshot}) {
+    if (isFirstSnapshot) {
+      _seenNoteIds.addAll(notes.map((n) => n.id));
+      return;
+    }
+    for (final note in notes) {
+      if (_seenNoteIds.add(note.id)) {
+        // .add() balikin true kalau id ini memang belum ada di set
+        // (baru ditambahkan barusan) -- persis penanda "baru".
+        ParentReplyNotificationService.instance.notifyNewReply(note);
+      }
+    }
+  }
+
   void _cancelAllSubs() {
     _adminSub?.cancel();
     _adminSub = null;
+    _adminFirstSnapshotDone = false;
     for (final sub in _pairSubs.values) {
       sub.cancel();
     }
     _pairSubs.clear();
     _pairNotes.clear();
+    _pairFirstSnapshotDone.clear();
   }
 
   Future<void> markAsRead(ParentNote note) async {

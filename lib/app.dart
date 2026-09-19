@@ -9,11 +9,20 @@ import 'presentation/screens/auth/splash_screen.dart';
 class QuranReportApp extends StatelessWidget {
   const QuranReportApp({super.key});
 
+  // <-- BARU: dipakai [ParentReplyNotificationService] buat buka halaman
+  // Notifikasi dari luar widget tree (pas notifikasi di-tap sementara
+  // service itu sendiri tidak punya BuildContext) -- terutama kasus tap
+  // pas app baru saja nyala TOTAL dari kondisi terminated (B12). Static
+  // (bukan instance) karena service singleton itu butuh akses ini
+  // sebelum widget QuranReportApp sempat ke-build sama sekali.
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Quran Report',
       debugShowCheckedModeBanner: false,
       themeMode: themeProvider.mode,

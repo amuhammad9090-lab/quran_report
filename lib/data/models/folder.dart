@@ -14,11 +14,27 @@ class ReportFolder {
   // mode admin) -- lihat folder_form_sheet.dart & AccessScope.
   final String? ownerId;
 
+  // <-- BARU (fix susulan): PERBAIKAN dari [ownerId] di atas. Ternyata
+  // toggle "Mode Admin"/"Mode Guru" itu di AKUN YANG SAMA (lihat
+  // AccessScope.adminModeActive) -- `ownerId == user.id` SELALU true
+  // buat folder yang dibuat akun itu sendiri, TIDAK PEDULI lagi mode
+  // Admin atau Guru pas bikinnya. Makanya folder yang dibuat pas Mode
+  // Admin AKTIF tetap kelihatan pas toggle ke Mode Guru -- [ownerId]
+  // SENDIRIAN tidak cukup buat bedain itu.
+  //
+  // Field ini simpan ROLE PAS BIKIN folder (bukan siapa yang bikin):
+  // true = dibuat selagi Mode Admin aktif, false = selagi Mode Guru.
+  // NULLABLE demi folder lama sebelum field ini ada (null = dianggap
+  // folder lama/global, tetap kelihatan semua mode, sama seperti
+  // [ownerId] null -- lihat AccessScope.scopeFolders).
+  final bool? createdAsAdmin;
+
   ReportFolder({
     required this.id,
     required this.nama,
     required this.createdAt,
     this.ownerId,
+    this.createdAsAdmin,
   });
 
   ReportFolder copyWith({String? nama}) => ReportFolder(
@@ -26,6 +42,7 @@ class ReportFolder {
         nama: nama ?? this.nama,
         createdAt: createdAt,
         ownerId: ownerId,
+        createdAsAdmin: createdAsAdmin,
       );
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +50,7 @@ class ReportFolder {
         'nama': nama,
         'createdAt': createdAt.toIso8601String(),
         'ownerId': ownerId,
+        'createdAsAdmin': createdAsAdmin,
       };
 
   factory ReportFolder.fromJson(Map<String, dynamic> json) => ReportFolder(
@@ -40,5 +58,6 @@ class ReportFolder {
         nama: json['nama'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
         ownerId: json['ownerId'] as String?,
+        createdAsAdmin: json['createdAsAdmin'] as bool?,
       );
 }

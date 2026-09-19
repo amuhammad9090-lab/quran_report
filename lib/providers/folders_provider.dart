@@ -22,12 +22,13 @@ class FoldersProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<ReportFolder> create(String nama, {String? ownerId}) async {
+  Future<ReportFolder> create(String nama, {String? ownerId, bool? createdAsAdmin}) async {
     final folder = ReportFolder(
       id: const Uuid().v4(),
       nama: nama.trim(),
       createdAt: DateTime.now(),
       ownerId: ownerId,
+      createdAsAdmin: createdAsAdmin,
     );
     await StorageService.instance.upsertFolder(folder);
     await load();

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'data/services/app_prefs_service.dart';
 import 'data/services/download_notification_service.dart';
+import 'data/services/parent_reply_notification_service.dart';
 import 'data/services/firebase_bootstrap_status.dart';
 import 'data/services/quran_engine_service.dart';
 import 'data/services/storage_service.dart';
@@ -57,6 +58,7 @@ void main() async {
   await AppPrefsService.instance.init();
   await QuranEngineService.instance.load();
   await DownloadNotificationService.instance.init();
+  await ParentReplyNotificationService.instance.init();
 
   final themeProvider = ThemeProvider();
   await themeProvider.load();
