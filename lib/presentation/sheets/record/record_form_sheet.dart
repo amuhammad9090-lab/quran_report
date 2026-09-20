@@ -18,14 +18,18 @@ import '../../../providers/students_provider.dart';
 import '../../widgets/common/status_icons.dart';
 import '../../widgets/forms/field_decoration.dart';
 import '../../widgets/forms/form_section_card.dart';
-import '../../widgets/forms/select_field.dart';
 import '../../widgets/record/keterangan_selector.dart';
 import '../../widgets/record/record_draft_banner.dart';
+import '../../widgets/record/record_form_header.dart';
+import '../../widgets/record/record_identity_fields.dart';
+import '../../widgets/record/record_optional_status_notice.dart';
 import '../../widgets/record/record_status_selector.dart';
+import '../../widgets/record/record_submit_button.dart';
 import '../../widgets/record/segment_states.dart';
 import '../../widgets/record/tahfizh_fields.dart';
 import '../../widgets/record/tahsin_fields.dart';
 import '../../widgets/record/tilawah_fields.dart';
+import 'record_form_options.dart';
 
 /// Modal bottom sheet full-height untuk tambah/edit laporan. [presetKelas]/[presetHalaqoh]/
 /// [presetNama]/[presetTanggal] dipakai saat dibuka dari kartu santri di tab Laporan; dengan
@@ -271,55 +275,16 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     return !scope.isAdmin;
   }
 
-  List<String> _kelasOptions() {
-    final scope = _scope;
-    final dataset = context.read<RecordsProvider>();
-    final accessibleStudents = context.read<StudentsProvider>().accessibleFor(scope);
-    if (_restrictToOwn) {
-      return (scope!.user.assignments.map((a) => a.kelas).toSet().toList()..sort());
-    }
-    return ({...dataset.distinctKelas, ...accessibleStudents.map((s) => s.kelas)}.toList()..sort());
-  }
+  RecordFormOptions _options() => RecordFormOptions(
+        scope: _scope,
+        restrictToOwn: _restrictToOwn,
+        dataset: context.read<RecordsProvider>(),
+        students: context.read<StudentsProvider>(),
+      );
 
-  // PENTING: kelas & halaqoh adalah PASANGAN per assignment (lihat KelasHalaqoh), jadi opsi
-  // halaqoh dipengaruhi kelas yang dipilih (_kelas), bukan gabungan semua halaqoh user.
-  List<String> _halaqohOptions() {
-    final scope = _scope;
-    final dataset = context.read<RecordsProvider>();
-    final accessibleStudents = context.read<StudentsProvider>().accessibleFor(scope);
-    if (_restrictToOwn) {
-      final validForKelas = scope!.user.assignments
-          .where((a) => a.kelas == _kelas)
-          .map((a) => a.halaqoh)
-          .toList();
-      // Kelas belum dipilih/cocok -> tampilkan union halaqoh semua assignment agar dropdown tak
-      // kosong; begitu kelas valid dipilih otomatis menyempit ke halaqoh yang berpasangan.
-      return validForKelas.isNotEmpty
-          ? validForKelas
-          : (scope.user.assignments.map((a) => a.halaqoh).toSet().toList()..sort());
-    }
-    return ({...dataset.distinctHalaqoh, ...accessibleStudents.map((s) => s.halaqoh)}.toList()..sort());
-  }
-
-  /// Nama santri: kelas & halaqoh HARUS dipilih dulu; isinya gabungan riwayat laporan (sudah
-  /// discope lewat RecordsProvider) dan master santri assignment ini, jadi santri yang belum
-  /// pernah dilaporkan tetap bisa dipilih tanpa menampilkan santri kelas/halaqoh lain.
-  List<String> _namaOptions() {
-    if (_kelas == null || _kelas!.trim().isEmpty || _halaqoh == null || _halaqoh!.trim().isEmpty) {
-      return const [];
-    }
-    final dataset = context.read<RecordsProvider>();
-    final accessibleStudents = context.read<StudentsProvider>().accessibleFor(_scope);
-    final names = <String>{
-      ...accessibleStudents
-          .where((s) => s.kelas == _kelas && s.halaqoh == _halaqoh)
-          .map((s) => s.nama),
-      ...dataset.all
-          .where((r) => r.kelas == _kelas && r.halaqoh == _halaqoh)
-          .map((r) => r.namaAnak),
-    };
-    return names.toList()..sort();
-  }
+  List<String> _kelasOptions() => _options().kelas();
+  List<String> _halaqohOptions() => _options().halaqoh(_kelas);
+  List<String> _namaOptions() => _options().nama(_kelas, _halaqoh);
 
   // --- Handler perubahan pilihan ---
 
@@ -690,15 +655,9 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     if (isiStatusCapaian && needsTahfizhPart) {
       // Segmen siap kalau (a) generate sukses dari dataset, ATAU (b) dataset belum meng-cover surah itu
       // (mis. Juz 11-25) tapi user sudah mengisi jumlah baris manual (lihat `manualBarisCtrl`).
-      final allReady = _tahfizhSegs.every((s) {
-        if (s.surahNumber == null || s.generated == null) return false;
-        if (s.generated!.available) return true;
-        final manual = int.tryParse(s.manualBarisCtrl.text.trim());
-        return manual != null && manual > 0;
-      });
+      final allReady = _tahfizhSegs.every((s) => s.isReady);
       if (!allReady) {
-        final anyUnavailable =
-            _tahfizhSegs.any((s) => s.generated != null && !s.generated!.available);
+        final anyUnavailable = _tahfizhSegs.any((s) => s.datasetUnavailable);
         _localMessengerKey.currentState?.showSnackBar(
           SnackBar(
               content: Text(anyUnavailable
@@ -723,39 +682,10 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     // Daftar segmen Tahfizh dari state form (bisa >1 surah). totalBaris/lineIds tetap AGREGAT semua
     // segmen agar konsumen lama (statistik/rekap) tetap benar; field singular (surahNumber, dst)
     // diisi dari segmen PERTAMA untuk backward compat.
-    final tahfizhSegments = isTahfizhPart
-        ? _tahfizhSegs
-            .map((s) {
-              // Fallback manual: dataset belum cover juz-nya (mis. Juz 11-25), baris dari input manual;
-              // lineIds sengaja kosong (tak ada mapping baris fisik untuk di-exclude di laporan berikutnya).
-              final useManual = s.generated == null || !s.generated!.available;
-              final manualBaris = useManual
-                  ? (int.tryParse(s.manualBarisCtrl.text.trim()) ?? 0)
-                  : 0;
-              return TahfizhSegment(
-                surahNumber: s.surahNumber!,
-                surahName: kSurahNames[s.surahNumber!]!,
-                ayatMulai: int.parse(s.ayatMulaiCtrl.text.trim()),
-                ayatSelesai: int.parse(s.ayatSelesaiCtrl.text.trim()),
-                totalBaris: useManual ? manualBaris : (s.generated?.totalBaris ?? 0),
-                lineIds: useManual ? const [] : (s.generated?.newLineIds ?? const []),
-              );
-            })
-            .toList()
-        : null;
+    final tahfizhSegments =
+        isTahfizhPart ? _tahfizhSegs.map((s) => s.toSegment()).toList() : null;
     final tilawahSegments = isTilawahShaped
-        ? _tilawahSegs
-            .where((s) =>
-                s.surahNumber != null &&
-                s.ayatMulaiCtrl.text.trim().isNotEmpty &&
-                s.ayatSelesaiCtrl.text.trim().isNotEmpty)
-            .map((s) => TilawahSegment(
-                  surahNumber: s.surahNumber!,
-                  surahName: kSurahNames[s.surahNumber!]!,
-                  ayatMulai: int.tryParse(s.ayatMulaiCtrl.text.trim()) ?? 0,
-                  ayatSelesai: int.tryParse(s.ayatSelesaiCtrl.text.trim()) ?? 0,
-                ))
-            .toList()
+        ? _tilawahSegs.where((s) => s.isFilled).map((s) => s.toSegment()).toList()
         : null;
 
     final record = SantriRecord(
@@ -858,68 +788,13 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                   ),
                   child: Column(
                 children: [
-                  const SizedBox(height: 10),
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: cs.onSurfaceVariant.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                  RecordFormHeader(
+                    isEdit: _isEdit,
+                    nama: _nama,
+                    kelas: _kelas,
+                    halaqoh: _halaqoh,
+                    onDelete: () => _confirmDelete(context),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 12, 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _isEdit ? 'Edit Laporan' : 'Laporan Baru',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w800, fontSize: 18),
-                              ),
-                              if (_nama != null && _nama!.trim().isNotEmpty) ...[
-                                const SizedBox(height: 3),
-                                Text(
-                                  _nama!,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15.5,
-                                    color: cs.primary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if ((_kelas ?? '').isNotEmpty || (_halaqoh ?? '').isNotEmpty)
-                                  Text(
-                                    '${_kelas ?? '-'} • Halaqoh ${_halaqoh ?? '-'}',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: cs.onSurfaceVariant,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        if (_isEdit)
-                          IconButton(
-                            onPressed: () => _confirmDelete(context),
-                            icon: Icon(LucideIcons.trash2, color: cs.error),
-                            tooltip: 'Hapus laporan ini',
-                          ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(LucideIcons.circleX),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
                   Expanded(
                     // Padding bawah di SINI (bukan di padding konten ListView) sengaja mengecilkan viewport saat
                     // keyboard muncul agar field terfokus ter-scroll ke atas keyboard (Scrollable.ensureVisible).
@@ -948,55 +823,21 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                             FormSectionCard(
                               title: 'Identitas Santri',
                               icon: LucideIcons.medal,
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: SelectField(
-                                          key: ValueKey('kelas_$_kelas'),
-                                          value: _kelas,
-                                          label: 'Kelas',
-                                          icon: LucideIcons.graduationCap,
-                                          options: kelasOptions,
-                                          errorText: _kelasError,
-                                          accent: cs.primary,
-                                          enabled: !widget.lockIdentity,
-                                          onChanged: _onKelasChanged,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: SelectField(
-                                          key: ValueKey('halaqoh_$_halaqoh'),
-                                          value: _halaqoh,
-                                          label: 'Halaqoh',
-                                          icon: LucideIcons.usersRound,
-                                          options: halaqohOptions,
-                                          errorText: _halaqohError,
-                                          accent: cs.primary,
-                                          enabled: !widget.lockIdentity,
-                                          onChanged: _onHalaqohChanged,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  SelectField(
-                                    key: ValueKey('nama_$_nama'),
-                                    value: _nama,
-                                    label: 'Nama Anak',
-                                    hint: comboBelumLengkap
-                                        ? 'Pilih kelas & halaqoh dulu'
-                                        : null,
-                                    icon: LucideIcons.user,
-                                    options: namaOptions,
-                                    errorText: _namaError,
-                                    accent: cs.primary,
-                                    enabled: !widget.lockIdentity,
-                                    onChanged: _onNamaChanged,
-                                  ),
-                                ],
+                              child: RecordIdentityFields(
+                                kelas: _kelas,
+                                halaqoh: _halaqoh,
+                                nama: _nama,
+                                kelasOptions: kelasOptions,
+                                halaqohOptions: halaqohOptions,
+                                namaOptions: namaOptions,
+                                kelasError: _kelasError,
+                                halaqohError: _halaqohError,
+                                namaError: _namaError,
+                                comboBelumLengkap: comboBelumLengkap,
+                                lockIdentity: widget.lockIdentity,
+                                onKelasChanged: _onKelasChanged,
+                                onHalaqohChanged: _onHalaqohChanged,
+                                onNamaChanged: _onNamaChanged,
                               ),
                             ),
                           ],
@@ -1016,37 +857,11 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                     _markEditedAndScheduleDraftSave();
                                   },
                                 ),
-                                if (!_wajibIsiStatusCapaian) ...[
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(LucideIcons.info,
-                                            size: 16, color: AppColors.tahsinOn(context)),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _tanpaCapaian
-                                                ? 'Ditandai "tanpa capaian" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan. Jangan lupa isi catatan.'
-                                                : 'Keterangan "${_keterangan.label}" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan.',
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              color: AppColors.tahsinOn(context),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                if (!_wajibIsiStatusCapaian)
+                                  RecordOptionalStatusNotice(
+                                    tanpaCapaian: _tanpaCapaian,
+                                    keteranganLabel: _keterangan.label,
                                   ),
-                                ],
                                 const SizedBox(height: 16),
                                 AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 220),
@@ -1103,23 +918,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                             ),
                           ),
                           const SizedBox(height: 28),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: cs.primary.withValues(alpha: 0.14),
-                                foregroundColor: cs.primary,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                textStyle: const TextStyle(
-                                    fontSize: 15, fontWeight: FontWeight.w800),
-                              ),
-                              onPressed: _submit,
-                              icon: const Icon(LucideIcons.circleCheck, size: 20),
-                              label: Text(
-                                  _isEdit ? 'Simpan Perubahan' : 'Simpan Laporan'),
-                            ),
-                          ),
+                          RecordSubmitButton(isEdit: _isEdit, onPressed: _submit),
                         ],
                       ),
                     ),

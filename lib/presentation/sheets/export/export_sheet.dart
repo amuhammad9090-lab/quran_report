@@ -106,31 +106,17 @@ class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<Expor
         showInlineMessage('Tidak ada data untuk diekspor.');
         return;
       }
-      await _runExport(format, judulDefault: 'Rekap Bulanan Al Quran', build: (judul) {
-        switch (format) {
-          case ExportFormat.pdf:
-            return ExportService.instance.exportGroupedMonthlyRecapPdf(
-              groupedMonthly,
-              judul: judul,
-              totalWeeks: widget.totalWeeks!,
-              periode: widget.periode,
-            );
-          case ExportFormat.word:
-            return ExportService.instance.exportGroupedMonthlyRecapWord(
-              groupedMonthly,
-              judul: judul,
-              totalWeeks: widget.totalWeeks!,
-              periode: widget.periode,
-            );
-          case ExportFormat.excel:
-            return ExportService.instance.exportGroupedMonthlyRecapExcel(
-              groupedMonthly,
-              judul: judul,
-              totalWeeks: widget.totalWeeks!,
-              periode: widget.periode,
-            );
-        }
-      });
+      await _runExport(
+        format,
+        judulDefault: 'Rekap Bulanan Al Quran',
+        build: (judul) => ExportService.instance.exportGroupedMonthlyRecap(
+          format,
+          groupedMonthly,
+          judul: judul,
+          totalWeeks: widget.totalWeeks!,
+          periode: widget.periode,
+        ),
+      );
       return;
     }
 
@@ -140,34 +126,18 @@ class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<Expor
         showInlineMessage('Tidak ada data untuk diekspor.');
         return;
       }
-      await _runExport(format, judulDefault: 'Laporan Pekanan Al Quran', build: (judul) {
-        switch (format) {
-          case ExportFormat.pdf:
-            return ExportService.instance.exportGroupedPdf(
-              grouped,
-              judul: judul,
-              periode: widget.periode,
-              includeTanggal: widget.includeTanggal,
-              fixedTanggalLabel: widget.fixedTanggalLabel,
-            );
-          case ExportFormat.word:
-            return ExportService.instance.exportGroupedWord(
-              grouped,
-              judul: judul,
-              periode: widget.periode,
-              includeTanggal: widget.includeTanggal,
-              fixedTanggalLabel: widget.fixedTanggalLabel,
-            );
-          case ExportFormat.excel:
-            return ExportService.instance.exportGroupedExcel(
-              grouped,
-              judul: judul,
-              periode: widget.periode,
-              includeTanggal: widget.includeTanggal,
-              fixedTanggalLabel: widget.fixedTanggalLabel,
-            );
-        }
-      });
+      await _runExport(
+        format,
+        judulDefault: 'Laporan Pekanan Al Quran',
+        build: (judul) => ExportService.instance.exportGrouped(
+          format,
+          grouped,
+          judul: judul,
+          periode: widget.periode,
+          includeTanggal: widget.includeTanggal,
+          fixedTanggalLabel: widget.fixedTanggalLabel,
+        ),
+      );
       return;
     }
 
@@ -180,37 +150,19 @@ class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<Expor
       return;
     }
 
-    await _runExport(format, judulDefault: 'Laporan Pekanan Al Quran', build: (judul) {
-      switch (format) {
-        case ExportFormat.pdf:
-          return ExportService.instance.exportPdf(
-            records,
-            judul: judul,
-            periode: widget.periode,
-            guruPembimbing: widget.guruPembimbing,
-            includeTanggal: widget.includeTanggal,
-            fixedTanggalLabel: widget.fixedTanggalLabel,
-          );
-        case ExportFormat.word:
-          return ExportService.instance.exportWord(
-            records,
-            judul: judul,
-            periode: widget.periode,
-            guruPembimbing: widget.guruPembimbing,
-            includeTanggal: widget.includeTanggal,
-            fixedTanggalLabel: widget.fixedTanggalLabel,
-          );
-        case ExportFormat.excel:
-          return ExportService.instance.exportExcel(
-            records,
-            judul: judul,
-            periode: widget.periode,
-            guruPembimbing: widget.guruPembimbing,
-            includeTanggal: widget.includeTanggal,
-            fixedTanggalLabel: widget.fixedTanggalLabel,
-          );
-      }
-    });
+    await _runExport(
+      format,
+      judulDefault: 'Laporan Pekanan Al Quran',
+      build: (judul) => ExportService.instance.exportRecords(
+        format,
+        records,
+        judul: judul,
+        periode: widget.periode,
+        guruPembimbing: widget.guruPembimbing,
+        includeTanggal: widget.includeTanggal,
+        fixedTanggalLabel: widget.fixedTanggalLabel,
+      ),
+    );
   }
 
   /// Inti proses export yang SAMA buat ketiga mode (flat records / grouped
