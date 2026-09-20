@@ -18,6 +18,18 @@ flutter run
 Tidak perlu `build_runner` — storage lokal pakai Hive `Box<String>` dengan
 serialisasi JSON manual (tanpa TypeAdapter codegen).
 
+### Kualitas kode
+
+```bash
+dart fix --apply     # buang import tak terpakai, dll.
+dart format lib
+flutter analyze
+```
+
+`analysis_options.yaml` memakai `flutter_lints` + `directives_ordering`
+(import diurutkan: `dart:`, `package:`, lalu relatif, masing-masing
+abjad). Belum ada folder `test/`.
+
 ### Setup Firebase (wajib untuk fitur cloud)
 
 Project ini pakai Firebase project **`quran-reportweb`** (project yang sama
@@ -45,8 +57,15 @@ firebase deploy --only firestore:rules --project quran-reportweb
 ## Fitur
 
 ### Autentikasi & hak akses
-- Login berbasis akun (`username`/password) — password di-hash lokal, tidak
-  pernah tersimpan plaintext (lihat `AuthHashService`).
+- Login lewat **Google Sign-In** (di web memakai popup Firebase Auth):
+  Google hanya membuktikan *siapa* penggunanya (authentication); boleh
+  masuk atau tidaknya ditentukan admin lewat *whitelist* email Google pada
+  akun guru (authorization — `AuthRepository.findByGoogleEmail`). Email
+  yang tidak terdaftar ditolak dan tidak pernah dibuatkan akun/anonymous
+  fallback. Seluruh akses Firebase Auth/Google ada di
+  `FirebaseAuthService`; `AuthProvider` hanya menyimpan state login.
+  Jalur username+password lama (hash lokal, `AuthHashService`) masih ada
+  di `AuthProvider.login` tapi tidak dipakai UI.
 - Dua peran: **Admin** (akses global ke semua data) dan **Guru Pembimbing**
   (hanya bisa melihat/mengubah data yang kelas+halaqoh-nya cocok persis
   dengan salah satu *assignment* miliknya — lihat `AccessScope`).
@@ -76,7 +95,14 @@ firebase deploy --only firestore:rules --project quran-reportweb
 - **Tahsin+Tahfizh**: gabungan keduanya dalam satu laporan.
 - **Muroja'ah/Tasmi'**: mengulang hafalan lama (surah + rentang ayat).
 - Keterangan kehadiran: Hadir / Izin Sakit / Izin Lomba / Izin Pelatihan /
-  Tanpa Keterangan (Alpa).
+  Tanpa Keterangan (Alpa), plus tiga keterangan sanksi (Tidak Setoran /
+  Tahsin / Murojaah) yang tetap dihitung hadir. Untuk **Hadir tanpa
+  capaian** ada checkbox eksplisit (capaian boleh kosong, catatan wajib).
+- **Draf otomatis** untuk laporan *baru*: isian tersimpan sebentar setelah
+  berhenti mengetik; kalau form tertutup sebelum disimpan, banner
+  "Ada draf laporan yang belum sempat disimpan" (Lanjutkan / Buang)
+  muncul saat form laporan baru dibuka lagi. Tidak berlaku untuk edit dan
+  tidak muncul bila form dibuka dari kartu santri (identitas terkunci).
 
 ### Laporan & Folder
 - Tab Laporan: satu kartu per santri (bukan per laporan pekanan), tap
@@ -104,6 +130,9 @@ firebase deploy --only firestore:rules --project quran-reportweb
   - **Rekap Bulanan** — lihat progres per pekan dalam sebulan, per
     Kelas+Halaqoh, sampai fitur **Generate Rekap Bulanan** (satu baris per
     santri, kolom Pekan 1..N) yang bisa langsung diekspor.
+- **Rekap Pekanan** — *Generate Laporan Pekanan* (satu baris per santri
+  per pekan) yang bisa diekspor atau di-*deploy* ke Portal Orang Tua
+  (`WeeklyRecapDeployService`, koleksi `weeklyRecaps`).
 - Semua angka di tab ini SCOPED mengikuti `AccessScope` yang sedang aktif
   (assignment sendiri, atau semua data kalau Mode Admin aktif).
 
@@ -116,16 +145,30 @@ firebase deploy --only firestore:rules --project quran-reportweb
   perangkat; lanjut bisa **Bagikan** (share sheet) atau **Simpan** salinan
   ke penyimpanan perangkat. Di Web, pakai Web Share API dengan fallback
   ke download langsung kalau browser tidak mendukung.
+- Di Android, setelah **Simpan** muncul notifikasi "Unduhan selesai";
+  mengetuknya membuka file hasil unduhan (lihat
+  [Notifikasi lokal](#notifikasi-lokal)).
+- Kode ekspor terpisah per tanggung jawab (`lib/data/services/export/`):
+  `ExportRows` (teks & baris tabel, dipakai juga widget UI agar isi kolom
+  sama dengan hasil ekspor), `ExportPdf`, `ExportExcel`, `ExportWord`
+  (layout per format). `ExportService` tetap jadi satu pintu (termasuk
+  `exportRecords/exportGrouped/exportGroupedMonthlyRecap` yang memilih
+  format).
 
 ### Sinkronisasi & Backup Cloud (Firestore)
 - App ini pakai Firestore project `quran-reportweb` sebagai **mirror /
   cloud backup** dari data lokal (Hive) — bukan sumber utama. Guru
-  pembimbing sign-in **anonim** ke Firebase Auth (`isGuruApp()` di
-  `firestore.rules`) supaya bisa nulis ke Firestore tanpa perlu akun
-  email/password terpisah dari login lokal.
+  sign-in ke Firebase Auth lewat Google Sign-In (bukan anonim lagi);
+  aturan `isGuruApp()`/`isAdmin()` di `firestore.rules` harus cocok
+  dengan cara login ini.
+- Pembagian tugas di data layer: `StorageService` = penyimpanan lokal
+  (Hive) + antrian *pending sync*; `RecordsRemoteSource` = satu-satunya
+  kode yang bicara ke Firestore untuk laporan & folder (mirror, backup,
+  restore). Data selalu ditampilkan dari cache lokal dulu, sinkron ke
+  cloud berjalan di belakang.
 - Perubahan (buat/edit/hapus laporan & folder) otomatis di-mirror ke
-  Firestore setiap kali terjadi (`StorageService._mirrorToFirestore`,
-  dkk.) — tidak perlu aksi manual buat data yang dibuat SETELAH fitur ini
+  Firestore setiap kali terjadi (`StorageService` → `RecordsRemoteSource`)
+  — tidak perlu aksi manual buat data yang dibuat SETELAH fitur ini
   aktif.
 - **Settings → Backup ke Cloud**: dorong ULANG *semua* laporan & folder
   lokal ke Firestore sekaligus (batch write). Dipakai terutama buat data
@@ -165,7 +208,22 @@ firebase deploy --only firestore:rules --project quran-reportweb
 - Tema Terang / Gelap / Ikuti Sistem (tersimpan otomatis).
 - Halaman Notifikasi — menampilkan Catatan Orang Tua yang masuk dari
   Portal Ortu (lihat bagian Integrasi di atas).
-- Halaman Pengaturan & Tentang Aplikasi.
+- Halaman Pengaturan (termasuk Kelola Guru/Murid/Data) & Tentang Aplikasi.
+
+### Notifikasi lokal
+
+Semua notifikasi memakai `flutter_local_notifications` (bukan FCM) dan
+hanya aktif di Android; di Web tidak dipakai.
+
+- **Balasan Orang Tua** (`ParentReplyNotificationService`) — dipicu stream
+  Firestore `ParentNotesProvider`, jadi hanya aktif selama proses app
+  hidup. Mengetuknya membuka halaman Notifikasi.
+- **Unduhan selesai** (`DownloadNotificationService`) — muncul setelah
+  Simpan hasil ekspor; mengetuknya membuka file hasil unduhan.
+- Plugin hanya punya satu callback tap, jadi keduanya dipasang lewat
+  `LocalNotificationsHub` (inisialisasi sekali, tap diteruskan ke service
+  pemilik notifikasi lewat payload). Service data tidak mengenal
+  navigator: rute halaman Notifikasi dipasang dari `main.dart`.
 
 ## Engine baris — dual-schema
 
@@ -231,7 +289,47 @@ bukan lewat `ownerId` (field itu tetap ada untuk keperluan audit/masa
 depan). Aturan yang sama diterapkan ulang di sisi server lewat
 `firestore.rules` (`isGuruApp()`, `isAdmin()`) — jadi bukan cuma
 penyaringan tampilan client, cloud backup/restore juga tunduk aturan yang
-sama (lihat `StorageService.restoreFromFirestore`).
+sama (lihat `StorageService.restoreFromFirestore`, query per pasangan
+kelas+halaqoh ada di `RecordsRemoteSource.fetchRecords`).
+
+## Arsitektur
+
+Sederhana, tanpa lapisan tambahan yang tidak perlu:
+
+```
+core  ←  data  ←  presentation        (providers = penghubung state
+                                        presentation ke data)
+```
+
+| Lapisan | Pertanyaan yang dijawab | Lokasi |
+|---|---|---|
+| UI | Apa yang tampil? | `presentation/screens` (halaman penuh), `presentation/sheets` (bottom sheet), `presentation/widgets` (komponen reusable) |
+| State | Apa keadaan app sekarang? (data, loading, filter, error) | `providers/` |
+| Business logic | Bagaimana operasi/hitungannya? | `data/services/` (mis. `RecordsRecapService`, `ExportRows`) |
+| Data access | Dari mana data diambil/disimpan? | `data/repositories/`, `StorageService` (Hive), `RecordsRemoteSource` (Firestore) |
+| Model | Bentuk datanya? | `data/models/` |
+| Global | Tema, hak akses, util umum | `core/` |
+
+Aturan dependensi:
+
+- `data/` **tidak** mengimpor `presentation/`, `providers/`, atau
+  `app.dart`, dan tidak memakai `BuildContext`/widget Flutter.
+- Firebase (Firestore/Auth/Google Sign-In) hanya diakses dari `data/`
+  (`FirebaseAuthService`, `RecordsRemoteSource`, repository/service lain)
+  — pengecualian hanya bootstrap di `main.dart`. Widget tidak pernah
+  query Firestore langsung.
+- Cache (Hive) ada di data layer; provider dan UI tidak perlu tahu data
+  berasal dari cache atau cloud. Alurnya: **cache → tampilkan →
+  refresh di belakang**.
+- Provider hanya memegang state dan mengoordinasi; hitungan berat
+  (rekap bulanan/pekanan, grouping, ringkasan) ada di service murni
+  yang menerima data sebagai input.
+- `AuthProvider` tidak menyentuh Firebase; semuanya lewat
+  `FirebaseAuthService`.
+
+Konvensi kode: komentar ringkas (maks. 3 baris per blok), import terurut
+(`directives_ordering`), widget yang sudah punya satu tanggung jawab tidak
+dipecah lagi hanya demi jumlah file.
 
 ## Struktur
 
@@ -241,37 +339,48 @@ lib/
   main.dart                # bootstrap: init Firebase/storage/services/providers
   firebase_options.dart    # config Firebase per platform (generated, JANGAN edit manual)
   core/
-    access/                 # AccessScope — aturan hak akses admin/guru + Mode Admin
+    access/                 # AccessScope (hak akses admin/guru + Mode Admin),
+                             # ScopeViolationException
     theme/                  # AppTheme, AppColors
-    utils/                  # DocxBuilder manual, WeekUtils, text utils
+    utils/                  # DocxBuilder manual, WeekUtils, text utils, config
   data/
     local_seed/              # data seed lokal (akun/sekolah awal)
-    models/                  # SantriRecord, Folder, UserAccount, School,
-                              # Student, KelasHalaqoh, SantriMonthlyRecap, enums
-    repositories/            # Auth/School/Student repository (abstraksi,
-                              # implementasi Local* siap diganti backend)
-    services/                 # QuranEngineService, StorageService (+ mirror
-                              # & restore Firestore), AppPrefsService,
-                              # AuthHashService, ProfilePhotoService,
-                              # ExportService, DownloadNotificationService
-      platform_file/          # abstraksi save/share file lintas platform
-                              # (_io / _web / _stub conditional import)
-  providers/                 # Auth (+ Mode Admin), Records, Folders,
-                              # Students, ParentNotes, Theme
+    models/                  # SantriRecord, Folder, UserAccount, School, Student,
+                              # KelasHalaqoh, SantriMonthlyRecap, ParentNote, enums,
+                              # records_view_models (SantriCardInfo, MonthWeekSummary, dst.)
+    repositories/            # Auth/School/Student repository (abstraksi; Api* =
+                              # Firestore + cache Hive, Local* = seed lokal)
+    services/
+      storage_service.dart          # laporan & folder di Hive + antrian pending sync
+      records_remote_source.dart    # Firestore untuk laporan & folder (mirror/backup/restore)
+      records_recap_service.dart    # rekap/ringkasan/grouping (murni, per snapshot data)
+      export_service.dart           # pintu tunggal ekspor + buka/bagikan/simpan file
+      export/                       # ExportRows, ExportPdf, ExportExcel, ExportWord
+      firebase_auth_service.dart    # Firebase Auth + Google Sign-In
+      local_notifications_hub.dart  # satu callback tap untuk semua notifikasi lokal
+      download_notification_service.dart, parent_reply_notification_service.dart
+      quran_engine_service.dart, app_prefs_service.dart, auth_hash_service.dart,
+      profile_photo_service.dart, parent_note_service.dart,
+      weekly_recap_deploy_service.dart, school_data_excel_service.dart,
+      firebase_bootstrap_status.dart
+      platform_file/                # abstraksi save/share file lintas platform
+                                     # (_io / _web / _stub conditional import)
+  providers/                 # Auth (+ Mode Admin), Records, Folders, Students,
+                              # ParentNotes, Theme
   presentation/
-    screens/
+    screens/                 # halaman penuh
       auth/                   # splash, onboarding, login
       home/                   # main_shell (bottom nav 4 tab), beranda
-      laporan/                # tab Laporan, buat laporan, pencarian
-      folder/                  # detail folder, form folder, pindah folder,
-                                 # laporan tanpa folder (orphaned)
-      statistik/                # tab Statistik, daftar santri, kehadiran,
-                                 # rekap bulanan (+ generate & per pekan)
-      record_form/              # sheet input/edit laporan
-      export/                    # sheet pilihan format ekspor
+      laporan/                # tab Laporan, pencarian, open_week_action
+      folder/                 # detail folder, laporan tanpa folder (orphaned)
+      statistik/              # tab Statistik, daftar santri, kehadiran, rekap
+                               # bulanan/pekanan (+ generate)
       profile/ settings/ about/ notifications/
-    widgets/                    # record_card, santri_report_card,
-                                 # folder_card, speed_dial_fab, dst.
+    sheets/                  # bottom sheet
+      export/ filter/ folder/ laporan/ record/
+    widgets/                 # komponen reusable
+      common/ forms/ home/ statistik/ export/ record/
+      record_card, santri_report_card, folder_card, speed_dial_fab, dst.
 assets/data/*.json            # dataset baris mushaf (legacy + skema baru)
 web/                           # entrypoint Flutter Web (index.html, manifest.json)
 firebase.json                 # config Hosting (+ cache headers) & Firestore
@@ -306,8 +415,8 @@ node fix_username_auth.js <UID> <username_baru>
 ## Ekspor Word (.docx)
 
 File Word dibuat manual (OOXML minimal) lewat `DocxBuilder`
-(`lib/core/utils/docx_builder.dart`) — tanpa dependency berat/template,
-cukup judul + tabel data. Kalau butuh format Word lebih kompleks (logo,
+(`lib/core/utils/docx_builder.dart`, dipakai `ExportWord`) — tanpa
+dependency berat/template, cukup judul + tabel data. Kalau butuh format Word lebih kompleks (logo,
 header/footer halaman, dsb), builder ini bisa dikembangkan lagi.
 
 ## Setup Android (signing release)
