@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/parent_note.dart';
 import '../../../providers/parent_notes_provider.dart';
-import '../../widgets/misc_widgets.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/pushed_page_header.dart';
 
 /// Halaman Notifikasi. Menampilkan Catatan dari Orang Tua yang dikirim
 /// lewat Portal Ortu secara live lewat [ParentNotesProvider], dan

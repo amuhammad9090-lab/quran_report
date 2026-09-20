@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -8,11 +9,13 @@ import '../../../providers/parent_notes_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/avatar_image_provider.dart';
-import '../../widgets/misc_widgets.dart';
+import '../../widgets/common/pushed_page_header.dart';
+import '../../widgets/common/section_label.dart';
+import '../../widgets/common/soft_icon_box.dart';
+import '../../widgets/common/stat_pill.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
 import 'edit_profile_screen.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Profile — identitas user yang login + statistik ringkas SCOPED ke
 /// assignment-nya (bukan angka global), sesuai spesifikasi bagian L/N.

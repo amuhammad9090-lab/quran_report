@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/week_utils.dart';
 import '../../../providers/folders_provider.dart';
 import '../../../providers/records_provider.dart';
-import '../../widgets/filter_sheet.dart';
-import '../../widgets/misc_widgets.dart';
+import '../../sheets/filter/filter_sheet.dart';
+import '../../sheets/folder/move_to_folder_sheet.dart';
+import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/pushed_page_header.dart';
+import '../../widgets/common/section_label.dart';
 import '../../widgets/santri_report_card.dart';
-import '../folder/move_to_folder_sheet.dart';
 import 'open_week_action.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Halaman "Hasil Pencarian" — beda dari list utama di tab Laporan yang
 /// cuma nyari kartu santri yang BELUM masuk folder mana pun, halaman ini

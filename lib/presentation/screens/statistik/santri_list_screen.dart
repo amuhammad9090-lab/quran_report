@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/records_provider.dart';
-import '../../widgets/misc_widgets.dart';
+import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/pushed_page_header.dart';
 import 'santri_detail_screen.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Daftar semua santri unik yang sudah tercatat di laporan — cukup nama,
 /// kelas, halaqoh (bukan detail laporan seperti tab Laporan). Tap satu

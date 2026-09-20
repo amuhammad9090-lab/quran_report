@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/folders_provider.dart';
-import '../../widgets/misc_widgets.dart';
+import '../../widgets/common/soft_icon_box.dart';
 import 'folder_form_sheet.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Bottom sheet pilih folder tujuan.
 Future<String?> showFolderPickerSheet(

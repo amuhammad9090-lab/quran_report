@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
-import '../../../providers/records_provider.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
-import '../../widgets/misc_widgets.dart';
-import 'santri_list_screen.dart';
+import '../../../providers/records_provider.dart';
+import '../../widgets/common/section_label.dart';
+import '../../widgets/statistik/distribusi_row.dart';
 import 'kehadiran_screen.dart';
 import 'rekap_bulanan_screen.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'santri_list_screen.dart';
 
 /// Tab "Statistik" — angka ringkas + pintu masuk ke 3 halaman detail:
 /// Daftar Santri, Kehadiran, dan Rekap Bulanan.

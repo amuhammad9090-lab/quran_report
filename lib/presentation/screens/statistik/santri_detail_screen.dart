@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
-import '../../widgets/misc_widgets.dart';
+import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/pushed_page_header.dart';
+import '../../widgets/common/status_icons.dart';
+import '../../widgets/statistik/date_group_card.dart';
+import '../../widgets/statistik/record_summary_row.dart';
+import '../../widgets/statistik/summary_stat_card.dart';
 import '../../widgets/status_badge.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Riwayat lengkap satu santri, dikelompokkan per tanggal dalam card
 /// (senada gaya grouping di Home) — bukan list detail penuh seperti tab

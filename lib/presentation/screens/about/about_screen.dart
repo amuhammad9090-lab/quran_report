@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../data/services/quran_engine_service.dart';
-import '../../widgets/misc_widgets.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../widgets/common/app_icon_mark.dart';
+import '../../widgets/common/pushed_page_header.dart';
+import '../../widgets/common/smpit_logo_badge.dart';
+import '../../widgets/common/soft_icon_box.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});

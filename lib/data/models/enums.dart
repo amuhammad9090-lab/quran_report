@@ -1,6 +1,3 @@
-import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
-
 /// Status capaian santri: Tahsin (belajar baca), Tahfizh (hafalan),
 /// gabungan Tahsin+Tahfizh, atau Muroja'ah/Tasmi' (mengulang hafalan lama).
 enum HafalanStatus {
@@ -14,13 +11,6 @@ enum HafalanStatus {
         HafalanStatus.tahfizh => 'Tahfizh',
         HafalanStatus.tahsinTahfizh => 'Tahsin+Tahfizh',
         HafalanStatus.murojaahTasmi => "Muroja'ah/Tasmi'",
-      };
-
-  IconData get icon => switch (this) {
-        HafalanStatus.tahsin => LucideIcons.bookOpen,
-        HafalanStatus.tahfizh => LucideIcons.bookOpen,
-        HafalanStatus.tahsinTahfizh => LucideIcons.library,
-        HafalanStatus.murojaahTasmi => LucideIcons.repeat,
       };
 
   // <-- BARU: dipakai SantriMonthlyRecap.keteranganSummaryText buat nandain
@@ -86,18 +76,6 @@ enum Keterangan {
         Keterangan.tidakSetoran => 'Tdk Setoran',
         Keterangan.tidakTahsin => 'Tdk Tahsin',
         Keterangan.tidakMurojaah => 'Tdk Murojaah',
-      };
-
-  IconData get icon => switch (this) {
-        Keterangan.hadir => LucideIcons.circleCheck,
-        Keterangan.izinSakit => LucideIcons.hospital,
-        Keterangan.izin => LucideIcons.fileText,
-        Keterangan.izinLomba => LucideIcons.trophy,
-        Keterangan.izinPelatihan => LucideIcons.graduationCap,
-        Keterangan.alpa => LucideIcons.circleX,
-        Keterangan.tidakSetoran => Icons.edit_off_rounded,
-        Keterangan.tidakTahsin => LucideIcons.bookOpen,
-        Keterangan.tidakMurojaah => LucideIcons.rotateCcw,
       };
 
   /// Tiga keterangan "sanksi" (santri HADIR tapi nggak setor/tahsin/

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -7,7 +8,6 @@ import '../../../data/services/app_prefs_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../home/main_shell.dart';
 import 'login_screen.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class _OnboardingPage {
   final IconData icon;

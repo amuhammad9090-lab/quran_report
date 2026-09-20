@@ -9,11 +9,12 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'data/services/app_prefs_service.dart';
 import 'data/services/download_notification_service.dart';
-import 'data/services/parent_reply_notification_service.dart';
 import 'data/services/firebase_bootstrap_status.dart';
+import 'data/services/parent_reply_notification_service.dart';
 import 'data/services/quran_engine_service.dart';
 import 'data/services/storage_service.dart';
 import 'firebase_options.dart';
+import 'presentation/screens/notifications/notifications_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/folders_provider.dart';
 import 'providers/parent_notes_provider.dart';
@@ -58,6 +59,13 @@ void main() async {
   await AppPrefsService.instance.init();
   await QuranEngineService.instance.load();
   await DownloadNotificationService.instance.init();
+  // Navigasi tap notifikasi: service data tidak mengenal UI, jadi rutenya dipasang di sini.
+  ParentReplyNotificationService.instance.onOpenNotifications = () {
+    final nav = QuranReportApp.navigatorKey.currentState;
+    if (nav == null) return false;
+    nav.push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+    return true;
+  };
   await ParentReplyNotificationService.instance.init();
 
   final themeProvider = ThemeProvider();

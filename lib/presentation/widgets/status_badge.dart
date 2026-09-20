@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../data/models/enums.dart';
+
 import '../../core/theme/app_colors.dart';
+import '../../data/models/enums.dart';
+import 'common/status_icons.dart';
 
 class StatusBadge extends StatelessWidget {
   final HafalanStatus status;

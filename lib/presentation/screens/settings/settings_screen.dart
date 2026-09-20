@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
-import '../../../providers/theme_provider.dart';
-import '../../../providers/auth_provider.dart'; // <-- BARU
-import '../../../providers/records_provider.dart';
-import '../../../providers/folders_provider.dart'; // <-- BARU
-import '../../../data/services/storage_service.dart';
 import '../../../data/services/app_prefs_service.dart'; // <-- BARU
 import '../../../data/services/firebase_bootstrap_status.dart';
-import '../../widgets/misc_widgets.dart';
+import '../../../data/services/storage_service.dart';
+import '../../../providers/auth_provider.dart'; // <-- BARU
+import '../../../providers/folders_provider.dart'; // <-- BARU
+import '../../../providers/records_provider.dart';
+import '../../../providers/theme_provider.dart';
+import '../../widgets/common/section_label.dart';
+import '../../widgets/common/soft_icon_box.dart';
 import '../about/about_screen.dart';
 import 'kelola_data_screen.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -352,7 +353,7 @@ class SettingsScreen extends StatelessWidget {
 }
 
 /// Kotak ikon bertinta lembut untuk leading icon list tile pengaturan —
-/// pakai [SoftIconBox] bersama dari misc_widgets.dart.
+/// pakai [SoftIconBox] bersama dari widgets/common/soft_icon_box.dart.
 
 class _SectionCard extends StatelessWidget {
   final String title;

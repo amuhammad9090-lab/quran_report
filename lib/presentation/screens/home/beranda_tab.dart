@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/week_utils.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/week_utils.dart';
 import '../../../data/models/enums.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_notes_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
+import '../../sheets/export/export_sheet.dart';
+import '../../sheets/filter/filter_sheet.dart';
+import '../../sheets/laporan/buat_laporan_sheet.dart';
 import '../../widgets/avatar_image_provider.dart';
-import '../../widgets/misc_widgets.dart';
-import '../../widgets/filter_sheet.dart';
-import '../profile/profile_screen.dart';
-import '../laporan/buat_laporan_sheet.dart';
-import '../export/export_sheet.dart';
+import '../../widgets/home/category_tile.dart';
+import '../../widgets/home/hero_action_item.dart';
+import '../../widgets/home/section_card.dart';
+import '../../widgets/home/stat_item.dart';
+import '../../widgets/home/v_divider.dart';
+import '../../widgets/home/welcome_hero_card.dart';
 import '../notifications/notifications_screen.dart';
+import '../profile/profile_screen.dart';
 import '../statistik/rekap_bulanan_screen.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Tab "Home" — dashboard ringkasan. Daftar laporan penuh ada di tab
 /// "Laporan"; tile kategori di sini cuma set filter lalu pindah ke sana.

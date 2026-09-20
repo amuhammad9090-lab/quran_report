@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/utils/week_utils.dart';
 import '../../providers/records_provider.dart';
-import 'misc_widgets.dart' show EditedBadge;
+import 'common/edited_badge.dart';
 import 'status_badge.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Kartu "1 santri = 1 card laporan utama" di tab Laporan. Nunjukin
 /// identitas, progres pekan BULAN BERJALAN, progress bar, dan ringkasan

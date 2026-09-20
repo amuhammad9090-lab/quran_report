@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-
-import '../../providers/records_provider.dart';
-import 'status_badge.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+import '../../data/models/records_view_models.dart';
+import 'status_badge.dart';
 
 /// Kartu rekap 1 kelompok Kelas+Halaqoh dalam suatu periode (pekan/bulan) —
 /// dipakai di Rekap Bulanan (termasuk drill-down per Pekan), section "Rekap

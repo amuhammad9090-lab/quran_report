@@ -1,7 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/santri_monthly_recap.dart';
 import '../../../data/models/santri_record.dart';
@@ -9,9 +10,8 @@ import '../../../data/services/download_notification_service.dart';
 import '../../../data/services/export_service.dart';
 import '../../../data/services/platform_file/exported_file.dart';
 import '../../../providers/records_provider.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../widgets/misc_widgets.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../widgets/common/inline_message.dart';
+import '../../widgets/export/export_option_tile.dart';
 
 Future<void> showExportSheet(
     BuildContext context, {
@@ -74,28 +74,11 @@ class ExportSheet extends StatefulWidget {
   State<ExportSheet> createState() => _ExportSheetState();
 }
 
-class _ExportSheetState extends State<ExportSheet> {
+// Pesan singkat memakai InlineMessageMixin (bukan SnackBar, yang tergambar di balik sheet).
+class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<ExportSheet> {
   bool _useFilteredOnly = true;
   bool _loading = false;
   ExportFormat? _loadingFormat;
-
-  // Fix snackbar "membelakangi" (v1)
-  String? _inlineMessage;
-  Timer? _inlineMessageTimer;
-
-  void _showSnack(String message) {
-    _inlineMessageTimer?.cancel();
-    setState(() => _inlineMessage = message);
-    _inlineMessageTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _inlineMessage = null);
-    });
-  }
-
-  @override
-  void dispose() {
-    _inlineMessageTimer?.cancel();
-    super.dispose();
-  }
 
   // Diisi begitu ekspor sukses — sheet pindah ke tampilan "selesai" dengan
   // tombol Bagikan & Simpan ke Perangkat.
@@ -120,7 +103,7 @@ class _ExportSheetState extends State<ExportSheet> {
     if (groupedMonthly != null) {
       final totalSantri = groupedMonthly.fold<int>(0, (sum, s) => sum + s.items.length);
       if (totalSantri == 0) {
-        _showSnack('Tidak ada data untuk diekspor.');
+        showInlineMessage('Tidak ada data untuk diekspor.');
         return;
       }
       await _runExport(format, judulDefault: 'Rekap Bulanan Al Quran', build: (judul) {
@@ -154,7 +137,7 @@ class _ExportSheetState extends State<ExportSheet> {
     if (grouped != null) {
       final total = grouped.fold<int>(0, (sum, s) => sum + s.items.length);
       if (total == 0) {
-        _showSnack('Tidak ada data untuk diekspor.');
+        showInlineMessage('Tidak ada data untuk diekspor.');
         return;
       }
       await _runExport(format, judulDefault: 'Laporan Pekanan Al Quran', build: (judul) {
@@ -193,7 +176,7 @@ class _ExportSheetState extends State<ExportSheet> {
         widget.fixedRecords ?? (_useFilteredOnly ? provider.filtered : provider.all);
 
     if (records.isEmpty) {
-      _showSnack('Tidak ada data untuk diekspor.');
+      showInlineMessage('Tidak ada data untuk diekspor.');
       return;
     }
 
@@ -260,7 +243,7 @@ class _ExportSheetState extends State<ExportSheet> {
       });
     } catch (e) {
       if (mounted) {
-        _showSnack('Gagal ekspor: $e');
+        showInlineMessage('Gagal ekspor: $e');
       }
     } finally {
       if (mounted) {
@@ -293,11 +276,11 @@ class _ExportSheetState extends State<ExportSheet> {
         file: _exportedFile!,
       );
       if (mounted) {
-        _showSnack('Tersimpan ke Download.');
+        showInlineMessage('Tersimpan ke Download.');
       }
     } catch (e) {
       if (mounted) {
-        _showSnack('Gagal menyimpan: $e');
+        showInlineMessage('Gagal menyimpan: $e');
       }
     }
   }
@@ -337,8 +320,8 @@ class _ExportSheetState extends State<ExportSheet> {
                 ),
               ),
             ),
-            if (_inlineMessage != null) ...[
-              _InlineMessageBanner(message: _inlineMessage!),
+            if (inlineMessage != null) ...[
+              InlineMessageBanner(message: inlineMessage!),
               const SizedBox(height: 12),
             ],
               if (_exportedFile == null) ...[
@@ -471,36 +454,5 @@ class _ExportSheetState extends State<ExportSheet> {
         ),
         ),
       );
-  }
-}
-
-/// Banner pesan singkat (pengganti SnackBar) yang jadi BAGIAN dari layout
-/// [ExportSheet] sendiri -- lihat catatan di [_ExportSheetState._showSnack]
-/// kenapa SnackBar/ScaffoldMessenger dihindari di sheet ini.
-class _InlineMessageBanner extends StatelessWidget {
-  final String message;
-  const _InlineMessageBanner({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(LucideIcons.info, size: 17, color: cs.primary),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Text(message, style: const TextStyle(fontSize: 12.5)),
-          ),
-        ],
-      ),
-    );
   }
 }

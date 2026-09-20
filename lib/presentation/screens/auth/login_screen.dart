@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_notes_provider.dart';
 import '../../../providers/records_provider.dart';
-import '../../widgets/misc_widgets.dart';
+import '../../widgets/common/app_icon_mark.dart';
+import '../../widgets/common/smpit_logo_badge.dart';
 import '../home/main_shell.dart';
 
 /// Login — SATU-SATUNYA cara masuk sekarang adalah "Masuk dengan Google"
@@ -87,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 36),
                       // <-- BERUBAH: warna tombol disamain sama gradient
-                      // WelcomeHeroCard di Beranda (lihat misc_widgets.dart)
+                      // WelcomeHeroCard di Beranda (lihat widgets/home/welcome_hero_card.dart)
                       // -- SENGAJA pakai warna fixed yang sama persis (bukan
                       // dari Theme/ColorScheme), soalnya hero itu sendiri
                       // juga fixed dark-green baik di light maupun dark mode

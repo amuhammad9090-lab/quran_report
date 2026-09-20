@@ -3,8 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
-import 'providers/theme_provider.dart';
 import 'presentation/screens/auth/splash_screen.dart';
+import 'providers/theme_provider.dart';
 
 class QuranReportApp extends StatelessWidget {
   const QuranReportApp({super.key});

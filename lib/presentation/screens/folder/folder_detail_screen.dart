@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/folder.dart';
 import '../../../providers/folders_provider.dart';
 import '../../../providers/records_provider.dart';
-import '../../widgets/misc_widgets.dart';
+import '../../sheets/folder/add_recent_records_sheet.dart';
+import '../../sheets/folder/folder_form_sheet.dart';
+import '../../sheets/laporan/buat_laporan_sheet.dart';
+import '../../widgets/common/app_snackbar.dart';
+import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/pushed_page_header.dart';
+import '../../widgets/common/selection_action_bar.dart';
 import '../../widgets/santri_report_card.dart';
-import '../laporan/buat_laporan_sheet.dart';
 import '../laporan/open_week_action.dart';
-import 'add_recent_records_sheet.dart';
-import 'folder_form_sheet.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Halaman isi satu folder — daftar KARTU SANTRI di dalamnya.
 class FolderDetailScreen extends StatefulWidget {

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
+import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/pushed_page_header.dart';
 import '../../widgets/export_style_records_table.dart';
-import '../../widgets/misc_widgets.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Detail laporan SATU HARI (mis. Senin) dalam sebuah Pekan — dibuka dari
 /// tap salah satu baris hari di dalam kartu "Pekan N" yang lagi di-expand
