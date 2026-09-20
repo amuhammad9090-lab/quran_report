@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../models/parent_note.dart';
 import 'app_prefs_service.dart';
+import 'local_notifications_hub.dart';
 
 /// Notifikasi lokal "Balasan Orang Tua", dipicu stream [ParentNotesProvider] (bukan FCM/Cloud
 /// Functions, jadi hanya aktif selama proses app hidup). Setup: [init] sekali sebelum `runApp()`
@@ -24,7 +25,7 @@ class ParentReplyNotificationService {
   /// Mengembalikan true kalau berhasil membuka, false kalau navigator belum siap/app ditutup.
   bool Function()? onOpenNotifications;
 
-  final _plugin = FlutterLocalNotificationsPlugin();
+  final _hub = LocalNotificationsHub.instance;
   bool _initialized = false;
 
   // Id notifikasi deterministik dari hash id ParentNote (bukan counter), jadi event duplikat
@@ -33,37 +34,18 @@ class ParentReplyNotificationService {
 
   Future<void> init() async {
     if (kIsWeb || _initialized) return;
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidInit);
-    await _plugin.initialize(
-      initSettings,
-      // Tap selagi app HIDUP (foreground/background, proses belum
-      // di-kill) -- payload (noteId) diambil dari `response.payload`.
-      onDidReceiveNotificationResponse: (response) => _handleTap(response.payload),
-    );
-    // Android 13+ butuh izin runtime -- sudah pernah diminta juga oleh
-    // DownloadNotificationService.init(), memanggil ini lagi aman
-    // (no-op kalau sudah granted/pernah ditolak).
-    await _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+    // Tap selagi app hidup (payload = id catatan); tap notifikasi lain (mis. unduhan) tidak sampai sini.
+    _hub.onParentReplyTap = (noteId) {
+      _navigateAfterAppReady(noteId, coldStart: false);
+    };
+    await _hub.ensureInitialized();
     _initialized = true;
 
-    // TERMINATED STATE (B12): app nyala dari nol karena tap notifikasi. Navigator/provider tree
-    // belum siap (sebelum runApp()), jadi navigasi ditunda lewat [_navigateAfterAppReady]
-    // yang menunggu SplashScreen selesai redirect.
-    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
-    if (launchDetails?.didNotificationLaunchApp == true) {
-      final payload = launchDetails?.notificationResponse?.payload;
-      if (payload != null) _navigateAfterAppReady(payload, coldStart: true);
-    }
-  }
-
-  void _handleTap(String? payload) {
-    if (payload == null) return;
-    // App masih hidup (bukan cold start) -- Navigator sudah pasti siap
-    // (splash sudah lewat lama), langsung navigasi tanpa delay.
-    _navigateAfterAppReady(payload, coldStart: false);
+    // App dinyalakan dari nol oleh tap notifikasi balasan: navigator/provider belum siap, jadi
+    // navigasi ditunda lewat [_navigateAfterAppReady] yang menunggu SplashScreen selesai redirect.
+    final launch = _hub.launchResponse;
+    final noteId = launch == null ? null : LocalNotificationsHub.parentReplyNoteId(launch);
+    if (noteId != null) _navigateAfterAppReady(noteId, coldStart: true);
   }
 
   /// Buka halaman Notifikasi lewat [onOpenNotifications]. Saat [coldStart] menunggu 3400ms
@@ -107,7 +89,7 @@ class ParentReplyNotificationService {
       // di-expand (B4/B10: isi pesan tampil langsung).
       styleInformation: BigTextStyleInformation(preview),
     );
-    await _plugin.show(
+    await _hub.plugin.show(
       _notifIdFor(note.id),
       'Balasan Orang Tua ${note.namaAnak}',
       preview,
