@@ -167,10 +167,8 @@ class RecordsRecapService {
   /// Semua laporan, terbaru duluan — dipakai halaman Kehadiran (di-cache).
   List<SantriRecord>? _allSortedByDateDesc;
   List<SantriRecord> get allSortedByDateDesc {
-    if (_allSortedByDateDesc == null) {
-      _allSortedByDateDesc = List<SantriRecord>.from(_records)
+    _allSortedByDateDesc ??= List<SantriRecord>.from(_records)
         ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
-    }
     return _allSortedByDateDesc!;
   }
 
