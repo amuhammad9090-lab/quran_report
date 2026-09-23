@@ -21,6 +21,16 @@
   <meta name="description" content="Laporan Capaian Hafalan & Tahsin Al-Qur'an untuk Guru">
   <meta name="theme-color" content="#36895E">
 
+  <!--
+    BUG FIX: sebelumnya gak ada meta viewport sama sekali. Di iPhone
+    (Safari & Chrome iOS, dua-duanya WebKit) ini bikin browser pake native
+    page-scroll/rubber-band-nya sendiri di atas canvas Flutter, yang
+    rebutan sama gesture Flutter (mis. RefreshIndicator) buat elemen yang
+    letaknya persis di scroll-offset 0 -- ini akar penyebab tap yang
+    "ketelan" (mis. banner folder-orphan di tab Laporan gak bisa di-tap).
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,6 +43,22 @@
 
   <title>Quran Report - Guru</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    BUG FIX (lanjutan viewport di atas): kunci body biar gak ikutan
+    native-scroll punya browser -- Flutter sendiri yang urus scrolling di
+    dalam canvas-nya. Tanpa ini, overscroll/bounce bawaan WebKit di iPhone
+    tetap bisa mencuri gesture tap di elemen paling atas layar.
+  -->
+  <style>
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: touch;
+      touch-action: manipulation;
+    }
+  </style>
 
   <!--
     <-- BARU (migrasi auth: Anonymous -> Google Sign-In). WAJIB DIISI

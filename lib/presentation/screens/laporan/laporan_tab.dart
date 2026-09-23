@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -320,13 +321,19 @@ class _LaporanTabState extends State<LaporanTab> {
       );
     }
 
-    return SafeArea(
-      bottom: false,
-      child: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: provider.load,
-            child: CustomScrollView(
+    // BUG FIX: di web (khususnya PWA di iPhone -- Safari & Chrome iOS
+    // sama-sama pakai engine WebKit), RefreshIndicator taruh gesture
+    // recognizer drag-vertikal persis di scroll offset 0, yaitu tepat di
+    // area kartu/banner pertama di bawah SliverAppBar pinned (mis. banner
+    // "folder-nya hilang"). Ini bentrok sama native rubber-band scroll
+    // punya WebKit di titik yang sama, jadi tap di elemen paling atas
+    // kadang "ditelan" gesture arena-nya dan gak ke-trigger sama sekali.
+    // Di app native (Android/iOS) gak kena karena gak ada native page
+    // scroll yang ikut berebut. Solusinya: pull-to-refresh cuma aktif di
+    // non-web; datanya sendiri sudah auto ke-refresh lewat notifyListeners
+    // provider begitu ada perubahan, jadi fitur ini murni kenyamanan tarik
+    // manual dan aman dimatikan khusus di web.
+    final scrollView = CustomScrollView(
               slivers: [
                 SliverAppBar(
                   pinned: true,
@@ -434,8 +441,18 @@ class _LaporanTabState extends State<LaporanTab> {
                     ),
                   ),
               ],
-            ),
-          ),
+            );
+
+    return SafeArea(
+      bottom: false,
+      child: Stack(
+        children: [
+          kIsWeb
+              ? scrollView
+              : RefreshIndicator(
+                  onRefresh: provider.load,
+                  child: scrollView,
+                ),
           if (_selectionMode)
             Positioned(
               left: 16,
