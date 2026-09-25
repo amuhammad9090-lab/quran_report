@@ -15,12 +15,22 @@ class Student {
   /// ini tetap terbaca (null = sekolah default/tunggal).
   final String? schoolId;
 
+  /// <-- BARU (skema per-guru nested, lihat firestore.rules): accountId guru pemegang
+  /// [kelas]+[halaqoh] santri ini SAAT terakhir field ini ditulis (lihat
+  /// ApiStudentRepository._resolveGuruAccountId) — dipakai Portal Ortu buat tahu harus baca
+  /// `accounts/{accountId}/laporan|weeklyRecaps|parentNotes` yang MANA (lihat rencana
+  /// "denormalisasi guruAccountId" di percakapan restrukturisasi Firestore). Null kalau
+  /// belum pernah di-set (data lama sebelum field ini ada) ATAU kelas+halaqoh-nya belum
+  /// dipegang guru mana pun saat itu di-set.
+  final String? guruAccountId;
+
   const Student({
     required this.id,
     required this.nama,
     required this.kelas,
     required this.halaqoh,
     this.schoolId,
+    this.guruAccountId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -29,6 +39,7 @@ class Student {
         'kelas': kelas,
         'halaqoh': halaqoh,
         'schoolId': schoolId,
+        'guruAccountId': guruAccountId,
       };
 
   factory Student.fromJson(Map<String, dynamic> json) => Student(
@@ -37,5 +48,6 @@ class Student {
         kelas: json['kelas'] as String,
         halaqoh: normalizeHalaqoh(json['halaqoh'] as String),
         schoolId: json['schoolId'] as String?,
+        guruAccountId: json['guruAccountId'] as String?,
       );
 }

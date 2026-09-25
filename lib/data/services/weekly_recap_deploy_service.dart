@@ -13,9 +13,14 @@ import 'export_service.dart';
 /// "Deploy", bukan otomatis) karena guru yang paling tahu kapan rekap
 /// pekan itu "final"/siap dibagikan ke orang tua.
 ///
-/// Disimpan di `schools/{schoolId}/weeklyRecaps/{docId}` — **SATU
-/// DOKUMEN PER SANTRI** (BUKAN 1 dokumen isi array semua santri
-/// sekelas). Ini keputusan desain PENTING soal privasi: kalau 1 dokumen
+/// <-- BERUBAH (skema per-guru nested, lihat firestore.rules): disimpan
+/// di `schools/{schoolId}/accounts/{accountId}/weeklyRecaps/{docId}`
+/// (dulu flat `schools/{schoolId}/weeklyRecaps/{docId}`) — [accountId]
+/// dari [currentGuruAccountId] (app_config.dart, diisi titik transisi
+/// auth yang sama seperti RecordsProvider.updateScope()). Alasan
+/// "1 dokumen per santri" (bukan array) di bawah TETAP SAMA — nesting
+/// per-guru ini soal isolasi ANTAR-GURU, bukan pengganti alasan privasi
+/// antar-ORANG TUA di kelas yang sama itu. Ini keputusan desain PENTING soal privasi: kalau 1 dokumen
 /// isinya array seluruh Kelas+Halaqoh, rules Firestore cuma bisa
 /// membatasi akses baca level "kelas+halaqoh cocok" -- begitu 1 orang
 /// tua boleh baca dokumen itu buat lihat progress anaknya, dia SECARA
@@ -76,6 +81,11 @@ class WeeklyRecapDeployService {
   }) async {
     if (rows.isEmpty) return;
 
+    final accountId = currentGuruAccountId;
+    if (accountId == null) {
+      throw StateError('currentGuruAccountId belum di-set (belum login?)');
+    }
+
     // Batch, bukan loop N kali .set() satu-satu -- 1 round-trip network
     // buat semua santri di grup ini, dan Firestore batch bersifat
     // atomik (semua berhasil atau semua gagal bareng, tidak ada
@@ -85,6 +95,8 @@ class WeeklyRecapDeployService {
     final col = FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
+        .collection('accounts')
+        .doc(accountId)
         .collection('weeklyRecaps');
 
     for (final r in rows) {

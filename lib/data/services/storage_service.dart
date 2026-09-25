@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/access/access_scope.dart';
+import '../../core/utils/app_config.dart';
 import '../models/folder.dart';
 import '../models/santri_record.dart';
 import 'records_remote_source.dart';
@@ -84,6 +85,15 @@ class StorageService {
   Future<void> clearAll() async {
     await _box.clear();
     await _folderBox.clear();
+  }
+
+  /// <-- BARU (skema per-guru nested): dipanggil di titik transisi auth yang SAMA PERSIS
+  /// seperti RecordsProvider.updateScope()/ParentNotesProvider.updateScope() (lihat
+  /// main.dart, login_screen.dart, profile_screen.dart, main_shell.dart) — set/kosongkan
+  /// [currentGuruAccountId] (app_config.dart) supaya [RecordsRemoteSource] tahu subcollection
+  /// `accounts/{accountId}/...` mana yang jadi milik sesi ini.
+  void updateScope(AccessScope? scope) {
+    currentGuruAccountId = scope?.user.id;
   }
 
   // FOLDER
@@ -257,8 +267,8 @@ class StorageService {
   }
 
   // PULIHKAN FOLDER DARI FIRESTORE
-  Future<int> restoreFoldersFromFirestore() async {
-    final docs = await _remote.fetchFolders();
+  Future<int> restoreFoldersFromFirestore({AccessScope? scope}) async {
+    final docs = await _remote.fetchFolders(scope: scope);
 
     var restored = 0;
 

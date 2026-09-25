@@ -291,7 +291,7 @@ class SettingsScreen extends StatelessWidget {
     try {
       // <-- BERUBAH: folder dipulihkan DULUAN sebelum laporan.
       final scope = context.read<AuthProvider>().scope;
-      await StorageService.instance.restoreFoldersFromFirestore();
+      await StorageService.instance.restoreFoldersFromFirestore(scope: scope);
       final count =
           await StorageService.instance.restoreFromFirestore(scope: scope);
 

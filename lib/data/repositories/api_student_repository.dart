@@ -5,9 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/utils/app_config.dart';
+import '../../core/utils/text_utils.dart';
 import '../local_seed/local_seed_data.dart';
+import '../models/kelas_halaqoh.dart';
 import '../models/student.dart';
+import '../models/user_account.dart';
 import '../services/app_prefs_service.dart';
+import 'api_auth_repository.dart';
 import 'student_repository.dart';
 
 /// Data master murid, sumbernya Firestore (`schools/{id}/students`) —
@@ -278,6 +282,38 @@ class ApiStudentRepository implements StudentRepository {
     await AppPrefsService.instance.setStudentsMetaVersion(version);
   }
 
+  /// <-- BARU (skema per-guru nested, lihat firestore.rules): ambil daftar akun guru
+  /// (buat resolve [Student.guruAccountId]) SEKALI, dipakai lagi buat cocokin BANYAK
+  /// santri (lihat [bulkUpdateKelasHalaqoh]/[migrateSeedToFirestore]) TANPA network round
+  /// -trip per santri. Method ini cuma dipanggil dari layar ADMIN-ONLY (Kelola Murid/Kelola
+  /// Data), jadi [ApiAuthRepository.refresh] otomatis dapat daftar LENGKAP (lihat rules:
+  /// admin boleh baca semua `accounts`). Gagal (offline dll) -> list kosong, guruAccountId
+  /// jadi null buat semua (aman, cuma berarti Portal Ortu belum bisa resolve akun santri itu
+  /// sampai berhasil di-set ulang lain kali -- BUKAN error yang menggagalkan simpan
+  /// kelas/halaqoh-nya sendiri).
+  Future<List<UserAccount>> _accountsForGuruResolution() async {
+    try {
+      return await ApiAuthRepository.instance.refresh();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Cocokkan [kelas]+[halaqoh] ke SATU akun guru dari [accounts] (hasil
+  /// [_accountsForGuruResolution]) lewat [KelasHalaqoh.==] (yang sudah menormalisasi
+  /// [halaqoh], lihat KelasHalaqoh.fromJson) -- BUKAN `arrayContains` Firestore, supaya
+  /// tidak rapuh kalau ejaan halaqoh di assignment guru & di data santri beda kapitalisasi
+  /// /spasi. Fakta "1 halaqoh = 1 guru" (dikonfirmasi user) berarti hasilnya seharusnya
+  /// selalu 0 atau 1 kecocokan -- kalau ternyata >1 (data tidak konsisten), yang dipakai
+  /// yang PERTAMA ketemu, bukan error, supaya penyimpanan kelas/halaqoh tetap jalan.
+  String? _matchGuruAccountId(List<UserAccount> accounts, String kelas, String halaqoh) {
+    final target = KelasHalaqoh(kelas: kelas, halaqoh: normalizeHalaqoh(halaqoh));
+    for (final acc in accounts) {
+      if (acc.assignments.contains(target)) return acc.id;
+    }
+    return null;
+  }
+
   /// Ubah kelas/halaqoh satu santri (mis. naik dari Tahsin ke Tahfizh).
   /// HANYA dipanggil dari layar admin (Kelola Data Murid) — pengecekan
   /// role dilakukan di layer UI, bukan di sini.
@@ -293,12 +329,14 @@ class ApiStudentRepository implements StudentRepository {
     required String kelas,
     required String halaqoh,
   }) async {
+    final accounts = await _accountsForGuruResolution();
     final updated = Student(
       id: student.id,
       nama: student.nama,
       kelas: kelas,
       halaqoh: halaqoh,
       schoolId: student.schoolId,
+      guruAccountId: _matchGuruAccountId(accounts, kelas, halaqoh),
     );
 
     final version = DateTime.now().millisecondsSinceEpoch;
@@ -335,6 +373,19 @@ class ApiStudentRepository implements StudentRepository {
     const batchSize = 400;
     var written = 0;
     final version = DateTime.now().millisecondsSinceEpoch;
+
+    final accounts = await _accountsForGuruResolution();
+    updatedStudents = [
+      for (final s in updatedStudents)
+        Student(
+          id: s.id,
+          nama: s.nama,
+          kelas: s.kelas,
+          halaqoh: s.halaqoh,
+          schoolId: s.schoolId,
+          guruAccountId: _matchGuruAccountId(accounts, s.kelas, s.halaqoh),
+        ),
+    ];
 
     for (var i = 0; i < updatedStudents.length; i += batchSize) {
       final end = (i + batchSize > updatedStudents.length) ? updatedStudents.length : i + batchSize;
@@ -391,7 +442,19 @@ class ApiStudentRepository implements StudentRepository {
     final snapshot = await _collection.get().timeout(const Duration(seconds: 15));
     final existingIds = snapshot.docs.map((d) => d.id).toSet();
 
-    final toWrite = seedStudents.where((s) => !existingIds.contains(s.id)).toList();
+    final accounts = await _accountsForGuruResolution();
+    final toWrite = [
+      for (final s in seedStudents)
+        if (!existingIds.contains(s.id))
+          Student(
+            id: s.id,
+            nama: s.nama,
+            kelas: s.kelas,
+            halaqoh: s.halaqoh,
+            schoolId: s.schoolId,
+            guruAccountId: _matchGuruAccountId(accounts, s.kelas, s.halaqoh),
+          ),
+    ];
 
     const batchSize = 400;
     for (var i = 0; i < toWrite.length; i += batchSize) {

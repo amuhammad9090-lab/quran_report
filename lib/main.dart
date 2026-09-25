@@ -78,6 +78,8 @@ void main() async {
   await recordsProvider.load();
 
   recordsProvider.updateScope(authProvider.scope);
+  StorageService.instance.updateScope(authProvider.scope);
+  AppPrefsService.instance.updateScope(authProvider.scope);
 
   final foldersProvider = FoldersProvider();
   await foldersProvider.load();

@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
+import '../../../data/services/app_prefs_service.dart';
+import '../../../data/services/storage_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_notes_provider.dart'; // <-- BARU
 import '../../../providers/records_provider.dart';
@@ -48,6 +50,8 @@ class ProfileScreen extends StatelessWidget {
     // <-- BARU: sama alasannya — badge notifikasi Catatan Orang Tua
     // jangan sempat kelihatan bawa data guru sebelumnya di layar Login.
     context.read<ParentNotesProvider>().updateScope(null);
+    StorageService.instance.updateScope(null);
+    AppPrefsService.instance.updateScope(null);
     await context.read<AuthProvider>().logout();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -230,6 +234,8 @@ class ProfileScreen extends StatelessWidget {
                           // lain sendiri.
                           context.read<RecordsProvider>().updateScope(auth.scope);
                           context.read<ParentNotesProvider>().updateScope(auth.scope);
+                          StorageService.instance.updateScope(auth.scope);
+                          AppPrefsService.instance.updateScope(auth.scope);
                         },
                       ),
                     ),

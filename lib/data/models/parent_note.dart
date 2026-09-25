@@ -16,6 +16,16 @@ import '../../core/utils/text_utils.dart';
 
 class ParentNote {
   final String id;
+
+  /// <-- BARU (skema per-guru nested, lihat firestore.rules): accountId guru pemilik
+  /// SUBCOLLECTION `accounts/{accountId}/parentNotes` tempat dokumen ini benar-benar
+  /// berada -- diambil dari PATH dokumen Firestore-nya sendiri (lihat
+  /// ParentNoteService._fromDoc), BUKAN dari [guruOwnerId] (yang cuma informasional &
+  /// boleh null/basi). Guru pembimbing (listener [ParentNoteService.watchForPair]) akan
+  /// selalu melihat field ini sama dengan akunnya sendiri; admin (lewat
+  /// `collectionGroup`) butuh field ini buat tahu subcollection mana yang harus ditulis
+  /// balik saat markAsRead/dismiss.
+  final String accountId;
   final String studentId;
   final String namaAnak;
   final String kelas;
@@ -51,6 +61,7 @@ class ParentNote {
 
   const ParentNote({
     required this.id,
+    required this.accountId,
     required this.studentId,
     required this.namaAnak,
     required this.kelas,
@@ -65,10 +76,17 @@ class ParentNote {
   /// [data] adalah hasil `doc.data()` Firestore MENTAH (Timestamp belum
   /// dikonversi) — konversi `createdAt` dilakukan di sini supaya model ini
   /// tidak perlu tahu soal Timestamp di tempat lain yang mungkin memakai
-  /// model ini (mis. widget test tanpa Firestore).
-  factory ParentNote.fromFirestore(String id, Map<String, dynamic> data, DateTime? createdAt) {
+  /// model ini (mis. widget test tanpa Firestore). [accountId] diambil
+  /// dari path dokumen (lihat catatan field-nya di atas), bukan dari [data].
+  factory ParentNote.fromFirestore(
+    String id,
+    Map<String, dynamic> data,
+    DateTime? createdAt, {
+    required String accountId,
+  }) {
     return ParentNote(
       id: id,
+      accountId: accountId,
       studentId: data['studentId'] as String? ?? '',
       namaAnak: data['namaAnak'] as String? ?? '',
       kelas: data['kelas'] as String? ?? '',

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/services/app_prefs_service.dart';
+import '../../../data/services/storage_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_notes_provider.dart';
 import '../../../providers/records_provider.dart';
@@ -77,6 +79,8 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     if (!mounted) return;
     context.read<RecordsProvider>().updateScope(auth.scope);
     context.read<ParentNotesProvider>().updateScope(auth.scope);
+    StorageService.instance.updateScope(auth.scope);
+    AppPrefsService.instance.updateScope(auth.scope);
   }
 
   void _switchTab(int index) {

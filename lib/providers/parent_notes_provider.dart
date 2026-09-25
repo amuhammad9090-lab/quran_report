@@ -31,17 +31,16 @@ import '../data/services/parent_reply_notification_service.dart';
 ///   halaqoh IN [...]` (itu menghasilkan cross-product yang salah, lihat
 ///   catatan [KelasHalaqoh]/[AccessScope]).
 ///
-/// CATATAN KEAMANAN (BAGIAN I audit): filtering Firestore-side di atas
-/// adalah OPTIMASI BACA, BUKAN batas keamanan. Firestore Rules
-/// (`parentNotes.allow read: if isGuruApp()`) saat ini mengizinkan
-/// SEMUA sesi app guru (yang otentikasinya sama-sama anonim, tidak ada
-/// identitas per-guru di level Firestore) membaca seluruh koleksi kalau
-/// mereka mau -- query yang dipersempit di sini cuma mengurangi apa yang
-/// AKTUAL diminta/didengarkan oleh app, bukan mencegah guru lain
-/// (hipotetis) query manual ke seluruh koleksi. Membuat rules yang benar
-/// -benar membedakan "guru mana" akan butuh identitas Firebase Auth
-/// per-guru (bukan anonim bersama) -- itu perubahan arsitektur besar di
-/// luar cakupan audit ini (lihat laporan akhir untuk detail).
+/// <-- BERUBAH (skema per-guru nested, lihat firestore.rules): CATATAN
+/// KEAMANAN lama di sini bilang filtering Firestore-side di atas cuma
+/// optimasi baca, BUKAN batas keamanan (rules lama mengizinkan SEMUA
+/// sesi app guru baca seluruh koleksi kalau mau). Itu sudah TIDAK
+/// BERLAKU LAGI: catatan sekarang nested fisik di bawah
+/// `accounts/{accountId}/parentNotes`, jadi isolasinya STRUKTURAL lewat
+/// Firestore Rules (`isOwnAccount(accountId)`) -- filtering per pasangan
+/// kelas+halaqoh di [_resubscribe] sekarang murni soal "guru yang punya
+/// >1 assignment perlu gabung beberapa listener", bukan lagi soal
+/// keamanan sama sekali.
 class ParentNotesProvider extends ChangeNotifier {
   List<ParentNote> _all = [];
   AccessScope? _scope;
@@ -101,6 +100,7 @@ class ParentNotesProvider extends ChangeNotifier {
 
   ParentNote _withFlags(ParentNote n, {bool? isRead, bool? dismissed}) => ParentNote(
         id: n.id,
+        accountId: n.accountId,
         studentId: n.studentId,
         namaAnak: n.namaAnak,
         kelas: n.kelas,
@@ -120,31 +120,48 @@ class ParentNotesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// <-- BARU (skema per-guru nested): [ParentNoteService] sekarang butuh tahu
+  /// subcollection `accounts/{accountId}/parentNotes` mana yang harus ditulis balik.
+  /// Dicari dari [_all] (bukan cuma [scope.user.id]) supaya benar juga untuk admin,
+  /// yang catatannya bisa datang dari BANYAK guru berbeda lewat `collectionGroup`.
+  String? _accountIdFor(String noteId) {
+    for (final n in _all) {
+      if (n.id == noteId) return n.accountId;
+    }
+    return null;
+  }
+
   /// Sembunyikan satu catatan dari daftar Notifikasi -- update field
   /// `dismissed` di Firestore (lihat dokumentasi lengkap di
   /// [ParentNote.dismissed]), BUKAN delete dokumennya. Dipakai
   /// swipe-to-dismiss di [NotificationsScreen].
   Future<void> dismissNote(String noteId) async {
+    final accountId = _accountIdFor(noteId);
     _optimisticUpdate(noteId, dismissed: true);
-    await ParentNoteService.instance.setDismissed(noteId, true);
+    if (accountId == null) return;
+    await ParentNoteService.instance.setDismissed(accountId, noteId, true);
   }
 
   /// Kebalikan [dismissNote] -- dipakai tombol "Undo" di SnackBar abis
   /// swipe, biar swipe kepencet gak sengaja gampang dibatalkan.
   Future<void> undismissNote(String noteId) async {
+    final accountId = _accountIdFor(noteId);
     _optimisticUpdate(noteId, dismissed: false);
-    await ParentNoteService.instance.setDismissed(noteId, false);
+    if (accountId == null) return;
+    await ParentNoteService.instance.setDismissed(accountId, noteId, false);
   }
 
   /// "Hapus semua" -- sembunyikan seluruh catatan yang lagi tampil
   /// (sudah discope) sekaligus. Dipakai tombol "Hapus semua" di header
   /// [NotificationsScreen].
   Future<void> dismissAll() async {
-    final ids = notes.map((n) => n.id).toList();
-    for (final id in ids) {
-      _optimisticUpdate(id, dismissed: true);
+    final targets = notes.map((n) => (id: n.id, accountId: n.accountId)).toList();
+    for (final t in targets) {
+      _optimisticUpdate(t.id, dismissed: true);
     }
-    await Future.wait(ids.map((id) => ParentNoteService.instance.setDismissed(id, true)));
+    await Future.wait(
+      targets.map((t) => ParentNoteService.instance.setDismissed(t.accountId, t.id, true)),
+    );
   }
 
   /// Dipanggil sekali di startup (main.dart) — mulai dengar stream
@@ -233,7 +250,7 @@ class ParentNotesProvider extends ChangeNotifier {
         _pairNotes[key] = const [];
         _pairFirstSnapshotDone[key] = false;
         _pairSubs[key] = ParentNoteService.instance
-            .watchForPair(assignment.kelas, halaqohVariant)
+            .watchForPair(scope.user.id, assignment.kelas, halaqohVariant)
             .listen(
           (notes) {
             _handleIncomingSnapshot(notes, isFirstSnapshot: !(_pairFirstSnapshotDone[key] ?? false));
@@ -337,7 +354,7 @@ class ParentNotesProvider extends ChangeNotifier {
     // konfirmasi baliknya, list ini akan ketiban ulang otomatis dengan
     // data server (yang seharusnya sama).
     _optimisticUpdate(note.id, isRead: true);
-    await ParentNoteService.instance.markAsRead(note.id);
+    await ParentNoteService.instance.markAsRead(note.accountId, note.id);
   }
 
   @override

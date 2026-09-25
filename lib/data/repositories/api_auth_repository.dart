@@ -10,6 +10,7 @@ import '../models/kelas_halaqoh.dart';
 import '../models/user_account.dart';
 import '../services/app_prefs_service.dart';
 import '../services/auth_hash_service.dart';
+import '../services/firebase_auth_service.dart';
 import 'auth_repository.dart';
 
 /// Data akun guru/admin, sumbernya Firestore (`schools/{id}/accounts`) —
@@ -114,22 +115,65 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   /// Paksa fetch ulang dari Firestore DAN TUNGGU hasilnya (dipanggil
-  /// eksplisit — mis. admin buka layar "Kelola Akun Guru", atau tombol
-  /// refresh manual. BUKAN dipanggil dari [_accounts]/startup).
+  /// eksplisit — mis. admin buka layar "Kelola Akun Guru", tombol
+  /// refresh manual, [findByGoogleEmail] pas cache basi, atau background
+  /// refresh dari [_accounts]/startup).
+  ///
+  /// <-- BERUBAH (skema per-guru nested, lihat firestore.rules): dulu
+  /// method ini SELALU full `_collection.get()` (baca SEMUA akun) --
+  /// rules lama memang mengizinkan itu untuk siapa pun ke-whitelist
+  /// (isGuruApp()). Rules BARU cuma mengizinkan guru biasa baca AKUNNYA
+  /// SENDIRI (`isOwnAccount`); full-collection-get sekarang HANYA
+  /// diizinkan admin. Kalau method ini tetap full-get tanpa berubah,
+  /// SETIAP guru biasa bakal kena permission-denied di sini terus-terusan
+  /// (ke-catch diam-diam di bawah -- tidak crash, tapi berarti cache akun
+  /// guru itu TIDAK PERNAH ke-refresh lagi selama sesi berjalan, termasuk
+  /// assignment kelas/halaqoh baru dari admin -- lihat BUG FIX resume di
+  /// main_shell.dart yang jadi tidak berfungsi lagi kalau ini dibiarkan).
+  ///
+  /// Sekarang: resolve dulu accountId sesi yang sedang login lewat index
+  /// kecil `accountsByEmail` (1 read kecil, tetap boleh dibaca isGuruApp()
+  /// sesuai rules), baca profil akunnya SENDIRI (1 read, `isOwnAccount`
+  /// mengizinkan) -- BARU kalau ternyata dia admin, lanjut full-collection
+  /// get seperti sebelumnya (admin memang butuh daftar lengkap untuk
+  /// Kelola Akun Guru & fitur lintas-guru lain).
   Future<List<UserAccount>> refresh() async {
     final box = await _openBox();
 
     try {
-      final snapshot = await _collection.get().timeout(const Duration(seconds: 10));
-      if (snapshot.docs.isNotEmpty) {
-        final accounts = snapshot.docs.map((d) => UserAccount.fromJson(d.data())).toList();
-        await box.clear();
-        await box.putAll({for (final a in accounts) a.id: jsonEncode(a.toJson())});
-        _memCache = accounts;
-        return accounts;
+      final email = await FirebaseAuthService.instance.restoredEmail();
+      if (email == null) throw StateError('tidak ada sesi Google Sign-In aktif');
+
+      final emailDoc = await _accountsByEmailCollection.doc(email).get().timeout(
+            const Duration(seconds: 10),
+          );
+      final selfId = emailDoc.data()?['accountId'] as String?;
+      if (selfId == null) throw StateError('email belum terdaftar di accountsByEmail');
+
+      final selfSnap = await _collection.doc(selfId).get().timeout(const Duration(seconds: 10));
+      if (!selfSnap.exists) throw StateError('dokumen akun sendiri tidak ditemukan');
+      final selfAccount = UserAccount.fromJson(selfSnap.data()!);
+
+      List<UserAccount> accounts;
+      if (selfAccount.isAdmin) {
+        final snapshot = await _collection.get().timeout(const Duration(seconds: 10));
+        accounts = snapshot.docs.isNotEmpty
+            ? snapshot.docs.map((d) => UserAccount.fromJson(d.data())).toList()
+            : [selfAccount];
+      } else {
+        // Guru biasa: rules cuma izinkan baca akunnya sendiri -- cache
+        // cukup 1 akun ini (lihat catatan kelas di atas soal
+        // findById/updatePasswordHash/updatePhotoPath yang cuma butuh
+        // "exists" untuk userId milik sendiri, bukan lintas akun).
+        accounts = [selfAccount];
       }
+
+      await box.clear();
+      await box.putAll({for (final a in accounts) a.id: jsonEncode(a.toJson())});
+      _memCache = accounts;
+      return accounts;
     } catch (_) {
-      // Offline/timeout -- lanjut ke fallback (login TETAP harus bisa
+      // Offline/timeout/belum ada sesi -- lanjut ke fallback (login TETAP harus bisa
       // jalan offline pakai data terakhir yang berhasil di-fetch).
     }
 

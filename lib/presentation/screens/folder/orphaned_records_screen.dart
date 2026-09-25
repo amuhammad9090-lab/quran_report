@@ -200,7 +200,24 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
   Widget build(BuildContext context) {
     final foldersProvider = context.watch<FoldersProvider>();
     final recordsProvider = context.watch<RecordsProvider>();
-    final validFolderIds = foldersProvider.all.map((f) => f.id).toSet();
+    // BUG FIX: sebelumnya di sini pakai foldersProvider.all TANPA di-scope,
+    // padahal banner yang membuka halaman ini (lihat
+    // _OrphanedRecordsBanner di laporan_tab.dart) menghitung orphanedCount
+    // pakai folder yang SUDAH di-scope (scope.scopeFolders(...) -- mode
+    // guru cuma folder miliknya sendiri, mode admin semua folder). Kalau
+    // sebuah kartu nunjuk ke folder yang ADA di foldersProvider.all tapi
+    // BUKAN milik scope guru yang sedang login, banner tetap menghitungnya
+    // "orphan" (folder-nya di luar scope-nya) tapi halaman ini malah
+    // menganggap folder itu valid (karena dicek ke SEMUA folder, bukan
+    // yang di-scope) -- jadi `cards` di sini selalu kosong, dan logika
+    // auto-pop-kalau-kosong di bawah langsung nutup halaman ini SEKETIKA
+    // setelah dibuka. Efeknya: tap banner kelihatan "diem aja" di SEMUA
+    // platform (Android app, Android web, iPhone web) -- bukan bug
+    // rendering/gesture platform tertentu sama sekali.
+    final scope = recordsProvider.scope;
+    final scopedFolders =
+        scope == null ? foldersProvider.all : scope.scopeFolders(foldersProvider.all);
+    final validFolderIds = scopedFolders.map((f) => f.id).toSet();
     final cards = recordsProvider.orphanedFolderCards(validFolderIds);
 
     if (cards.isEmpty) {

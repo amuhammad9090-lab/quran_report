@@ -1,254 +1,157 @@
-// firestore.rules
+// firestore.rules — DRAFT skema baru (nested per-guru)
 //
-// PERUBAHAN DESAIN #1 (login santri): password diverifikasi lewat
-// FIREBASE AUTH (email sintetis `username@quranreport-parent.app`),
-// BUKAN `passwordHash` yang dibaca dari Firestore — supaya password
-// tidak pernah perlu dibuka ke client sebelum auth (lihat README.md).
+// PERUBAHAN UTAMA vs rules lama:
+// Data operasional guru (laporan/santriRecords, folder, parentNotes,
+// weeklyRecaps, appMeta) dipindah jadi SUBCOLLECTION di bawah
+// `accounts/{accountId}` masing-masing guru, BUKAN koleksi flat lagi.
+// Ini menutup celah keamanan lama: sebelumnya SEMUA guru ke-whitelist
+// (isGuruApp()) otomatis boleh baca+TULIS seluruh data guru LAIN (semua
+// santriRecords/reportFolders/parentNotes/weeklyRecaps sekolah, bukan
+// cuma miliknya sendiri) karena rules lama tidak pernah cek "punya
+// siapa". Sekarang isolasinya struktural lewat path, bukan cuma logic
+// client.
 //
-// PERUBAHAN DESAIN #2 (admin, versi TANPA Cloud Functions/Blaze):
-// admin login lewat akun Firebase Auth SUNGGUHAN (bukan cuma PIN lokal
-// di client) — emailnya dicek langsung di rules lewat
-// `isAdmin()`. Ini menghindari kebutuhan Cloud Functions generasi-2
-// yang WAJIB plan Blaze — semuanya jalan di plan Spark (gratis).
-// Trade-off: daftar admin di-hardcode di rules (perlu re-deploy rules
-// kalau mau tambah/hapus admin) — untuk 1 sekolah dengan 1-2 admin,
-// ini lebih simpel daripada infra Cloud Functions.
+// Konteks 1 halaqoh = SELALU 1 guru (dikonfirmasi user) -- makanya path
+// `accounts/{accountId}/laporan/{recordId}` sudah cukup unik buat 1
+// kelas+halaqoh tanpa perlu skema duplikasi/co-teaching.
 //
-// PERUBAHAN DESAIN #3 (migrasi auth app GURU: Anonymous -> Google
-// Sign-In): app guru (project `quran_report`, BEDA dari Portal Ortu di
-// atas) dulu login ANONIM sebagai bootstrap identity doang -- SEMUA
-// sesi anonim otomatis dianggap `isGuruApp()` (lihat definisi lama di
-// bawah, dihapus), tanpa ada cara membedakan "guru yang mana" atau
-// bahkan "beneran guru atau bukan" (siapa pun yang install app ini
-// otomatis lolos). Sekarang app guru login BENERAN pakai Google
-// Sign-In -- `isGuruApp()` diganti jadi "email Google yang login ini
-// terdaftar di whitelist `accountsByEmail` sekolah ini" (lihat definisi
-// baru & koleksi `accountsByEmail` di bawah). Guru Google yang TIDAK
-// di-whitelist admin (lewat KelolaGuruScreen di app, field
-// UserAccount.googleEmail) DITOLAK di level RULES ini, bukan cuma level
-// UI seperti sebelumnya -- ini LEBIH KETAT dari desain anonim yang lama,
-// bukan lebih longgar.
-//
-// >>> WAJIB DILAKUKAN SEKALI SECARA MANUAL SEBELUM DEPLOY RULES INI <<<
-// Rules baru ini membutuhkan MINIMAL SATU dokumen `accountsByEmail`
-// supaya ADMIN PERTAMA bisa login (chicken-and-egg: admin butuh sudah
-// terdaftar buat bisa memakai fitur "Kelola Akun Guru" yang mendaftarkan
-// guru lain). Buat manual lewat Firebase Console > Firestore Database >
-// koleksi `schools/{schoolId}/accountsByEmail`, buat 1 dokumen dengan:
-//   - Document ID = email Google admin, HURUF KECIL SEMUA
-//     (mis. "budi.admin@gmail.com")
-//   - Field `accountId` (string) = id dokumen admin di collection
-//     `accounts` (mis. "usr_01" -- cek di Firestore/local_seed_data.dart)
-// Setelah itu admin bisa login & pakai app buat mendaftarkan email
-// Google guru-guru lain seperti biasa, tidak perlu sentuh Console lagi.
+// PENTING -- WAJIB SEBELUM DEPLOY:
+// 1. Tetap butuh 1 dokumen `accountsByEmail` manual buat admin pertama
+//    (sama seperti rules lama -- lihat komentar panjang di versi lama).
+// 2. `students/{studentId}` sekarang WAJIB ada field baru `guruAccountId`
+//    (ditulis ApiStudentRepository saat kelas/halaqoh di-set) SEBELUM
+//    Portal Ortu bisa resolve ke subcollection guru yang benar.
+// 3. Refactor Dart-nya (ApiAuthRepository.findByGoogleEmail dkk) HARUS
+//    naik bareng rules ini, jangan deploy terpisah -- kalau rules ini
+//    naik duluan sebelum kode guru diubah, fitur yang masih baca/tulis
+//    ke koleksi flat lama (santriRecords/reportFolders/dst di root
+//    schoolId) bakal permission-denied karena match block-nya sudah
+//    dihapus dari rules ini.
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /schools/{schoolId} {
+
+      // ---------- Helper functions ----------
+
       function myAccount() {
         return get(/databases/$(database)/documents/schools/$(schoolId)/santriAccounts/$(request.auth.uid)).data;
       }
       function myStudent() {
         return get(/databases/$(database)/documents/schools/$(schoolId)/students/$(myAccount().studentId)).data;
       }
-      // GANTI daftar ini kalau mau tambah/hapus admin — harus di-deploy
-      // ulang (`firebase deploy --only firestore:rules`) tiap ubah.
       function isAdmin() {
         return request.auth != null &&
           request.auth.token.email in [
             'admin@quranreport-admin.app'
           ];
       }
-      // <-- BERUBAH (PERUBAHAN DESAIN #3 di atas -- migrasi auth app
-      // guru: Anonymous -> Google Sign-In). DULU: `request.auth != null
-      // && request.auth.token.firebase.sign_in_provider == 'anonymous'`
-      // -- app guru pakai sign-in anonim sebagai bootstrap identity
-      // doang (santri/admin Portal Ortu SELALU login email+password,
-      // jadi provider anonim dulu aman dipakai buat "pasti app guru,
-      // bukan mereka" -- TAPI tidak bisa bedain guru yang mana, atau
-      // bahkan orang asing yang cuma install app ini).
-      //
-      // SEKARANG: app guru login BENERAN pakai Google Sign-In (lihat
-      // AuthProvider.signInWithGoogle di project quran_report) --
-      // isGuruApp() jadi berarti "user ini login pakai Google, DAN
-      // emailnya ada di whitelist `accountsByEmail` sekolah ini" (guru
-      // yang di-daftarkan admin lewat KelolaGuruScreen ->
-      // ApiAuthRepository.updateGoogleEmail). `exists()` di bawah ini
-      // adalah operasi rules-internal (BUKAN request client biasa),
-      // jadi TIDAK butuh `allow read` terpisah di collection
-      // `accountsByEmail` supaya bisa dipakai di sini -- lihat match
-      // block-nya sendiri di bawah untuk akses langsung dari client.
       function isGuruApp() {
         return request.auth != null &&
           request.auth.token.firebase.sign_in_provider == 'google.com' &&
           request.auth.token.email != null &&
           exists(/databases/$(database)/documents/schools/$(schoolId)/accountsByEmail/$(request.auth.token.email.lower()));
       }
-      // Collection `accounts` (data guru/admin: username, passwordHash
-      // awal, displayName, assignments kelas+halaqoh, flag isAdmin) —
-      // dipakai ApiAuthRepository, fitur admin bisa edit assignment guru
-      // dari dalam app ("Kelola Akun Guru") TANPA build ulang APK, plus
-      // tombol "Migrasi Data Guru & Murid ke Cloud"
-      // (migrateSeedToFirestore). JANGAN disamakan dengan
-      // `santriAccounts` di bawah — itu punya SANTRI/Portal Ortu, beda
-      // sama sekali. Cuma app guru (anonim) yang pernah baca/tulis
-      // collection ini — santri/admin Portal Ortu tidak pernah butuh
-      // data guru.
-      match /accounts/{accountId} {
-        allow read, write: if isGuruApp();
+      // <-- BARU: accountId milik guru yang SEDANG login (dari index
+      // accountsByEmail, bukan scan seluruh accounts). Dipakai buat
+      // membedakan "punya sendiri" vs "punya guru lain" di semua
+      // subcollection nested di bawah accounts/{accountId}.
+      function myGuruAccountId() {
+        return get(/databases/$(database)/documents/schools/$(schoolId)/accountsByEmail/$(request.auth.token.email.lower())).data.accountId;
       }
-      // <-- BARU (PERUBAHAN DESAIN #3). Koleksi "index" kecil: document
-      // ID = email Google (huruf kecil semua), isinya cuma
-      // `{accountId: '...'}` -- lihat ApiAuthRepository.updateGoogleEmail
-      // & fungsi isGuruApp() di atas yang MEMBACA koleksi ini (via
-      // exists(), operasi rules-internal, tidak butuh allow read
-      // terpisah untuk itu). `allow read, write: if isGuruApp()` di sini
-      // SENGAJA disamakan trust boundary-nya dengan `accounts` di atas
-      // (guru mana pun yang sudah terdaftar boleh baca/tulis, sama
-      // seperti sebelum migrasi ini SEMUA sesi anonim yang sama-sama
-      // "isGuruApp()" juga boleh baca/tulis SEMUA `accounts` -- bukan
-      // batasan baru yang lebih longgar, cuma dipertahankan sama).
-      // Pembatasan "cuma admin yang boleh mendaftarkan guru baru" tetap
-      // di level UI (KelolaGuruScreen), BUKAN di rules ini -- konsisten
-      // dengan bagaimana `accounts`/`students` dkk sudah didesain
-      // sebelum migrasi ini (lihat BAGIAN I di laporan audit
-      // sebelumnya soal client-side gating bukan security boundary).
+      function isOwnAccount(accountId) {
+        return isGuruApp() && myGuruAccountId() == accountId;
+      }
+
+      // ---------- Data global (tetap flat) ----------
+
+      // Index kecil email -> accountId. Dibaca isGuruApp()/myGuruAccountId()
+      // (lewat get()/exists(), operasi rules-internal), dan tetap perlu
+      // allow read/write eksplisit untuk dibaca langsung dari client
+      // (ApiAuthRepository) & ditulis admin (KelolaGuruScreen).
       match /accountsByEmail/{email} {
-        allow read, write: if isGuruApp();
-      }
-      // Akun santri (Portal Ortu):
-      //  - santri baca dokumennya sendiri (uid = ID dokumen)
-      //  - admin baca/tulis SEMUA (buat akun baru, nonaktifkan)
-      //
-      // <-- BERUBA (dikoreksi): sempat ditambah `isGuruApp()` di allow
-      // write dengan asumsi fitur "Migrasi Data Guru & Murid ke Cloud"
-      // nulis ke sini juga — TERNYATA SALAH, migrasi itu cuma nulis ke
-      // `accounts`/`students` (2 collection terpisah di atas/bawah),
-      // TIDAK PERNAH ke `santriAccounts`. Dibalikin ke `isAdmin()` doang,
-      // supaya kredensial login santri/orang tua tidak ikut kebuka buat
-      // ditulis oleh sembarang sesi app guru yang anonim.
-      match /santriAccounts/{accountId} {
-        allow read: if isAdmin() || (request.auth != null && request.auth.uid == accountId);
+        allow read: if isGuruApp();
         allow write: if isAdmin();
-        // <-- BARU: orang tua (uid == id dokumennya sendiri) boleh update
-        // foto profil PUNYA SENDIRI — dipakai fitur ganti/hapus foto di
-        // AccountScreen (Portal Ortu), lewat
-        // FirestoreSantriAccountRepository.updatePhoto().
-        //
-        // SENGAJA dibatasi HANYA ke 2 field ini pakai
-        // `diff(...).affectedKeys().hasOnly([...])` — TANPA batasan ini,
-        // orang tua yang device/koneksinya sudah kepegang bisa nulis
-        // field APA SAJA di dokumen ini, termasuk `studentId`. Kalau
-        // `studentId` bisa ditimpa bebas, orang tua bisa "pindah" nunjuk
-        // ke ID santri lain dan ke-baca sebagai anaknya sendiri di semua
-        // rule lain yang pakai `myAccount().studentId`/`myStudent()`
-        // (santriRecords, parentNotes, weeklyRecaps) — jadi ini bukan
-        // cuma soal rapi, ini yang mencegah orang tua lain bisa
-        // mengintip data akademik santri lain.
-        allow update: if request.auth != null && request.auth.uid == accountId &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoBase64', 'photoUpdatedAt']);
       }
-      // Data master santri:
-      //  - santri baca datanya sendiri
-      //  - admin baca semua (buat pilih santri saat bikin akun)
-      //  - <-- BERUBAH: dulu `allow write: if false` total (niatnya:
-      //    read-only, cuma diisi lewat script seed manual). Sekarang
-      //    isGuruApp() boleh nulis juga, khusus buat fitur "Migrasi
-      //    Data Guru & Murid ke Cloud" (ApiStudentRepository.
-      //    migrateSeedToFirestore) — sekali-jalan, upsert per id,
-      //    dipicu admin LOKAL dari app guru. Gak ada cara bedain "admin
-      //    lokal" vs "guru pembimbing biasa" di level Firestore selama
-      //    keduanya sama-sama anonim, jadi trust-nya di-generalisasi ke
-      //    seluruh isGuruApp() — ditutup di sisi UI, bukan di rules.
+
+      // Data master santri (dipakai autocomplete + Portal Ortu resolve
+      // guruAccountId). Field baru `guruAccountId` ditulis di sini juga.
       match /students/{studentId} {
-        // <-- BERUBAH: ditambah isGuruApp() di allow read. Sebelumnya app
-        // guru cuma boleh WRITE ke students, gak boleh READ sama sekali --
-        // ini bikin refresh data murid dari cloud (buka Kelola Murid, dll)
-        // diam-diam gagal terus fallback ke cache lokal (ketutup try-catch
-        // di ApiStudentRepository.refresh()), dan bikin fitur Migrasi
-        // (yang butuh baca dulu buat cek id mana yang udah ada sebelum
-        // nulis) kena permission-denied beneran.
         allow read: if isAdmin() || isGuruApp() || (request.auth != null && myAccount().studentId == studentId);
         allow write: if isGuruApp();
       }
-      // Laporan — SantriRecord tidak punya studentId (desain existing
-      // app guru), jadi dicek kelas+halaqoh+namaAnak cocok dengan
-      // Student milik si pembaca — genuinely dicek di rules, bukan
-      // cuma filter di query client.
-      match /santriRecords/{recordId} {
-        allow read: if isGuruApp() || (request.auth != null && !isAdmin() &&
-          myStudent().nama == resource.data.namaAnak &&
-          myStudent().kelas == resource.data.kelas &&
-          myStudent().halaqoh == resource.data.halaqoh);
-        allow write: if isGuruApp(); // mirror-write dari app guru
+
+      // Akun santri/Portal Ortu (login) -- tidak berubah dari rules lama.
+      match /santriAccounts/{accountId} {
+        allow read: if isAdmin() || (request.auth != null && request.auth.uid == accountId);
+        allow write: if isAdmin();
+        allow update: if request.auth != null && request.auth.uid == accountId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoBase64', 'photoUpdatedAt']);
       }
-      // Metadata "kartu identitas kosong" (santri yang sudah diaktifkan
-      // di app guru tapi belum ada laporannya) — dipakai fitur
-      // "Pulihkan dari Cloud" biar kartu kosong itu juga ikut balik
-      // nama aslinya (bukan huruf kecil semua) kalau data lokal HP guru
-      // hilang. Cuma app guru yang pernah baca/tulis dokumen ini,
-      // santri/admin tidak pernah butuh ini sama sekali.
-      match /appMeta/{docId} {
-        allow read, write: if isGuruApp();
-      }
-      // <-- BARU (audit optimasi Firestore read, BAGIAN B/C): dokumen
-      // metadata ringan (mis. `metadata/students`, field `version` int)
-      // dipakai ApiStudentRepository buat cek "ada perubahan data
-      // student atau tidak" TANPA baca seluruh koleksi `students`.
-      // Tanpa rule ini, `metadata/{docId}` TIDAK COCOK match manapun di
-      // atas -- default Firestore Rules adalah DENY, jadi baca/tulis ke
-      // sini akan gagal permission-denied (app tetap jalan karena ada
-      // fallback try-catch di ApiStudentRepository, cuma optimasinya
-      // TIDAK AKTIF -- selalu jatuh ke full fetch). Trust boundary-nya
-      // disamakan dengan `appMeta`/`students` di atas (isGuruApp() =
-      // sesi app guru mana pun, karena semuanya sama-sama anonim -- lihat
-      // catatan panjang soal ini di collection `parentNotes` di bawah).
+
+      // Metadata versi cache `students` (global, bukan per-guru).
       match /metadata/{docId} {
         allow read, write: if isGuruApp();
       }
-      // Folder laporan (organisasi guru) — dipakai fitur mirror-backup &
-      // "Pulihkan dari Cloud" di app guru (StorageService.upsertFolder/
-      // deleteFolder/restoreFoldersFromFirestore). Cuma app guru yang
-      // pernah baca/tulis dokumen ini.
-      match /reportFolders/{folderId} {
-        allow read, write: if isGuruApp();
-      }
-      // Catatan dari orang tua ke guru — app guru (anonim) baca semua
-      // (buat badge/notifikasi live) dan HANYA boleh update field
-      // `isRead`/`dismissed`. Santri (Portal Ortu) boleh baca riwayat
-      // catatan MILIKNYA sendiri, dan boleh membuat catatan baru selama
-      // studentId-nya cocok akun yang sedang login serta isRead dikirim
-      // false.
-      match /parentNotes/{noteId} {
-        allow read: if isGuruApp();
-        allow update: if isGuruApp() &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'dismissed']);
 
-        allow read: if request.auth != null && !isAdmin() && !isGuruApp() &&
-          resource.data.studentId == myAccount().studentId;
-        allow create: if request.auth != null && !isAdmin() && !isGuruApp() &&
-          request.resource.data.studentId == myAccount().studentId &&
-          request.resource.data.isRead == false;
+      // ---------- Data per-guru (BARU: nested) ----------
 
-        allow write: if isAdmin();
-      }
-      // Rekap pekanan (1 dokumen = 1 santri = 1 pekan — lihat catatan
-      // arsitektur di WeeklyRecapDeployService & model WeeklyRecap di
-      // Portal Ortu) yang di-deploy manual dari tombol "Deploy" di
-      // GenerateRekapPekananScreen (app guru).
-      // App guru (anonim) tulis; santri (Portal Ortu) cuma boleh baca
-      // dokumen MILIK ANAKNYA SENDIRI (kelas+halaqoh+nama harus cocok
-      // tiga-tiganya, persis pola santriRecords) — BUKAN "seluruh kelas
-      // boleh baca", supaya data anak lain sekelas (nama, catatan guru)
-      // tidak pernah ke-expose ke orang tua lain, walau cuma lewat
-      // network inspector.
-      match /weeklyRecaps/{recapId} {
-        allow write: if isGuruApp();
-        allow read: if isGuruApp();
-        allow read: if request.auth != null && !isAdmin() && !isGuruApp() &&
-          myStudent().kelas == resource.data.kelas &&
-          myStudent().halaqoh == resource.data.halaqoh &&
-          myStudent().nama.lower() == resource.data.namaAnakLower;
+      match /accounts/{accountId} {
+        // Profil guru sendiri. Admin boleh kelola semua (Kelola Akun
+        // Guru); guru biasa CUMA boleh baca/tulis profilnya sendiri --
+        // beda dari rules lama yang isGuruApp() bebas ke semua akun.
+        allow read: if isAdmin() || isOwnAccount(accountId);
+        allow write: if isAdmin() || isOwnAccount(accountId);
+
+        // Laporan (ex-santriRecords, flat di root). Guru cuma akses
+        // subcollection-nya sendiri; admin semua (lewat isAdmin() di
+        // sini, ATAU collectionGroup('laporan') buat lintas-guru).
+        match /laporan/{recordId} {
+          allow read, write: if isAdmin() || isOwnAccount(accountId);
+          // Portal Ortu: baca laporan ANAKNYA sendiri, cocokkan
+          // kelas+halaqoh+nama (pola sama seperti rules lama) --
+          // aman karena 1 halaqoh = 1 guru, jadi cuma ada SATU
+          // accountId yang mungkin punya record dengan kombinasi ini.
+          allow read: if request.auth != null && !isAdmin() && !isGuruApp() &&
+            myStudent().nama == resource.data.namaAnak &&
+            myStudent().kelas == resource.data.kelas &&
+            myStudent().halaqoh == resource.data.halaqoh;
+        }
+
+        // Folder laporan (ex-reportFolders, flat di root).
+        match /folders/{folderId} {
+          allow read, write: if isAdmin() || isOwnAccount(accountId);
+        }
+
+        // "Kartu identitas kosong" (ex-appMeta, flat di root).
+        match /appMeta/{docId} {
+          allow read, write: if isAdmin() || isOwnAccount(accountId);
+        }
+
+        // Catatan dari orang tua ke guru (ex-parentNotes, flat di root).
+        match /parentNotes/{noteId} {
+          allow read: if isAdmin() || isOwnAccount(accountId);
+          allow update: if isOwnAccount(accountId) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'dismissed']);
+
+          // Portal Ortu: baca riwayat catatan miliknya + buat catatan baru.
+          allow read: if request.auth != null && !isAdmin() && !isGuruApp() &&
+            resource.data.studentId == myAccount().studentId;
+          allow create: if request.auth != null && !isAdmin() && !isGuruApp() &&
+            request.resource.data.studentId == myAccount().studentId &&
+            request.resource.data.isRead == false;
+        }
+
+        // Rekap pekanan yang di-deploy ke orang tua (ex-weeklyRecaps,
+        // flat di root).
+        match /weeklyRecaps/{recapId} {
+          allow read, write: if isAdmin() || isOwnAccount(accountId);
+          allow read: if request.auth != null && !isAdmin() && !isGuruApp() &&
+            myStudent().kelas == resource.data.kelas &&
+            myStudent().halaqoh == resource.data.halaqoh &&
+            myStudent().nama.lower() == resource.data.namaAnakLower;
+        }
       }
     }
   }

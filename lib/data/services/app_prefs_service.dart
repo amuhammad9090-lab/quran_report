@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart'; // <-- BARU
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../core/access/access_scope.dart';
 import '../../core/utils/app_config.dart'; // <-- BARU
 
 /// Persistensi key-value kecil untuk app-level state (status onboarding,
@@ -213,10 +214,23 @@ class AppPrefsService {
   // ke-backup, kartu kosong itu bakal balik nampilin nama huruf kecil
   // semua (fallback ke identityKey yang emang sengaja lowercase) — lihat
   // RecordsProvider.laporanCards.
+  /// <-- BARU (skema per-guru nested): dipanggil di titik transisi auth yang SAMA PERSIS
+  /// seperti RecordsProvider.updateScope()/StorageService.updateScope() (lihat main.dart,
+  /// login_screen.dart, profile_screen.dart, main_shell.dart) — set/kosongkan
+  /// [currentGuruAccountId] (app_config.dart) supaya mirror `appMeta` di bawah ini tahu
+  /// subcollection `accounts/{accountId}/appMeta` mana yang jadi milik sesi ini.
+  void updateScope(AccessScope? scope) {
+    currentGuruAccountId = scope?.user.id;
+  }
+
   void _mirrorActivatedMetaToFirestore() {
+    final accountId = currentGuruAccountId;
+    if (accountId == null) return;
     FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
+        .collection('accounts')
+        .doc(accountId)
         .collection('appMeta')
         .doc('activatedIdentities')
         .set({
@@ -234,9 +248,13 @@ class AppPrefsService {
   /// StorageService.restoreFromFirestore() dari tombol "Pulihkan dari
   /// Cloud" di Pengaturan (lihat SettingsScreen._restoreFromCloud).
   Future<void> restoreActivatedMetaFromFirestore() async {
+    final accountId = currentGuruAccountId;
+    if (accountId == null) return;
     final doc = await FirebaseFirestore.instance
         .collection('schools')
         .doc(kSchoolId)
+        .collection('accounts')
+        .doc(accountId)
         .collection('appMeta')
         .doc('activatedIdentities')
         .get();
