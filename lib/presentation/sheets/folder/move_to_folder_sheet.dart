@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/folders_provider.dart';
+import '../../../providers/records_provider.dart';
 import '../../widgets/common/soft_icon_box.dart';
 import 'folder_form_sheet.dart';
 
@@ -31,7 +32,13 @@ class _FolderPickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final folders = context.watch<FoldersProvider>().all;
+    // BUG FIX: dulu foldersProvider.all dipakai mentah (tidak discope),
+    // jadi guru pembimbing (non-admin) bisa lihat & pilih folder milik
+    // guru lain sebagai tujuan pindah — beda dari laporan_tab.dart yang
+    // sudah benar pakai scope.scopeFolders(). Disamakan di sini.
+    final scope = context.watch<RecordsProvider>().scope;
+    final allFolders = context.watch<FoldersProvider>().all;
+    final folders = scope == null ? allFolders : scope.scopeFolders(allFolders);
 
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),

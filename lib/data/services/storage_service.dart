@@ -200,7 +200,19 @@ class StorageService {
     }
 
     // Folder selalu full setiap kali — volumenya kecil, tak worth pending-set.
-    final folders = getAllFolders();
+    // BUG FIX: dulu getAllFolders() ditulis APA ADANYA ke Firestore tanpa
+    // discope, beda dari `eligible` di atas untuk records. Karena _folderBox
+    // adalah SATU box lokal yang dipakai lintas akun (lihat catatan di
+    // updateScope), kalau box itu pernah kecampur folder akun lain (mis. 2
+    // akun guru pernah login gantian di device yang sama), "Backup" akun
+    // manapun yang aktif ikut menuliskan ULANG folder akun lain itu ke
+    // accounts/{accountId-nya-sendiri}/folders — itu penyebab folder guru
+    // "kegabung" ke akun lain. Sekarang disaring dulu pakai scope yang
+    // sama persis dengan scopeRecords di atas.
+    final localFolders = getAllFolders();
+    final folders = (scope != null && !scope.isAdmin)
+        ? scope.scopeFolders(localFolders)
+        : localFolders;
 
     if (folders.isNotEmpty) {
       await _remote.pushFolders(folders);

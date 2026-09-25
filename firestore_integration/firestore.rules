@@ -70,16 +70,35 @@ service cloud.firestore {
       // (lewat get()/exists(), operasi rules-internal), dan tetap perlu
       // allow read/write eksplisit untuk dibaca langsung dari client
       // (ApiAuthRepository) & ditulis admin (KelolaGuruScreen).
+      // <-- BERUBAH (audit keamanan): dulu `allow read: if isGuruApp();`
+      // — SEMUA guru bisa baca SELURUH directory email->accountId guru
+      // lain di sekolah (info disclosure, bukan cuma milik sendiri).
+      // Dicek ulang ke `api_auth_repository.dart`: client CUMA pernah
+      // baca dokumen emailnya SENDIRI saat login (findByGoogleEmail),
+      // kecuali dari layar admin (updateGoogleEmail, yang sudah pasti
+      // isAdmin()) — jadi ketatin ke situ TIDAK mematahkan fitur mana pun.
       match /accountsByEmail/{email} {
-        allow read: if isGuruApp();
+        allow read: if isAdmin() || (isGuruApp() && email == request.auth.token.email.lower());
         allow write: if isAdmin();
       }
 
       // Data master santri (dipakai autocomplete + Portal Ortu resolve
       // guruAccountId). Field baru `guruAccountId` ditulis di sini juga.
+      //
+      // <-- BERUBAH (audit keamanan): dulu `allow write: if isGuruApp();`
+      // — SEMUA guru (bukan cuma admin) bisa create/update/DELETE
+      // dokumen `students/{id}` milik guru LAIN, termasuk menimpa field
+      // `guruAccountId` — field yang justru jadi dasar Portal Ortu
+      // resolve ke subcollection accounts/{accountId} yang benar. Dicek
+      // ke `api_student_repository.dart`: SEMUA method tulis
+      // (updateKelasHalaqoh/bulkUpdateKelasHalaqoh/migrateSeedToFirestore)
+      // cuma pernah dipanggil dari layar admin (Kelola Data/Kelola
+      // Murid) — komentarnya sendiri bilang "pengecekan role dilakukan
+      // di layer UI, bukan di sini". Diketatin match kenyataan
+      // pemakaian app: admin-only di level rules juga, bukan cuma UI.
       match /students/{studentId} {
         allow read: if isAdmin() || isGuruApp() || (request.auth != null && myAccount().studentId == studentId);
-        allow write: if isGuruApp();
+        allow write: if isAdmin();
       }
 
       // Akun santri/Portal Ortu (login) -- tidak berubah dari rules lama.
@@ -113,7 +132,19 @@ service cloud.firestore {
           // kelas+halaqoh+nama (pola sama seperti rules lama) --
           // aman karena 1 halaqoh = 1 guru, jadi cuma ada SATU
           // accountId yang mungkin punya record dengan kombinasi ini.
+          //
+          // <-- BERUBAH (audit keamanan, defense-in-depth): ditambah
+          // `accountId == myStudent().guruAccountId`. Sebelumnya rule
+          // ini cuma cek kelas+halaqoh+nama TANPA peduli accountId-nya
+          // — aman SELAMA asumsi "1 halaqoh = 1 guru" selalu tepat di
+          // data. Kalau suatu saat data kecampur lagi (mis. bug sinkron
+          // atau migrasi yang salah taruh dokumen di accountId yang
+          // salah), tanpa penjepit ini orang tua tetap bisa kebaca
+          // laporan dari accountId yang salah selama kelas+halaqoh+nama
+          // kebetulan cocok. Sekarang dikunci juga ke accountId yang
+          // resmi tercatat di students/{id}.guruAccountId.
           allow read: if request.auth != null && !isAdmin() && !isGuruApp() &&
+            accountId == myStudent().guruAccountId &&
             myStudent().nama == resource.data.namaAnak &&
             myStudent().kelas == resource.data.kelas &&
             myStudent().halaqoh == resource.data.halaqoh;
@@ -136,9 +167,14 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'dismissed']);
 
           // Portal Ortu: baca riwayat catatan miliknya + buat catatan baru.
+          // <-- BERUBAH (audit keamanan, defense-in-depth): dikunci juga
+          // ke accountId = guruAccountId santrinya sendiri, sama alasan
+          // seperti di /laporan di atas.
           allow read: if request.auth != null && !isAdmin() && !isGuruApp() &&
+            accountId == myStudent().guruAccountId &&
             resource.data.studentId == myAccount().studentId;
           allow create: if request.auth != null && !isAdmin() && !isGuruApp() &&
+            accountId == myStudent().guruAccountId &&
             request.resource.data.studentId == myAccount().studentId &&
             request.resource.data.isRead == false;
         }
@@ -147,7 +183,11 @@ service cloud.firestore {
         // flat di root).
         match /weeklyRecaps/{recapId} {
           allow read, write: if isAdmin() || isOwnAccount(accountId);
+          // <-- BERUBAH (audit keamanan, defense-in-depth): dikunci juga
+          // ke accountId = guruAccountId santrinya sendiri, sama alasan
+          // seperti di /laporan di atas.
           allow read: if request.auth != null && !isAdmin() && !isGuruApp() &&
+            accountId == myStudent().guruAccountId &&
             myStudent().kelas == resource.data.kelas &&
             myStudent().halaqoh == resource.data.halaqoh &&
             myStudent().nama.lower() == resource.data.namaAnakLower;
