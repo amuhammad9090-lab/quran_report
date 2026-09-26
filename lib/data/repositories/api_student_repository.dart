@@ -282,21 +282,23 @@ class ApiStudentRepository implements StudentRepository {
     await AppPrefsService.instance.setStudentsMetaVersion(version);
   }
 
-  /// <-- BARU (skema per-guru nested, lihat firestore.rules): ambil daftar akun guru
-  /// (buat resolve [Student.guruAccountId]) SEKALI, dipakai lagi buat cocokin BANYAK
-  /// santri (lihat [bulkUpdateKelasHalaqoh]/[migrateSeedToFirestore]) TANPA network round
-  /// -trip per santri. Method ini cuma dipanggil dari layar ADMIN-ONLY (Kelola Murid/Kelola
-  /// Data), jadi [ApiAuthRepository.refresh] otomatis dapat daftar LENGKAP (lihat rules:
-  /// admin boleh baca semua `accounts`). Gagal (offline dll) -> list kosong, guruAccountId
-  /// jadi null buat semua (aman, cuma berarti Portal Ortu belum bisa resolve akun santri itu
-  /// sampai berhasil di-set ulang lain kali -- BUKAN error yang menggagalkan simpan
-  /// kelas/halaqoh-nya sendiri).
-  Future<List<UserAccount>> _accountsForGuruResolution() async {
-    try {
-      return await ApiAuthRepository.instance.refresh();
-    } catch (_) {
-      return const [];
-    }
+  /// <-- BERUBAH (bug fix): dulu method ini nelan SEMUA error dari
+  /// [ApiAuthRepository.refresh] diam-diam dan return `[]` -- niatnya
+  /// "aman", TAPI akibatnya kebalik: [_matchGuruAccountId] dipanggil
+  /// dengan list KOSONG selalu balikin `null`, jadi tiap kali resolusi
+  /// ini gagal (offline/timeout/permission-denied sesaat), SEMUA santri
+  /// yang lagi ditulis (updateKelasHalaqoh/bulkUpdateKelasHalaqoh) ikut
+  /// KETIMPA `guruAccountId: null` -- padahal sebelumnya sudah benar --
+  /// TANPA ada error apa pun yang kelihatan ke admin. Ini yang bikin
+  /// santri yang guru pembimbingnya sudah di-assign tetap balik null.
+  ///
+  /// Sekarang: error DILEMPAR APA ADANYA ke pemanggil (updateKelasHalaqoh/
+  /// bulkUpdateKelasHalaqoh/migrateSeedToFirestore/resyncAllGuruAccountIds)
+  /// -- masing-masing yang mutuskan cara aman buat handle-nya (biasanya:
+  /// PERTAHANKAN guruAccountId lama, JANGAN ditimpa null, lalu tetap
+  /// kasih tau admin lewat exception supaya tidak senyap).
+  Future<List<UserAccount>> _accountsForGuruResolution() {
+    return ApiAuthRepository.instance.refresh();
   }
 
   /// Cocokkan [kelas]+[halaqoh] ke SATU akun guru dari [accounts] (hasil
@@ -324,19 +326,35 @@ class ApiStudentRepository implements StudentRepository {
   /// kondisi "student berubah tapi metadata tidak", yang bisa membuat
   /// device lain (atau device ini sendiri sesi berikutnya) salah kira
   /// cache-nya masih up-to-date.
+  ///
+  /// <-- BERUBAH (bug fix, lihat [_accountsForGuruResolution]): kalau
+  /// resolusi akun guru gagal (offline/permission-denied sesaat),
+  /// kelas/halaqoh TETAP disimpan (itu yang diminta admin), tapi
+  /// `guruAccountId` LAMA dipertahankan APA ADANYA -- BUKAN ditimpa
+  /// `null` seperti sebelumnya -- lalu method ini tetap melempar error
+  /// di akhir supaya admin TAHU perlu simpan ulang nanti (bukan senyap).
   Future<void> updateKelasHalaqoh(
     Student student, {
     required String kelas,
     required String halaqoh,
   }) async {
-    final accounts = await _accountsForGuruResolution();
+    List<UserAccount> accounts = const [];
+    Object? resolutionError;
+    try {
+      accounts = await _accountsForGuruResolution();
+    } catch (e) {
+      resolutionError = e;
+    }
+
     final updated = Student(
       id: student.id,
       nama: student.nama,
       kelas: kelas,
       halaqoh: halaqoh,
       schoolId: student.schoolId,
-      guruAccountId: _matchGuruAccountId(accounts, kelas, halaqoh),
+      guruAccountId: resolutionError == null
+          ? _matchGuruAccountId(accounts, kelas, halaqoh)
+          : student.guruAccountId,
     );
 
     final version = DateTime.now().millisecondsSinceEpoch;
@@ -353,6 +371,13 @@ class ApiStudentRepository implements StudentRepository {
     if (_memCache != null) {
       _memCache = [for (final s in _memCache!) if (s.id == student.id) updated else s];
     }
+
+    if (resolutionError != null) {
+      throw StateError(
+        'Kelas/halaqoh tersimpan, tapi guru pembimbing gagal disinkron ($resolutionError). '
+        'guruAccountId lama dipertahankan -- coba simpan ulang nanti.',
+      );
+    }
   }
 
   /// Ubah kelas/halaqoh BANYAK santri sekaligus (dipakai admin dari
@@ -368,13 +393,30 @@ class ApiStudentRepository implements StudentRepository {
   /// [_bumpMetadataVersion] yang menangani kasus "metadata belum ada"
   /// secara terpisah, lewat 1 dokumen kecil, bukan nulis ulang semua
   /// student).
+  ///
+  /// <-- BERUBAH (bug fix, lihat [_accountsForGuruResolution]): kalau
+  /// resolusi akun guru gagal, kelas/halaqoh tiap santri TETAP disimpan
+  /// apa adanya, tapi `guruAccountId` masing-masing dipertahankan ke
+  /// nilai LAMA-nya (bukan `null`) -- ini yang dipanggil reconcile di
+  /// KelolaGuruScreen tiap assignment guru diedit, jadi kalau ini
+  /// senyap nulis null, guru pembimbing yang BARU SAJA di-assign gak
+  /// pernah ke-reflect ke Portal Ortu tanpa admin pernah tahu kenapa.
+  /// Method ini tetap melempar error di akhir kalau resolusinya gagal,
+  /// supaya pemanggil (reconcile/import Excel) bisa kasih tau admin.
   Future<int> bulkUpdateKelasHalaqoh(List<Student> updatedStudents) async {
     if (updatedStudents.isEmpty) return 0;
     const batchSize = 400;
     var written = 0;
     final version = DateTime.now().millisecondsSinceEpoch;
 
-    final accounts = await _accountsForGuruResolution();
+    List<UserAccount> accounts = const [];
+    Object? resolutionError;
+    try {
+      accounts = await _accountsForGuruResolution();
+    } catch (e) {
+      resolutionError = e;
+    }
+
     updatedStudents = [
       for (final s in updatedStudents)
         Student(
@@ -383,7 +425,9 @@ class ApiStudentRepository implements StudentRepository {
           kelas: s.kelas,
           halaqoh: s.halaqoh,
           schoolId: s.schoolId,
-          guruAccountId: _matchGuruAccountId(accounts, s.kelas, s.halaqoh),
+          guruAccountId: resolutionError == null
+              ? _matchGuruAccountId(accounts, s.kelas, s.halaqoh)
+              : s.guruAccountId,
         ),
     ];
 
@@ -414,6 +458,14 @@ class ApiStudentRepository implements StudentRepository {
       _memCache = [for (final s in _memCache!) byId[s.id] ?? s];
     }
 
+    if (resolutionError != null) {
+      throw StateError(
+        'Kelas/halaqoh $written santri tersimpan, tapi guru pembimbing gagal disinkron '
+        '($resolutionError). guruAccountId lama dipertahankan -- coba lagi nanti, atau '
+        'pakai "Sinkronkan Guru Pembimbing" di Kelola Guru.',
+      );
+    }
+
     return written;
   }
 
@@ -442,7 +494,18 @@ class ApiStudentRepository implements StudentRepository {
     final snapshot = await _collection.get().timeout(const Duration(seconds: 15));
     final existingIds = snapshot.docs.map((d) => d.id).toSet();
 
-    final accounts = await _accountsForGuruResolution();
+    // <-- BERUBAH (bug fix, lihat _accountsForGuruResolution): dokumen yang
+    // ditulis di sini SELALU baru (id yang sudah ada di-skip di atas), jadi
+    // tidak ada guruAccountId lama yang bisa "ketimpa" -- tapi errornya
+    // tetap dilempar di akhir (bukan ditelan) supaya admin tahu perlu
+    // resync manual kalau resolusi guru gagal pas migrasi ini jalan.
+    List<UserAccount> accounts = const [];
+    Object? resolutionError;
+    try {
+      accounts = await _accountsForGuruResolution();
+    } catch (e) {
+      resolutionError = e;
+    }
     final toWrite = [
       for (final s in seedStudents)
         if (!existingIds.contains(s.id))
@@ -478,6 +541,83 @@ class ApiStudentRepository implements StudentRepository {
     // ulang di atas.
     await refresh(force: true);
 
+    if (resolutionError != null) {
+      throw StateError(
+        '${toWrite.length} santri baru tersimpan, tapi guru pembimbing gagal disinkron '
+        '($resolutionError) -- pakai "Sinkronkan Guru Pembimbing" di Kelola Guru setelah ini.',
+      );
+    }
+
     return toWrite.length;
+  }
+
+  /// <-- BARU: backfill SEKALI-JALAN buat SEMUA santri (bukan cuma yang
+  /// "kena dampak" edit assignment terakhir seperti reconcile di
+  /// KelolaGuruScreen). Nutup 2 celah: (1) assignment guru yang dibuat
+  /// SEBELUM reconcile itu ada di kode, jadi tidak pernah ke-backfill
+  /// otomatis; (2) santri yang guruAccountId-nya sempat ke-null-kan gara-
+  /// gara [_accountsForGuruResolution] dulu gagal senyap (lihat riwayat
+  /// bug di sana). Dipanggil manual dari tombol admin di Kelola Guru --
+  /// BUKAN otomatis, karena baca+tulis semua santri sekaligus.
+  ///
+  /// Sengaja BUKAN percobaan "aman" kalau resolusi gagal: kalau
+  /// [_accountsForGuruResolution] gagal di sini, method ini LANGSUNG
+  /// melempar error TANPA menulis apa pun -- beda dari
+  /// [updateKelasHalaqoh]/[bulkUpdateKelasHalaqoh] yang harus tetap
+  /// menyimpan kelas/halaqoh yang memang diminta admin. Di sini TIDAK
+  /// ada perubahan kelas/halaqoh yang "wajib tersimpan" -- satu-satunya
+  /// tujuan method ini MEMANG resolusi guru, jadi kalau itu gagal, lebih
+  /// aman batal total daripada menulis ulang ratusan santri dengan data
+  /// yang salah/null.
+  Future<int> resyncAllGuruAccountIds() async {
+    final accounts = await _accountsForGuruResolution();
+    final students = await refresh(force: true);
+
+    final changed = <Student>[];
+    for (final s in students) {
+      final resolved = _matchGuruAccountId(accounts, s.kelas, s.halaqoh);
+      if (resolved != s.guruAccountId) {
+        changed.add(Student(
+          id: s.id,
+          nama: s.nama,
+          kelas: s.kelas,
+          halaqoh: s.halaqoh,
+          schoolId: s.schoolId,
+          guruAccountId: resolved,
+        ));
+      }
+    }
+
+    if (changed.isEmpty) return 0;
+
+    const batchSize = 400;
+    final version = DateTime.now().millisecondsSinceEpoch;
+    for (var i = 0; i < changed.length; i += batchSize) {
+      final end = (i + batchSize > changed.length) ? changed.length : i + batchSize;
+      final chunk = changed.sublist(i, end);
+      final isLastChunk = end == changed.length;
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final s in chunk) {
+        batch.set(_collection.doc(s.id), s.toJson());
+      }
+      if (isLastChunk) {
+        batch.set(_metaDoc, {'version': version});
+      }
+      await batch.commit().timeout(const Duration(seconds: 20));
+    }
+
+    final box = await _openBox();
+    for (final s in changed) {
+      await box.put(s.id, jsonEncode(s.toJson()));
+    }
+    await AppPrefsService.instance.setStudentsMetaVersion(version);
+    await AppPrefsService.instance.setStudentsLastSync(DateTime.now());
+    if (_memCache != null) {
+      final byId = {for (final s in changed) s.id: s};
+      _memCache = [for (final s in _memCache!) byId[s.id] ?? s];
+    }
+
+    return changed.length;
   }
 }

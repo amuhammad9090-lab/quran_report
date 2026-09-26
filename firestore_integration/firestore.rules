@@ -124,6 +124,27 @@ service cloud.firestore {
         allow read, write: if isGuruApp();
       }
 
+      // ---------- Collection-group queries (admin restore) ----------
+
+      // <-- BARU (bug fix): "Pulihkan dari Cloud" mode admin (lihat
+      // RecordsRemoteSource.fetchRecords/fetchFolders) pakai
+      // `collectionGroup('laporan')`/`collectionGroup('folders')` buat
+      // baca lintas SEMUA guru sekaligus, BUKAN baca satu path
+      // `accounts/{accountId}/laporan` tertentu. Rule nested biasa di
+      // `match /accounts/{accountId} { match /laporan/{recordId} {...} } }`
+      // di bawah TIDAK berlaku buat collectionGroup query walau path-nya
+      // sama persis -- Firestore mewajibkan rule TERPISAH pakai wildcard
+      // `{path=**}` supaya izin collectionGroup dievaluasi. Tanpa ini,
+      // query-nya ditolak DI DEPAN (sebelum sempat cek isAdmin() sama
+      // sekali) -> permission-denied walau email admin sudah benar.
+      // Read-only (admin) -- tulis tetap lewat rule nested biasa di bawah.
+      match /{path=**}/laporan/{recordId} {
+        allow read: if isAdmin();
+      }
+      match /{path=**}/folders/{folderId} {
+        allow read: if isAdmin();
+      }
+
       // ---------- Data per-guru (BARU: nested) ----------
 
       match /accounts/{accountId} {

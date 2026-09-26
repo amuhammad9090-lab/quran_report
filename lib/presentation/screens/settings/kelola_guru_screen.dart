@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../data/models/kelas_halaqoh.dart';
 import '../../../data/models/user_account.dart';
 import '../../../data/repositories/api_auth_repository.dart';
+import '../../../data/repositories/api_student_repository.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/common/empty_state.dart';
@@ -26,6 +27,39 @@ class KelolaGuruScreen extends StatefulWidget {
 
 class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
   bool _refreshing = false;
+  bool _syncingGuruAccountId = false;
+
+  // <-- BARU: backfill manual [ApiStudentRepository.resyncAllGuruAccountIds]
+  // -- beda dari reconcile otomatis di [_editAccount] yang cuma nyentuh
+  // santri KENA DAMPAK edit assignment TERAKHIR. Tombol ini buat nutup
+  // celah assignment lama yang dibuat sebelum reconcile itu ada, atau
+  // santri yang guruAccountId-nya sempat ke-null-kan gara-gara bug
+  // _accountsForGuruResolution dulu (lihat catatan di sana).
+  Future<void> _resyncGuruAccountIds(BuildContext context) async {
+    setState(() => _syncingGuruAccountId = true);
+    try {
+      final changed = await ApiStudentRepository.instance.resyncAllGuruAccountIds();
+      if (!context.mounted) return;
+      if (!mounted) return;
+      setState(() => _syncingGuruAccountId = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            changed == 0
+                ? 'Sudah sinkron -- tidak ada santri yang perlu diperbarui.'
+                : 'Berhasil! $changed santri disinkronkan ke guru pembimbing terbaru.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _syncingGuruAccountId = false);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal sinkron: $e')),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -57,12 +91,24 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
             PushedPageHeader(
               title: 'Kelola Akun Guru',
               titleFontSize: 17,
-              trailing: IconButton(
-                icon: _refreshing
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(LucideIcons.refreshCw),
-                onPressed: _refreshing ? null : _refresh,
-                tooltip: 'Muat ulang dari cloud',
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: _syncingGuruAccountId
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(LucideIcons.users),
+                    onPressed: _syncingGuruAccountId ? null : () => _resyncGuruAccountIds(context),
+                    tooltip: 'Sinkronkan Guru Pembimbing ke semua santri',
+                  ),
+                  IconButton(
+                    icon: _refreshing
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(LucideIcons.refreshCw),
+                    onPressed: _refreshing ? null : _refresh,
+                    tooltip: 'Muat ulang dari cloud',
+                  ),
+                ],
               ),
             ),
             if (sorted.isEmpty)
@@ -260,12 +306,67 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                                       refreshed,
                                       newEmail.isEmpty ? null : newEmail,
                                     );
+
+                                    // <-- BARU: reconcile [Student.guruAccountId].
+                                    // BUG yang diperbaiki: updateAssignments di
+                                    // atas cuma nulis `accounts/{id}.assignments`
+                                    // — TIDAK PERNAH menyentuh dokumen
+                                    // `students/{id}` mana pun. Padahal
+                                    // `guruAccountId` di situ adalah field
+                                    // DENORMALISASI yang cuma kehitung ulang
+                                    // saat `updateKelasHalaqoh`/
+                                    // `bulkUpdateKelasHalaqoh` jalan (lihat
+                                    // ApiStudentRepository) — biasanya dari
+                                    // Kelola Data Murid, BUKAN dari sini.
+                                    // Akibatnya: assign guru pembimbing ke
+                                    // kelas+halaqoh yang SANTRINYA SUDAH ADA
+                                    // duluan tidak pernah ke-reflect ke
+                                    // Portal Ortu — guruAccountId mereka
+                                    // tetap null/basi SELAMANYA sampai ada
+                                    // yang kebetulan re-save kelas/halaqoh
+                                    // santri itu satu-satu secara manual.
+                                    //
+                                    // Fix: begitu assignment BERUBAH, cari
+                                    // semua santri yang kelas+halaqoh-nya ada
+                                    // di assignment LAMA *atau* BARU (union —
+                                    // assignment yang DICABUT juga perlu
+                                    // reconcile, bukan cuma yang ditambah,
+                                    // supaya guruAccountId mereka ikut
+                                    // diperbarui ke guru lain/null kalau ada
+                                    // pergantian), lalu panggil
+                                    // `bulkUpdateKelasHalaqoh` dengan
+                                    // kelas/halaqoh MEREKA SENDIRI (tidak
+                                    // diubah) — method itu tetap recompute
+                                    // guruAccountId dari assignment TERBARU
+                                    // (yang barusan disimpan), jadi cukup
+                                    // "re-save" tanpa perlu buka Kelola Data
+                                    // Murid satu-satu.
+                                    final affectedKeys = <String>{
+                                      for (final a in account.assignments) a.key,
+                                      for (final a in newAssignments) a.key,
+                                    };
+                                    final affectedStudents = studentsProvider.all
+                                        .where((s) => affectedKeys
+                                            .contains(KelasHalaqoh(kelas: s.kelas, halaqoh: s.halaqoh).key))
+                                        .toList();
+                                    if (affectedStudents.isNotEmpty) {
+                                      await ApiStudentRepository.instance
+                                          .bulkUpdateKelasHalaqoh(affectedStudents);
+                                    }
+
                                     if (!ctx.mounted) return;
                                     await authProvider.reloadAccounts();
                                     if (!ctx.mounted) return;
+                                    await studentsProvider.load();
+                                    if (!ctx.mounted) return;
                                     Navigator.of(ctx).pop();
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Akun ${nameCtrl.text.trim()} tersimpan.')),
+                                      SnackBar(
+                                        content: Text(affectedStudents.isEmpty
+                                            ? 'Akun ${nameCtrl.text.trim()} tersimpan.'
+                                            : 'Akun ${nameCtrl.text.trim()} tersimpan. '
+                                                '${affectedStudents.length} santri disinkronkan.'),
+                                      ),
                                     );
                                   } catch (e) {
                                     setSheetState(() => saving = false);
