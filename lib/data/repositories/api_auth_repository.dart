@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/utils/app_config.dart';
@@ -172,9 +173,22 @@ class ApiAuthRepository implements AuthRepository {
       await box.putAll({for (final a in accounts) a.id: jsonEncode(a.toJson())});
       _memCache = accounts;
       return accounts;
-    } catch (_) {
+    } catch (e) {
       // Offline/timeout/belum ada sesi -- lanjut ke fallback (login TETAP harus bisa
       // jalan offline pakai data terakhir yang berhasil di-fetch).
+      //
+      // <-- BARU (debugging aid): dulu exception ini ditelan total tanpa
+      // jejak apapun. Di [findByGoogleEmail], setiap error di sini
+      // (termasuk permission-denied dari Firestore Rules) berakhir
+      // sebagai pesan yang SAMA PERSIS dengan "email beneran belum
+      // terdaftar" ("Tidak ada akses...belum terdaftar sebagai
+      // pengguna Quran Report") -- jadi dari UI/screenshot TIDAK BISA
+      // dibedakan dua kasus itu. debugPrint ini tidak mengubah behavior
+      // (fallback di bawah tetap jalan sama), cuma nongol di
+      // `flutter run`/Logcat/Console log biar kelihatan errornya
+      // beneran apa (mis. [cloud_firestore/permission-denied]) tanpa
+      // perlu nebak-nebak dari pesan generik di UI.
+      debugPrint('ApiAuthRepository.refresh() gagal: $e');
     }
 
     if (box.isNotEmpty) {

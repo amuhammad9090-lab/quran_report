@@ -41,10 +41,20 @@ service cloud.firestore {
       function myStudent() {
         return get(/databases/$(database)/documents/schools/$(schoolId)/students/$(myAccount().studentId)).data;
       }
+      // <-- BERUBAH: ditambah a.muhammad9090@gmail.com. Root cause login
+      // gagal ("permission-denied" di ApiAuthRepository.refresh()): akun
+      // ini punya `role: "admin"` di dokumen accounts/usr_01 (dipakai
+      // CLIENT buat nentuin apakah perlu full-collection get semua akun
+      // guru), tapi server isAdmin() di sini cuma percaya satu email
+      // hardcode -- jadi client mikir dia admin & nyoba baca SEMUA
+      // accounts/*, sementara server nolak (bukan admin menurut daftar
+      // ini) -> permission-denied. Gap ini sudah ada sejak migrasi ke
+      // isAdmin()/isOwnAccount(), cuma baru ketauan sekarang.
       function isAdmin() {
         return request.auth != null &&
           request.auth.token.email in [
-            'admin@quranreport-admin.app'
+            'admin@quranreport-admin.app',
+            'a.muhammad9090@gmail.com'
           ];
       }
       function isGuruApp() {
