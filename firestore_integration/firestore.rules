@@ -119,6 +119,16 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoBase64', 'photoUpdatedAt']);
       }
 
+      // Info versi terbaru app Android/web (fitur update in-app), dipakai
+      // app guru (`appConfig/guru_android`) dan Portal Orang Tua
+      // (`appConfig/parent_android`). Isinya cuma nomor versi + link APK +
+      // changelog (tidak sensitif) => read publik. Tulis cuma admin (atau
+      // lewat Firebase Console).
+      match /appConfig/{docId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
       // Metadata versi cache `students` (global, bukan per-guru).
       match /metadata/{docId} {
         allow read, write: if isGuruApp();

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../data/services/quran_engine_service.dart';
+import '../../widgets/app_update_dialog.dart';
 import '../../widgets/common/app_icon_mark.dart';
 import '../../widgets/common/pushed_page_header.dart';
 import '../../widgets/common/smpit_logo_badge.dart';
@@ -67,6 +69,12 @@ class AboutScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => checkForAppUpdate(context, manual: true),
+                    icon: const Icon(Icons.system_update_rounded, size: 18),
+                    label: const Text('Cek pembaruan'),
                   ),
                   const SizedBox(height: 32),
                   const _Footer(),
@@ -187,14 +195,25 @@ class _HeroCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
                       ),
-                      child: const Text(
-                        'Versi 1.0.0',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                        ),
+                      // Versi diambil dari pubspec (versi + nomor build),
+                      // bukan hardcode, supaya selalu sesuai APK terpasang.
+                      child: FutureBuilder<PackageInfo>(
+                        future: PackageInfo.fromPlatform(),
+                        builder: (context, snap) {
+                          final p = snap.data;
+                          final v = p == null
+                              ? '1.0.0'
+                              : '${p.version} (${p.buildNumber})';
+                          return Text(
+                            'Versi $v',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],

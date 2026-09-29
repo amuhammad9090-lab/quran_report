@@ -1,12 +1,12 @@
 {
   "indexes": [
     {
-      "collectionGroup": "santriRecords",
+      "collectionGroup": "laporan",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "namaAnak", "order": "ASCENDING" },
-        { "fieldPath": "kelas", "order": "ASCENDING" },
         { "fieldPath": "halaqoh", "order": "ASCENDING" },
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "namaAnak", "order": "ASCENDING" },
         { "fieldPath": "tanggal", "order": "DESCENDING" }
       ]
     },

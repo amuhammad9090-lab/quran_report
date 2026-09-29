@@ -10,6 +10,7 @@ import '../../../providers/parent_notes_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../sheets/folder/folder_form_sheet.dart';
 import '../../sheets/laporan/buat_laporan_sheet.dart';
+import '../../widgets/app_update_dialog.dart';
 import '../../widgets/speed_dial_fab.dart';
 import '../laporan/laporan_tab.dart';
 import '../settings/settings_screen.dart';
@@ -36,6 +37,10 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Cek update app (Android: APK dari GitHub Release; web: version.json).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) checkForAppUpdate(context);
+    });
   }
 
   @override
