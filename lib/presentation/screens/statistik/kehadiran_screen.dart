@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/santri_record.dart';
+import '../../../data/services/export_service.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/records_provider.dart';
+import '../../sheets/export/export_sheet.dart';
+import '../../widgets/common/app_action_chip.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/pushed_page_header.dart';
 import '../../widgets/common/status_icons.dart';
@@ -26,6 +31,48 @@ class KehadiranScreen extends StatefulWidget {
 class _KehadiranScreenState extends State<KehadiranScreen> {
   Keterangan? _filter;
 
+  /// Export rekap kehadiran sesuai filter chip yang sedang aktif. Datanya dikelompokkan per
+  /// Kelas+Halaqoh (urut tanggal naik) dan memakai pipeline export yang sama dengan Laporan
+  /// Pekanan, jadi PDF/Word/Excel + Bagikan/Simpan langsung tersedia.
+  void _export(List<SantriRecord> records) {
+    final recordsProvider = context.read<RecordsProvider>();
+    final auth = context.read<AuthProvider>();
+
+    final sorted = List<SantriRecord>.from(records)
+      ..sort((a, b) {
+        final byDate = a.tanggal.compareTo(b.tanggal);
+        if (byDate != 0) return byDate;
+        return a.namaAnak.toLowerCase().compareTo(b.namaAnak.toLowerCase());
+      });
+    final groups = recordsProvider.groupByKelasHalaqoh(sorted);
+    final sections = [
+      for (final g in groups)
+        ExportKelasHalaqohSection<SantriRecord>(
+          kelas: g.kelas,
+          halaqoh: g.halaqoh,
+          guruPembimbing: auth.guruPembimbingNameFor(g.kelas, g.halaqoh),
+          items: g.records,
+        ),
+    ];
+
+    final fmt = DateFormat('d MMM yyyy', 'id_ID');
+    final first = sorted.first.tanggal;
+    final last = sorted.last.tanggal;
+    final periode = DateUtils.isSameDay(first, last)
+        ? fmt.format(first)
+        : '${fmt.format(first)} - ${fmt.format(last)}';
+
+    showExportSheet(
+      context,
+      groupedSections: sections,
+      judul: _filter == null
+          ? 'Rekap Kehadiran Santri'
+          : 'Rekap Kehadiran Santri - ${_filter!.label}',
+      periode: periode,
+      includeTanggal: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final all = context.select<RecordsProvider, List<SantriRecord>>(
@@ -42,9 +89,19 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const PushedPageHeader(
+            PushedPageHeader(
               title: 'Kehadiran',
               subtitle: 'Rekap kehadiran santri per tanggal',
+              trailing: AppActionChip(
+                icon: LucideIcons.upload,
+                label: 'Export',
+                color: AppColors.deployOn(context),
+                tooltip: _filter == null
+                    ? 'Export seluruh rekap kehadiran'
+                    : 'Export rekap kehadiran: ${_filter!.label}',
+                // Nonaktif kalau tidak ada data (sesuai filter aktif).
+                onTap: filtered.isEmpty ? null : () => _export(filtered),
+              ),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),

@@ -134,6 +134,13 @@ class SantriRecord {
 
   final String? catatan;
 
+  // Nilai bebas ketik (mis. "85", "A", "Mumtaz") — opsional, data lama null.
+  final String? nilai;
+
+  // Ketuntasan setoran hari itu: true = Tuntas, false = Tidak Tuntas,
+  // null = belum ditandai (data lama / tidak diisi).
+  final bool? tuntas;
+
   // Folder tempat laporan ini disimpan (null = tidak di dalam folder mana pun,
   // tampil di section "Laporan" biasa).
   final String? folderId;
@@ -171,6 +178,8 @@ class SantriRecord {
     this.tilawahAyatSelesai,
     this.tilawahSegments,
     this.catatan,
+    this.nilai,
+    this.tuntas,
     this.folderId,
     this.ownerId,
   });
@@ -198,7 +207,11 @@ class SantriRecord {
     int? tilawahAyatSelesai,
     List<TilawahSegment>? tilawahSegments,
     String? catatan,
+    String? nilai,
+    bool? tuntas,
     String? folderId,
+    bool clearNilai = false,
+    bool clearTuntas = false,
     bool clearTahfizh = false,
     bool clearTahsin = false,
     bool clearTilawah = false,
@@ -237,6 +250,8 @@ class SantriRecord {
           clearTilawah ? null : (tilawahAyatSelesai ?? this.tilawahAyatSelesai),
       tilawahSegments: clearTilawah ? null : (tilawahSegments ?? this.tilawahSegments),
       catatan: catatan ?? this.catatan,
+      nilai: clearNilai ? null : (nilai ?? this.nilai),
+      tuntas: clearTuntas ? null : (tuntas ?? this.tuntas),
       folderId: clearFolder ? null : (folderId ?? this.folderId),
     );
   }
@@ -388,6 +403,8 @@ class SantriRecord {
         'tilawahAyatSelesai': tilawahAyatSelesai,
         'tilawahSegments': tilawahSegments?.map((s) => s.toJson()).toList(),
         'catatan': catatan,
+        'nilai': nilai,
+        'tuntas': tuntas,
         'folderId': folderId,
         'ownerId': ownerId,
         // <-- BARU: lihat dokumentasi di getter [kelasHalaqohKey] di atas.
@@ -442,6 +459,9 @@ class SantriRecord {
             ?.map((e) => TilawahSegment.fromJson(e as Map<String, dynamic>))
             .toList(),
         catatan: json['catatan'] as String?,
+        // Field baru — data lama belum punya key ini, default null aman.
+        nilai: json['nilai'] as String?,
+        tuntas: json['tuntas'] as bool?,
         folderId: json['folderId'] as String?,
         // Field baru — data lama pasti belum punya ini, default null aman
         // (backward compatible, tidak ada migration destructive).
