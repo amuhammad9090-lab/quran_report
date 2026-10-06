@@ -9,6 +9,11 @@ import 'package:archive/archive.dart';
 class DocxBuilder {
   final List<String> _bodyXmlParts = [];
 
+  /// Halaman A4 landscape (dipakai tabel lebar, mis. rekap kehadiran bulanan).
+  final bool landscape;
+
+  DocxBuilder({this.landscape = false});
+
   void addTitle(String text) {
     _bodyXmlParts.add('''
 <w:p><w:pPr><w:jc w:val="center"/></w:pPr>
@@ -35,16 +40,35 @@ class DocxBuilder {
   }
 
   /// Tabel sederhana: baris pertama otomatis jadi header (bold, shading).
-  void addTable(List<String> headers, List<List<String>> rows) {
+  ///
+  /// Opsional (default-nya = perilaku lama, kolom sama lebar total 9000):
+  /// [columnWidths] lebar tiap kolom dalam dxa, [compact] font + margin sel lebih kecil buat tabel
+  /// padat, [centerFromColumn] kolom mulai index ini rata tengah.
+  void addTable(
+    List<String> headers,
+    List<List<String>> rows, {
+    List<int>? columnWidths,
+    bool compact = false,
+    int? centerFromColumn,
+  }) {
     final colCount = headers.length;
-    final colWidth = (9000 / colCount).floor();
+    final defaultWidth = (9000 / colCount).floor();
+    final widths = columnWidths ?? List<int>.filled(colCount, defaultWidth);
+    final totalWidth = widths.fold<int>(0, (a, b) => a + b);
+    final headerSz = compact ? 14 : 18;
+    final cellSz = compact ? 14 : 17;
+    final cellMar = compact
+        ? '<w:tblCellMar><w:left w:w="30" w:type="dxa"/><w:right w:w="30" w:type="dxa"/></w:tblCellMar>'
+        : '';
+    String jc(int col) =>
+        (centerFromColumn != null && col >= centerFromColumn) ? '<w:pPr><w:jc w:val="center"/></w:pPr>' : '';
 
     final buffer = StringBuffer();
     buffer.write('<w:tbl>');
     buffer.write('''
 <w:tblPr>
   <w:tblStyle w:val="TableGrid"/>
-  <w:tblW w:w="9000" w:type="dxa"/>
+  <w:tblW w:w="$totalWidth" w:type="dxa"/>
   <w:tblBorders>
     <w:top w:val="single" w:sz="4" w:color="CCCCCC"/>
     <w:left w:val="single" w:sz="4" w:color="CCCCCC"/>
@@ -53,21 +77,23 @@ class DocxBuilder {
     <w:insideH w:val="single" w:sz="4" w:color="CCCCCC"/>
     <w:insideV w:val="single" w:sz="4" w:color="CCCCCC"/>
   </w:tblBorders>
+  $cellMar
 </w:tblPr>
 ''');
     buffer.write('<w:tblGrid>');
     for (var i = 0; i < colCount; i++) {
-      buffer.write('<w:gridCol w:w="$colWidth"/>');
+      buffer.write('<w:gridCol w:w="${widths[i]}"/>');
     }
     buffer.write('</w:tblGrid>');
 
     // Header row
     buffer.write('<w:tr>');
-    for (final h in headers) {
+    for (var i = 0; i < headers.length; i++) {
+      final h = headers[i];
       buffer.write('''
 <w:tc>
-  <w:tcPr><w:tcW w:w="$colWidth" w:type="dxa"/><w:shd w:val="clear" w:fill="0E7C61"/></w:tcPr>
-  <w:p><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${_esc(h)}</w:t></w:r></w:p>
+  <w:tcPr><w:tcW w:w="${widths[i]}" w:type="dxa"/><w:shd w:val="clear" w:fill="0E7C61"/></w:tcPr>
+  <w:p>${jc(i)}<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="$headerSz"/></w:rPr><w:t xml:space="preserve">${_esc(h)}</w:t></w:r></w:p>
 </w:tc>
 ''');
     }
@@ -77,11 +103,12 @@ class DocxBuilder {
     for (var r = 0; r < rows.length; r++) {
       final fill = r.isEven ? 'FFFFFF' : 'F3F6F4';
       buffer.write('<w:tr>');
-      for (final cell in rows[r]) {
+      for (var i = 0; i < rows[r].length; i++) {
+        final cell = rows[r][i];
         buffer.write('''
 <w:tc>
-  <w:tcPr><w:tcW w:w="$colWidth" w:type="dxa"/><w:shd w:val="clear" w:fill="$fill"/></w:tcPr>
-  <w:p><w:r><w:rPr><w:sz w:val="17"/></w:rPr>${_runContent(cell)}</w:r></w:p>
+  <w:tcPr><w:tcW w:w="${widths[i]}" w:type="dxa"/><w:shd w:val="clear" w:fill="$fill"/></w:tcPr>
+  <w:p>${jc(i)}<w:r><w:rPr><w:sz w:val="$cellSz"/></w:rPr>${_runContent(cell)}</w:r></w:p>
 </w:tc>
 ''');
       }
@@ -137,7 +164,7 @@ class DocxBuilder {
 <w:body>
 ${_bodyXmlParts.join('\n')}
 <w:sectPr>
-  <w:pgSz w:w="11906" w:h="16838"/>
+  ${landscape ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>' : '<w:pgSz w:w="11906" w:h="16838"/>'}
   <w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="708" w:footer="708" w:gutter="0"/>
 </w:sectPr>
 </w:body>

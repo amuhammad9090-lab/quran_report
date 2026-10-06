@@ -18,6 +18,8 @@ Future<void> showExportSheet(
       List<SantriRecord>? records,
       List<ExportKelasHalaqohSection<SantriRecord>>? groupedSections,
       List<ExportKelasHalaqohSection<SantriMonthlyRecap>>? groupedMonthlySections,
+      List<ExportKelasHalaqohSection<SantriRecord>>? attendanceMonthSections,
+      DateTime? attendanceMonth,
       int? totalWeeks,
       String? judul,
       String? periode,
@@ -36,6 +38,8 @@ Future<void> showExportSheet(
       fixedRecords: records,
       groupedSections: groupedSections,
       groupedMonthlySections: groupedMonthlySections,
+      attendanceMonthSections: attendanceMonthSections,
+      attendanceMonth: attendanceMonth,
       totalWeeks: totalWeeks,
       judul: judul,
       periode: periode,
@@ -50,6 +54,8 @@ class ExportSheet extends StatefulWidget {
   final List<SantriRecord>? fixedRecords;
   final List<ExportKelasHalaqohSection<SantriRecord>>? groupedSections;
   final List<ExportKelasHalaqohSection<SantriMonthlyRecap>>? groupedMonthlySections;
+  final List<ExportKelasHalaqohSection<SantriRecord>>? attendanceMonthSections;
+  final DateTime? attendanceMonth;
   final int? totalWeeks;
   final String? judul;
   final String? periode;
@@ -62,6 +68,8 @@ class ExportSheet extends StatefulWidget {
     this.fixedRecords,
     this.groupedSections,
     this.groupedMonthlySections,
+    this.attendanceMonthSections,
+    this.attendanceMonth,
     this.totalWeeks,
     this.judul,
     this.periode,
@@ -88,7 +96,8 @@ class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<Expor
 
   bool get _isFixed => widget.fixedRecords != null ||
       widget.groupedSections != null ||
-      widget.groupedMonthlySections != null;
+      widget.groupedMonthlySections != null ||
+      widget.attendanceMonthSections != null;
 
   String _extFor(ExportFormat f) => switch (f) {
     ExportFormat.pdf => 'pdf',
@@ -99,6 +108,27 @@ class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<Expor
   Future<void> _doExport(ExportFormat format) async {
     final groupedMonthly = widget.groupedMonthlySections;
     final grouped = widget.groupedSections;
+    final attendance = widget.attendanceMonthSections;
+
+    if (attendance != null) {
+      final total = attendance.fold<int>(0, (sum, s) => sum + s.items.length);
+      if (total == 0) {
+        showInlineMessage('Tidak ada data untuk diekspor.');
+        return;
+      }
+      await _runExport(
+        format,
+        judulDefault: 'Rekap Kehadiran Santri',
+        build: (judul) => ExportService.instance.exportAttendanceMonthly(
+          format,
+          attendance,
+          month: widget.attendanceMonth!,
+          judul: judul,
+          periode: widget.periode,
+        ),
+      );
+      return;
+    }
 
     if (groupedMonthly != null) {
       final totalSantri = groupedMonthly.fold<int>(0, (sum, s) => sum + s.items.length);
@@ -179,6 +209,11 @@ class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<Expor
 
     try {
       final judul = widget.judul ?? judulDefault;
+      // Pembuatan PDF/Word/Excel berjalan di isolate utama dan langsung menyita UI. Tanpa jeda ini
+      // setState(_loading) di atas belum sempat digambar, jadi layar terlihat "diam" sampai
+      // file selesai. Jeda singkat memberi waktu spinner tampil lebih dulu.
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      if (!mounted) return;
       final file = await build(judul);
 
       try {
@@ -241,7 +276,9 @@ class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<Expor
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final provider = context.watch<RecordsProvider>();
-    final count = widget.groupedMonthlySections != null
+    final count = widget.attendanceMonthSections != null
+        ? widget.attendanceMonthSections!.fold<int>(0, (sum, s) => sum + s.items.length)
+        : widget.groupedMonthlySections != null
         ? widget.groupedMonthlySections!.fold<int>(0, (sum, s) => sum + s.items.length)
         : widget.groupedSections != null
             ? widget.groupedSections!.fold<int>(0, (sum, s) => sum + s.items.length)

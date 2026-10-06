@@ -902,7 +902,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                 context,
                                 icon: LucideIcons.hash,
                                 label: 'Nilai',
-                                hint: 'ketik nilai, mis. 85 atau A',
+                                hint: 'ketik nilai, mis. 85',
                                 accent: cs.primary,
                               ),
                               onChanged: (_) => _markEditedAndScheduleDraftSave(),

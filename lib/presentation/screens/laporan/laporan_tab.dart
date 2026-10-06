@@ -689,14 +689,7 @@ class _LaporanTabState extends State<LaporanTab> {
 ///
 /// BUG FIX: sebelumnya filter tanggal ini SAMA SEKALI tidak kelihatan di tab
 /// Laporan (cuma titik merah generik di ikon filter, dan filter tanggal juga
-/// tidak muncul sebagai chip apa pun di [FilterSheet]) — jadi begitu user
-/// tap "Lihat Semua" dari Home, tab Laporan diam-diam KETERUSAN cuma
-/// nampilin laporan hari itu doang, tapi user nggak sadar kenapa (kelihatan
-/// kayak tab Laporan "nyangkut" di satu tanggal terus tiap dibuka, sampai
-/// nggak sengaja ketemu tombol "Reset" di Filter Lainnya yang nge-reset
-/// SEMUA filter sekaligus, bukan cuma tanggalnya). Banner ini bikin filter
-/// tanggal EKSPLISIT kelihatan + ada tombol hapus KHUSUS buat filter ini
-/// saja (filter lain seperti Status/Kelas/Halaqoh tetap dibiarkan aktif).
+/// tidak muncul sebagai chip apa pun di [FilterSheet])
 class _DateFilterBanner extends StatelessWidget {
   final DateTime date;
   final VoidCallback onClear;

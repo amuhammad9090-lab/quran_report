@@ -91,6 +91,7 @@ class UserAccount {
   UserAccount copyWith({
     String? displayName,
     String? passwordHash,
+    UserRole? role,
     List<KelasHalaqoh>? assignments,
     String? photoPath,
     bool clearPhoto = false,
@@ -102,7 +103,7 @@ class UserAccount {
       username: username,
       displayName: displayName ?? this.displayName,
       passwordHash: passwordHash ?? this.passwordHash,
-      role: role,
+      role: role ?? this.role,
       assignments: assignments ?? this.assignments,
       schoolId: schoolId,
       photoPath: clearPhoto ? null : (photoPath ?? this.photoPath),

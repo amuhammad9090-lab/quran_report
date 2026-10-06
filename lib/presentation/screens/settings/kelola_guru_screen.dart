@@ -190,6 +190,10 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
     // terhapus, cuma tidak bisa login lagi sampai diisi ulang).
     final googleEmailCtrl = TextEditingController(text: account.googleEmail ?? '');
     final selected = {for (final a in account.assignments) a.key};
+    // Role admin (akses global). Akun yang sedang dipakai login TIDAK boleh diubah rolenya dari
+    // sini, supaya admin tidak tidak sengaja mencabut akses admin dirinya sendiri.
+    var isAdminRole = account.isAdmin;
+    final isSelf = authProvider.currentUser?.id == account.id;
     var saving = false;
 
     await showModalBottomSheet<void>(
@@ -235,9 +239,21 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                         'Guru login pakai akun Google ini. Kosongkan untuk mencabut akses login.',
                         style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 11.5),
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Jadikan Admin'),
+                        subtitle: Text(
+                          isSelf
+                              ? 'Role akun yang sedang dipakai tidak bisa diubah dari sini.'
+                              : 'Akses global ke semua kelas, halaqoh, dan menu Kelola.',
+                          style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 11.5),
+                        ),
+                        value: isAdminRole,
+                        onChanged: isSelf ? null : (v) => setSheetState(() => isAdminRole = v),
+                      ),
                       const SizedBox(height: 6),
                       Text(
-                        'Assignment kelas+halaqoh (${account.role.label})',
+                        'Assignment kelas+halaqoh (${isAdminRole ? UserRole.admin.label : UserRole.guruPembimbing.label})',
                         style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 12.5),
                       ),
                       const SizedBox(height: 4),
@@ -274,8 +290,18 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                                   setSheetState(() => saving = true);
                                   try {
                                     final newAssignments = pairOptions.where((p) => selected.contains(p.key)).toList();
+                                    // Role diubah DULU dan akun hasilnya dipakai sebagai basis
+                                    // updateAssignments, karena updateAssignments menulis ulang
+                                    // seluruh dokumen (role lama akan menimpa kalau basisnya `account`).
+                                    var base = account;
+                                    if (isAdminRole != account.isAdmin) {
+                                      final newRole = isAdminRole ? UserRole.admin : UserRole.guruPembimbing;
+                                      await ApiAuthRepository.instance.updateRole(account, newRole);
+                                      base = await ApiAuthRepository.instance.findById(account.id) ??
+                                          account.copyWith(role: newRole);
+                                    }
                                     await ApiAuthRepository.instance.updateAssignments(
-                                      account,
+                                      base,
                                       displayName: nameCtrl.text.trim(),
                                       assignments: newAssignments,
                                     );

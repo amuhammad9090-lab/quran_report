@@ -104,6 +104,53 @@ class ExportWord {
     return persistExportedFile('${exportFileSlug(judul)}.docx', bytes);
   }
 
+  /// Rekap Kehadiran BULANAN (A4 landscape): per Kelas+Halaqoh 1 tabel, baris = santri, kolom = tanggal.
+  Future<ExportedFile> exportAttendanceMonthlyWord(
+      List<ExportKelasHalaqohSection<SantriRecord>> sections, {
+        required DateTime month,
+        required String judul,
+        String? periode,
+      }) async {
+    final builder = DocxBuilder(landscape: true);
+    final headers = _r.attendanceMonthHeaders(month);
+
+    // Lebar konten landscape = 16838 - 2 x 1000 margin = 14838 dxa. Kolom tanggal/total lebar tetap,
+    // kolom Nama menyerap sisanya.
+    const noW = 400;
+    const smallW = 320;
+    const contentW = 14838;
+    final nameW = contentW - noW - (headers.length - 2) * smallW;
+    final widths = <int>[noW, nameW, for (var i = 2; i < headers.length; i++) smallW];
+
+    builder.addTitle(ExportRows.judulKehadiran);
+    builder.addSubtitle(ExportRows.namaSekolah);
+    if (periode != null && periode.trim().isNotEmpty) builder.addSubtitle(periode);
+    builder.addSpacer();
+
+    for (var s = 0; s < sections.length; s++) {
+      final section = sections[s];
+      if (s > 0) builder.addSpacer();
+      builder.addParagraph('Kelas   : ${section.kelas}');
+      builder.addParagraph('Halaqoh : ${section.halaqoh}');
+      if (section.guruPembimbing != null && section.guruPembimbing!.trim().isNotEmpty) {
+        builder.addParagraph('Guru Pembimbing : ${section.guruPembimbing}');
+      }
+      builder.addTable(
+        headers,
+        _r.buildAttendanceMonthRows(section.items, month),
+        columnWidths: widths,
+        compact: true,
+        centerFromColumn: 2,
+      );
+    }
+
+    builder.addSpacer();
+    builder.addParagraph(ExportRows.attendanceLegend);
+
+    final bytes = builder.build();
+    return persistExportedFile('${exportFileSlug(judul)}.docx', bytes);
+  }
+
   Future<ExportedFile> exportGroupedMonthlyRecapWord(
       List<ExportKelasHalaqohSection<SantriMonthlyRecap>> sections, {
         required String judul,

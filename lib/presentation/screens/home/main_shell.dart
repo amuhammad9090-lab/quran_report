@@ -41,7 +41,15 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) checkForAppUpdate(context);
     });
+    // Role/assignment dari admin harus langsung terbaca begitu app dibuka (restoreSession cuma
+    // memakai cache, jadi tanpa ini perubahan baru terasa di pembukaan berikutnya).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshAssignmentsIfLoggedIn(force: true);
+    });
   }
+
+  // Cooldown refresh paksa ke Firestore (hemat read; lihat audit read sebelumnya).
+  static DateTime? _lastForcedRefresh;
 
   @override
   void dispose() {
@@ -73,14 +81,17 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     // ParentNotesProvider ikut di-sync ulang -- TANPA perlu logout-login
     // manual lagi.
     if (state == AppLifecycleState.resumed) {
-      _refreshAssignmentsIfLoggedIn();
+      final last = _lastForcedRefresh;
+      final stale = last == null || DateTime.now().difference(last) > const Duration(minutes: 5);
+      _refreshAssignmentsIfLoggedIn(force: stale);
     }
   }
 
-  Future<void> _refreshAssignmentsIfLoggedIn() async {
+  Future<void> _refreshAssignmentsIfLoggedIn({bool force = false}) async {
     final auth = context.read<AuthProvider>();
     if (auth.currentUser == null) return;
-    await auth.reloadAccounts();
+    if (force) _lastForcedRefresh = DateTime.now();
+    await auth.reloadAccounts(forceRefresh: force);
     if (!mounted) return;
     context.read<RecordsProvider>().updateScope(auth.scope);
     context.read<ParentNotesProvider>().updateScope(auth.scope);

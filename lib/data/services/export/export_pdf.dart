@@ -287,6 +287,94 @@ class ExportPdf {
     return persistExportedFile('${exportFileSlug(judul)}.pdf', bytes);
   }
 
+  /// Rekap Kehadiran BULANAN (A4 landscape): per Kelas+Halaqoh 1 tabel, baris = santri, kolom = tanggal.
+  Future<ExportedFile> exportAttendanceMonthlyPdf(
+      List<ExportKelasHalaqohSection<SantriRecord>> sections, {
+        required DateTime month,
+        required String judul,
+        String? periode,
+      }) async {
+    final doc = pw.Document();
+    final headers = _pdfSafeHeaders(_r.attendanceMonthHeaders(month));
+    final columnWidths = <int, pw.TableColumnWidth>{
+      0: const pw.FixedColumnWidth(22),
+      1: const pw.FlexColumnWidth(1),
+      for (var c = 2; c < headers.length; c++) c: const pw.FixedColumnWidth(15),
+    };
+    final cellAlignments = <int, pw.Alignment>{
+      0: pw.Alignment.center,
+      1: pw.Alignment.centerLeft,
+      for (var c = 2; c < headers.length; c++) c: pw.Alignment.center,
+    };
+
+    final body = <pw.Widget>[];
+    for (var s = 0; s < sections.length; s++) {
+      final section = sections[s];
+      if (s > 0) body.add(pw.SizedBox(height: 14));
+      body.add(pw.Text('Kelas   : ${section.kelas}', style: const pw.TextStyle(fontSize: 10)));
+      body.add(pw.SizedBox(height: 2));
+      body.add(pw.Text('Halaqoh : ${section.halaqoh}', style: const pw.TextStyle(fontSize: 10)));
+      if (section.guruPembimbing != null && section.guruPembimbing!.trim().isNotEmpty) {
+        body.add(pw.SizedBox(height: 2));
+        body.add(pw.Text('Guru Pembimbing : ${section.guruPembimbing}',
+            style: const pw.TextStyle(fontSize: 10)));
+      }
+      body.add(pw.SizedBox(height: 6));
+      body.add(pw.TableHelper.fromTextArray(
+        headers: headers,
+        data: _pdfSafeRows(_r.buildAttendanceMonthRows(section.items, month)),
+        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 7),
+        headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF0E7C61)),
+        headerAlignment: pw.Alignment.center,
+        cellStyle: const pw.TextStyle(fontSize: 7),
+        cellHeight: 15,
+        cellPadding: const pw.EdgeInsets.symmetric(horizontal: 1, vertical: 2),
+        cellAlignment: pw.Alignment.center,
+        columnWidths: columnWidths,
+        cellAlignments: cellAlignments,
+        oddRowDecoration: const pw.BoxDecoration(color: PdfColors.grey100),
+        border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.4),
+      ));
+    }
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(24),
+        header: (context) => pw.Align(
+          alignment: pw.Alignment.center,
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Text(ExportRows.judulKehadiran,
+                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+                  textAlign: pw.TextAlign.center),
+              pw.SizedBox(height: 2),
+              pw.Text(ExportRows.namaSekolah,
+                  style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700),
+                  textAlign: pw.TextAlign.center),
+              if (periode != null && periode.trim().isNotEmpty) ...[
+                pw.SizedBox(height: 2),
+                pw.Text(_pdfSafe(periode),
+                    style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.center),
+              ],
+              pw.SizedBox(height: 10),
+            ],
+          ),
+        ),
+        build: (context) => [
+          ...body,
+          pw.SizedBox(height: 10),
+          pw.Text(ExportRows.attendanceLegend, style: const pw.TextStyle(fontSize: 8)),
+        ],
+      ),
+    );
+
+    final bytes = await doc.save();
+    return persistExportedFile('${exportFileSlug(judul)}.pdf', bytes);
+  }
+
   Future<ExportedFile> exportGroupedMonthlyRecapPdf(
       List<ExportKelasHalaqohSection<SantriMonthlyRecap>> sections, {
         required String judul,

@@ -31,20 +31,27 @@ class KehadiranScreen extends StatefulWidget {
 class _KehadiranScreenState extends State<KehadiranScreen> {
   Keterangan? _filter;
 
-  /// Export rekap kehadiran sesuai filter chip yang sedang aktif. Datanya dikelompokkan per
-  /// Kelas+Halaqoh (urut tanggal naik) dan memakai pipeline export yang sama dengan Laporan
-  /// Pekanan, jadi PDF/Word/Excel + Bagikan/Simpan langsung tersedia.
-  void _export(List<SantriRecord> records) {
+  /// Export rekap kehadiran PER BULAN: pilih bulan dulu, lalu semua Kelas+Halaqoh di bulan itu
+  /// masuk 1 dokumen (tiap kelompok 1 tabel: baris = santri, kolom = tanggal 1..akhir bulan, isi =
+  /// kode H/S/I/L/P/A, plus total). Tidak terpengaruh chip filter di layar.
+  Future<void> _export(List<SantriRecord> all) async {
+    final counts = <DateTime, int>{};
+    for (final r in all) {
+      final m = DateTime(r.tanggal.year, r.tanggal.month);
+      counts[m] = (counts[m] ?? 0) + 1;
+    }
+    final months = counts.keys.toList()..sort((a, b) => b.compareTo(a));
+    if (months.isEmpty) return;
+
+    final month = await _pickMonth(months, counts);
+    if (month == null || !mounted) return;
+
     final recordsProvider = context.read<RecordsProvider>();
     final auth = context.read<AuthProvider>();
-
-    final sorted = List<SantriRecord>.from(records)
-      ..sort((a, b) {
-        final byDate = a.tanggal.compareTo(b.tanggal);
-        if (byDate != 0) return byDate;
-        return a.namaAnak.toLowerCase().compareTo(b.namaAnak.toLowerCase());
-      });
-    final groups = recordsProvider.groupByKelasHalaqoh(sorted);
+    final monthRecords = all
+        .where((r) => r.tanggal.year == month.year && r.tanggal.month == month.month)
+        .toList();
+    final groups = recordsProvider.groupByKelasHalaqoh(monthRecords);
     final sections = [
       for (final g in groups)
         ExportKelasHalaqohSection<SantriRecord>(
@@ -55,21 +62,49 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
         ),
     ];
 
-    final fmt = DateFormat('d MMM yyyy', 'id_ID');
-    final first = sorted.first.tanggal;
-    final last = sorted.last.tanggal;
-    final periode = DateUtils.isSameDay(first, last)
-        ? fmt.format(first)
-        : '${fmt.format(first)} - ${fmt.format(last)}';
-
+    final bulanLabel = DateFormat('MMMM yyyy', 'id_ID').format(month);
     showExportSheet(
       context,
-      groupedSections: sections,
-      judul: _filter == null
-          ? 'Rekap Kehadiran Santri'
-          : 'Rekap Kehadiran Santri - ${_filter!.label}',
-      periode: periode,
-      includeTanggal: true,
+      attendanceMonthSections: sections,
+      attendanceMonth: month,
+      judul: 'Rekap Kehadiran Santri - $bulanLabel',
+      periode: bulanLabel,
+    );
+  }
+
+  Future<DateTime?> _pickMonth(List<DateTime> months, Map<DateTime, int> counts) {
+    return showModalBottomSheet<DateTime>(
+      context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
+      constraints: const BoxConstraints(maxWidth: 640),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Text('Pilih bulan untuk diexport',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final m in months)
+                    ListTile(
+                      leading: const Icon(LucideIcons.calendarDays),
+                      title: Text(DateFormat('MMMM yyyy', 'id_ID').format(m)),
+                      subtitle: Text('${counts[m]} laporan'),
+                      onTap: () => Navigator.of(ctx).pop(m),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -96,11 +131,9 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                 icon: LucideIcons.upload,
                 label: 'Export',
                 color: AppColors.deployOn(context),
-                tooltip: _filter == null
-                    ? 'Export seluruh rekap kehadiran'
-                    : 'Export rekap kehadiran: ${_filter!.label}',
-                // Nonaktif kalau tidak ada data (sesuai filter aktif).
-                onTap: filtered.isEmpty ? null : () => _export(filtered),
+                tooltip: 'Export rekap kehadiran per bulan',
+                // Nonaktif kalau belum ada laporan sama sekali.
+                onTap: all.isEmpty ? null : () => _export(all),
               ),
             ),
             SliverPadding(

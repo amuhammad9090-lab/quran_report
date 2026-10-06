@@ -207,7 +207,12 @@ class AuthProvider extends ChangeNotifier {
   /// Muat ulang [allAccounts] dari repository, dipanggil setelah admin mengedit assignment guru
   /// (Kelola Akun Guru). Bila akun yang login ikut teredit, [currentUser]/[scope] ikut disegarkan
   /// agar assignment barunya langsung terpakai tanpa logout-login.
-  Future<void> reloadAccounts() async {
+  Future<void> reloadAccounts({bool forceRefresh = false}) async {
+    if (forceRefresh && _authRepo is ApiAuthRepository) {
+      try {
+        await (_authRepo).refresh();
+      } catch (_) {}
+    }
     _allAccounts = await _authRepo.allAccounts();
     if (_currentUser != null) {
       for (final acc in _allAccounts) {

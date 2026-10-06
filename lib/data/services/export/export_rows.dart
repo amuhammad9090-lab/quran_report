@@ -59,6 +59,72 @@ class ExportRows {
     'Catatan',
   ];
 
+  // ---- Export Rekap Kehadiran BULANAN: 1 tabel per Kelas+Halaqoh, baris = santri, kolom = tanggal 1..N ----
+  static const judulKehadiran = 'REKAP KEHADIRAN SANTRI';
+  static const attendanceTotalLabels = ['H', 'S', 'I', 'L', 'P', 'A'];
+  static const attendanceLegend =
+      'Keterangan: H = Hadir (termasuk tidak setoran/tahsin/murojaah), S = Sakit, I = Izin, '
+      'L = Izin Lomba, P = Izin Pelatihan, A = Alpa. Kotak kosong = tidak ada laporan di hari itu.';
+
+  int daysInMonth(DateTime month) => DateTime(month.year, month.month + 1, 0).day;
+
+  List<String> attendanceMonthHeaders(DateTime month) => [
+        'No',
+        'Nama Murid',
+        for (var d = 1; d <= daysInMonth(month); d++) '$d',
+        ...attendanceTotalLabels,
+      ];
+
+  String _attendanceCode(Keterangan k) => switch (k) {
+        Keterangan.hadir ||
+        Keterangan.tidakSetoran ||
+        Keterangan.tidakTahsin ||
+        Keterangan.tidakMurojaah =>
+          'H',
+        Keterangan.izinSakit => 'S',
+        Keterangan.izin => 'I',
+        Keterangan.izinLomba => 'L',
+        Keterangan.izinPelatihan => 'P',
+        Keterangan.alpa => 'A',
+      };
+
+  /// 1 baris per santri (urut nama): No, Nama, kode kehadiran tiap tanggal 1..N, lalu total H,S,I,L,P,A.
+  /// Kalau 1 santri punya >1 laporan di hari yang sama, yang terakhir diinput yang dipakai.
+  List<List<String>> buildAttendanceMonthRows(List<SantriRecord> records, DateTime month) {
+    final days = daysInMonth(month);
+    final byKey = <String, List<SantriRecord>>{};
+    final display = <String, String>{};
+    for (final r in records) {
+      if (r.tanggal.year != month.year || r.tanggal.month != month.month) continue;
+      final key = r.namaAnak.trim().toLowerCase();
+      byKey.putIfAbsent(key, () => []).add(r);
+      display[key] = r.namaAnak.trim();
+    }
+    final keys = byKey.keys.toList()
+      ..sort((a, b) => (display[a] ?? a).toLowerCase().compareTo((display[b] ?? b).toLowerCase()));
+
+    final rows = <List<String>>[];
+    for (var i = 0; i < keys.length; i++) {
+      final recs = List<SantriRecord>.from(byKey[keys[i]]!)
+        ..sort((a, b) => (a.createdAt ?? a.tanggal).compareTo(b.createdAt ?? b.tanggal));
+      final codes = List<String>.filled(days + 1, '');
+      for (final r in recs) {
+        codes[r.tanggal.day] = _attendanceCode(r.keterangan);
+      }
+      final counts = {for (final l in attendanceTotalLabels) l: 0};
+      for (var d = 1; d <= days; d++) {
+        if (codes[d].isNotEmpty) counts[codes[d]] = counts[codes[d]]! + 1;
+      }
+      rows.add([
+        '${i + 1}',
+        display[keys[i]] ?? keys[i],
+        for (var d = 1; d <= days; d++) codes[d],
+        for (final l in attendanceTotalLabels) '${counts[l]}',
+      ]);
+    }
+    return rows;
+  }
+
   static const headersWithTanggal = [
     'No',
     'Hari/Tanggal',

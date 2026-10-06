@@ -50,12 +50,31 @@ service cloud.firestore {
       // accounts/*, sementara server nolak (bukan admin menurut daftar
       // ini) -> permission-denied. Gap ini sudah ada sejak migrasi ke
       // isAdmin()/isOwnAccount(), cuma baru ketauan sekarang.
-      function isAdmin() {
+      //
+      // <-- BERUBAH (fix: role admin dari app tidak berlaku di server): isAdmin() dulu HANYA
+      // percaya daftar email hardcode di atas, jadi mengubah `role` jadi admin (lewat Kelola
+      // Akun Guru atau manual di Console) cuma mengubah pandangan CLIENT; server tetap menolak
+      // (permission-denied) karena emailnya tidak ada di daftar. Sekarang admin = SALAH SATU dari:
+      //   1. email bootstrap hardcode (admin pertama, tidak bergantung data apa pun), ATAU
+      //   2. dokumen index `accountsByEmail/{email-sendiri}` punya `isAdmin: true`.
+      // Flag di (2) SENGAJA ditaruh di accountsByEmail, BUKAN dibaca dari `accounts/{id}.role`,
+      // karena `accounts/{id}` boleh ditulis pemiliknya sendiri (isOwnAccount) -- kalau role di
+      // situ jadi dasar izin, guru biasa bisa menaikkan dirinya jadi admin. accountsByEmail cuma
+      // boleh ditulis admin (lihat rule-nya di bawah), jadi aman.
+      function isBootstrapAdmin() {
         return request.auth != null &&
-          request.auth.token.email in [
+          request.auth.token.email != null &&
+          request.auth.token.email.lower() in [
             'admin@quranreport-admin.app',
             'a.muhammad9090@gmail.com'
           ];
+      }
+      function isAdminByIndex() {
+        return isGuruApp() &&
+          get(/databases/$(database)/documents/schools/$(schoolId)/accountsByEmail/$(request.auth.token.email.lower())).data.get('isAdmin', false) == true;
+      }
+      function isAdmin() {
+        return isBootstrapAdmin() || isAdminByIndex();
       }
       function isGuruApp() {
         return request.auth != null &&

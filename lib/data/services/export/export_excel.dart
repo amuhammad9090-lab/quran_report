@@ -117,6 +117,83 @@ class ExportExcel {
     return persistExportedFile('${exportFileSlug(judul)}.xlsx', Uint8List.fromList(bytes));
   }
 
+  /// Rekap Kehadiran BULANAN: per Kelas+Halaqoh 1 blok, baris = santri, kolom = tanggal 1..N + total.
+  Future<ExportedFile> exportAttendanceMonthlyExcel(
+      List<ExportKelasHalaqohSection<SantriRecord>> sections, {
+        required DateTime month,
+        required String judul,
+        String? periode,
+      }) async {
+    final book = xls.Excel.createExcel();
+    const sheetName = 'Kehadiran';
+    book.rename('Sheet1', sheetName);
+    final sheet = book[sheetName];
+
+    final headers = _r.attendanceMonthHeaders(month);
+    final titleStyle = xls.CellStyle(bold: true, fontSize: 14);
+    final subtitleStyle = xls.CellStyle(fontSize: 11, italic: true);
+    final labelStyle = xls.CellStyle(fontSize: 10);
+    final headerStyle = xls.CellStyle(
+      bold: true,
+      horizontalAlign: xls.HorizontalAlign.Center,
+      fontColorHex: xls.ExcelColor.white,
+      backgroundColorHex: xls.ExcelColor.fromHexString('#0E7C61'),
+    );
+    final centerStyle = xls.CellStyle(horizontalAlign: xls.HorizontalAlign.Center);
+
+    var row = 0;
+    void writeMerged(String text, xls.CellStyle style) {
+      final start = xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row);
+      final end = xls.CellIndex.indexByColumnRow(columnIndex: headers.length - 1, rowIndex: row);
+      sheet.merge(start, end);
+      final cell = sheet.cell(start);
+      cell.value = xls.TextCellValue(text);
+      cell.cellStyle = style;
+      row++;
+    }
+
+    writeMerged(ExportRows.judulKehadiran, titleStyle);
+    writeMerged(ExportRows.namaSekolah, subtitleStyle);
+    if (periode != null && periode.trim().isNotEmpty) writeMerged(periode, labelStyle);
+    row++; // spasi
+
+    for (final section in sections) {
+      writeMerged('Kelas   : ${section.kelas}', labelStyle);
+      writeMerged('Halaqoh : ${section.halaqoh}', labelStyle);
+      if (section.guruPembimbing != null && section.guruPembimbing!.trim().isNotEmpty) {
+        writeMerged('Guru Pembimbing : ${section.guruPembimbing}', labelStyle);
+      }
+      for (var c = 0; c < headers.length; c++) {
+        final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row));
+        cell.value = xls.TextCellValue(headers[c]);
+        cell.cellStyle = headerStyle;
+      }
+      row++;
+      final rows = _r.buildAttendanceMonthRows(section.items, month);
+      for (var r = 0; r < rows.length; r++) {
+        for (var c = 0; c < rows[r].length; c++) {
+          // Kotak kosong (tidak ada laporan) dibiarkan benar-benar kosong.
+          if (rows[r][c].isEmpty) continue;
+          final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row + r));
+          cell.value = xls.TextCellValue(rows[r][c]);
+          if (c != 1) cell.cellStyle = centerStyle;
+        }
+      }
+      row += rows.length + 1; // +1 spasi antar kelompok
+    }
+
+    writeMerged(ExportRows.attendanceLegend, labelStyle);
+
+    sheet.setColumnWidth(0, 5);   // No
+    sheet.setColumnWidth(1, 30);  // Nama
+    for (var c = 2; c < headers.length; c++) {
+      sheet.setColumnWidth(c, 4.5); // tanggal 1..N + total H,S,I,L,P,A
+    }
+
+    final bytes = book.encode()!;
+    return persistExportedFile('${exportFileSlug(judul)}.xlsx', Uint8List.fromList(bytes));
+  }
+
   Future<ExportedFile> exportGroupedExcel(
       List<ExportKelasHalaqohSection<SantriRecord>> sections, {
         required String judul,

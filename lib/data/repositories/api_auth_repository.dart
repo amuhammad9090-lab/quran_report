@@ -328,6 +328,36 @@ class ApiAuthRepository implements AuthRepository {
     }
   }
 
+  /// Ubah role akun (admin <-> guru pembimbing). HANYA dipanggil dari layar admin (Kelola Akun
+  /// Guru); pengecekan siapa yang boleh ada di layer UI, dan Firestore Rules tetap penentu akhir
+  /// boleh-tidaknya tulis ke `accounts/{id}`. Pakai merge supaya cuma field `role` yang berubah.
+  /// Nilai yang ditulis 'admin' / 'guru_pembimbing' (sama seperti seed; [UserRole.fromName] baca keduanya).
+  Future<void> updateRole(UserAccount account, UserRole newRole) async {
+    final roleValue = newRole == UserRole.admin ? 'admin' : 'guru_pembimbing';
+
+    // Dua dokumen dijaga sinkron dalam 1 batch: `accounts/{id}.role` (dibaca CLIENT) dan flag
+    // `accountsByEmail/{email}.isAdmin` (dibaca Firestore Rules di isAdmin() -- INI yang
+    // sebenarnya memberi izin admin di server, lihat firestore.rules).
+    final batch = FirebaseFirestore.instance.batch();
+    batch.set(_collection.doc(account.id), {'role': roleValue}, SetOptions(merge: true));
+    final email = account.googleEmail;
+    if (email != null) {
+      batch.set(
+        _accountsByEmailCollection.doc(email),
+        {'accountId': account.id, 'isAdmin': newRole == UserRole.admin},
+        SetOptions(merge: true),
+      );
+    }
+    await batch.commit().timeout(const Duration(seconds: 15));
+
+    final updated = account.copyWith(role: newRole);
+    final box = await _openBox();
+    await box.put(account.id, jsonEncode(updated.toJson()));
+    if (_memCache != null) {
+      _memCache = [for (final a in _memCache!) if (a.id == account.id) updated else a];
+    }
+  }
+
   /// <-- BARU (migrasi auth: Anonymous -> Google Sign-In). Mapping/ubah
   /// email Google yang di-whitelist buat akun ini -- SATU-SATUNYA cara
   /// admin memberi (atau mencabut, lewat [newGoogleEmail] = null) akses
@@ -371,7 +401,12 @@ class ApiAuthRepository implements AuthRepository {
       batch.delete(_accountsByEmailCollection.doc(oldEmail));
     }
     if (normalizedOrNull != null) {
-      batch.set(_accountsByEmailCollection.doc(normalizedOrNull), {'accountId': account.id});
+      // `isAdmin` ikut ditulis supaya Firestore Rules (isAdmin()) tahu role akun ini; ini juga
+      // yang membuat akun admin lama (index-nya belum punya flag) ter-sinkron tiap kali disimpan.
+      batch.set(_accountsByEmailCollection.doc(normalizedOrNull), {
+        'accountId': account.id,
+        'isAdmin': updated.isAdmin,
+      });
     }
     await batch.commit().timeout(const Duration(seconds: 15));
 

@@ -290,6 +290,24 @@ class ExportService {
           ),
       };
 
+  // -------------------- Rekap Kehadiran bulanan (baris = santri, kolom = tanggal) --------------------
+
+  Future<ExportedFile> exportAttendanceMonthly(
+    ExportFormat format,
+    List<ExportKelasHalaqohSection<SantriRecord>> sections, {
+    required DateTime month,
+    required String judul,
+    String? periode,
+  }) =>
+      switch (format) {
+        ExportFormat.pdf =>
+          _pdf.exportAttendanceMonthlyPdf(sections, month: month, judul: judul, periode: periode),
+        ExportFormat.word =>
+          _word.exportAttendanceMonthlyWord(sections, month: month, judul: judul, periode: periode),
+        ExportFormat.excel =>
+          _excel.exportAttendanceMonthlyExcel(sections, month: month, judul: judul, periode: periode),
+      };
+
   // -------------------- Buka / Bagikan / Simpan --------------------
 
   /// Buka file lewat aplikasi bawaan perangkat (PDF viewer, Word, Excel, dst), dipanggil otomatis
