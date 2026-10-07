@@ -89,7 +89,7 @@ class ProfileScreen extends StatelessWidget {
     // sendiri (baris di bawah) yang sengaja tetap baca `user.isAdmin`
     // mentah, soalnya toggle itu harus tetap muncul buat admin walau
     // lagi dia nonaktifkan.
-    final isEffectivelyAdmin = auth.scope?.isAdmin ?? false;
+    final isEffectivelyAdmin = auth.scope?.canSeeAll ?? false;
     // Kalau data master santri untuk assignment ini kosong (belum
     // diimpor), fallback ke jumlah santri unik dari riwayat laporan biar
     // angkanya tetap masuk akal, bukan 0 yang menyesatkan.
@@ -249,7 +249,7 @@ class ProfileScreen extends StatelessWidget {
                       children: [
                         Expanded(
                           child: StatPill(
-                            label: 'Santri Diampu',
+                            label: 'Siswa Diampu',
                             value: '$santriDiampu',
                             icon: LucideIcons.users,
                             color: cs.primary,

@@ -46,8 +46,8 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
         SnackBar(
           content: Text(
             changed == 0
-                ? 'Sudah sinkron -- tidak ada santri yang perlu diperbarui.'
-                : 'Berhasil! $changed santri disinkronkan ke guru pembimbing terbaru.',
+                ? 'Sudah sinkron -- tidak ada siswa yang perlu diperbarui.'
+                : 'Berhasil! $changed siswa disinkronkan ke guru pembimbing terbaru.',
           ),
         ),
       );
@@ -99,7 +99,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(LucideIcons.users),
                     onPressed: _syncingGuruAccountId ? null : () => _resyncGuruAccountIds(context),
-                    tooltip: 'Sinkronkan Guru Pembimbing ke semua santri',
+                    tooltip: 'Sinkronkan Guru Pembimbing ke semua siswa',
                   ),
                   IconButton(
                     icon: _refreshing
@@ -134,7 +134,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                     final noGoogleEmail = acc.googleEmail == null;
                     return ListTile(
                       leading: SoftIconBox(
-                        icon: acc.isAdmin ? LucideIcons.shield : LucideIcons.user,
+                        icon: acc.isAdmin ? LucideIcons.shield : (acc.isPengawas ? LucideIcons.eye : LucideIcons.user),
                         color: noGoogleEmail ? cs.error : cs.primary,
                       ),
                       title: Text(acc.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -192,7 +192,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
     final selected = {for (final a in account.assignments) a.key};
     // Role admin (akses global). Akun yang sedang dipakai login TIDAK boleh diubah rolenya dari
     // sini, supaya admin tidak tidak sengaja mencabut akses admin dirinya sendiri.
-    var isAdminRole = account.isAdmin;
+    var selectedRole = account.role;
     final isSelf = authProvider.currentUser?.id == account.id;
     var saving = false;
 
@@ -239,21 +239,32 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                         'Guru login pakai akun Google ini. Kosongkan untuk mencabut akses login.',
                         style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 11.5),
                       ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Jadikan Admin'),
-                        subtitle: Text(
-                          isSelf
-                              ? 'Role akun yang sedang dipakai tidak bisa diubah dari sini.'
-                              : 'Akses global ke semua kelas, halaqoh, dan menu Kelola.',
-                          style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 11.5),
-                        ),
-                        value: isAdminRole,
-                        onChanged: isSelf ? null : (v) => setSheetState(() => isAdminRole = v),
+                      Text('Role', style: Theme.of(ctx).textTheme.labelLarge),
+                      const SizedBox(height: 6),
+                      SegmentedButton<UserRole>(
+                        showSelectedIcon: false,
+                        segments: const [
+                          ButtonSegment(value: UserRole.guruPembimbing, label: Text('Guru')),
+                          ButtonSegment(value: UserRole.pengawas, label: Text('Pengawas')),
+                          ButtonSegment(value: UserRole.admin, label: Text('Admin')),
+                        ],
+                        selected: {selectedRole},
+                        onSelectionChanged: isSelf ? null : (v) => setSheetState(() => selectedRole = v.first),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isSelf
+                            ? 'Role akun yang sedang dipakai tidak bisa diubah dari sini.'
+                            : switch (selectedRole) {
+                                UserRole.admin => 'Admin: akses global, boleh mengubah data dan mengelola sekolah.',
+                                UserRole.pengawas => 'Pengawas: melihat semua kelas, halaqoh, statistik, dan export. Tidak bisa mengubah data.',
+                                UserRole.guruPembimbing => 'Guru: hanya kelas dan halaqoh yang diampu.',
+                              },
+                        style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 11.5),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Assignment kelas+halaqoh (${isAdminRole ? UserRole.admin.label : UserRole.guruPembimbing.label})',
+                        'Assignment kelas+halaqoh (${selectedRole.label})',
                         style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 12.5),
                       ),
                       const SizedBox(height: 4),
@@ -294,8 +305,8 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                                     // updateAssignments, karena updateAssignments menulis ulang
                                     // seluruh dokumen (role lama akan menimpa kalau basisnya `account`).
                                     var base = account;
-                                    if (isAdminRole != account.isAdmin) {
-                                      final newRole = isAdminRole ? UserRole.admin : UserRole.guruPembimbing;
+                                    if (selectedRole != account.role) {
+                                      final newRole = selectedRole;
                                       await ApiAuthRepository.instance.updateRole(account, newRole);
                                       base = await ApiAuthRepository.instance.findById(account.id) ??
                                           account.copyWith(role: newRole);
@@ -391,7 +402,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                                         content: Text(affectedStudents.isEmpty
                                             ? 'Akun ${nameCtrl.text.trim()} tersimpan.'
                                             : 'Akun ${nameCtrl.text.trim()} tersimpan. '
-                                                '${affectedStudents.length} santri disinkronkan.'),
+                                                '${affectedStudents.length} siswa disinkronkan.'),
                                       ),
                                     );
                                   } catch (e) {

@@ -82,7 +82,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Laporan Tahsin & Tahfizh Santri',
+                        'Laporan Tahsin & Tahfizh Siswa',
                         style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
                       ),
                     ],

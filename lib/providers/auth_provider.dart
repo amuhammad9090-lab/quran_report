@@ -207,6 +207,10 @@ class AuthProvider extends ChangeNotifier {
   /// Muat ulang [allAccounts] dari repository, dipanggil setelah admin mengedit assignment guru
   /// (Kelola Akun Guru). Bila akun yang login ikut teredit, [currentUser]/[scope] ikut disegarkan
   /// agar assignment barunya langsung terpakai tanpa logout-login.
+  ///
+  /// [forceRefresh] = true: tarik dulu data TERBARU dari Firestore (bukan cuma cache Hive/memori),
+  /// supaya perubahan role/assignment dari admin langsung terbaca di device ini. Tanpa ini cache
+  /// baru ke-update di background dan baru terpakai pada pembukaan app berikutnya.
   Future<void> reloadAccounts({bool forceRefresh = false}) async {
     if (forceRefresh && _authRepo is ApiAuthRepository) {
       try {

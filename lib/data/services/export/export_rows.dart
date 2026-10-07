@@ -27,6 +27,7 @@ class SantriWeeklyRow {
   final String capaian;
   final int totalBaris;
   final String keterangan;
+  final String status;
   final String catatan;
 
   const SantriWeeklyRow({
@@ -35,6 +36,7 @@ class SantriWeeklyRow {
     required this.capaian,
     required this.totalBaris,
     required this.keterangan,
+    required this.status,
     required this.catatan,
   });
 }
@@ -51,16 +53,17 @@ class ExportRows {
 
   static const headers = [
     'No',
-    'Nama Murid',
+    'Nama Siswa',
     'Capaian Tahsin/Tahfizh',
     'Ayat/Hal',
     'Baris',
     'Keterangan',
+    'Status',
     'Catatan',
   ];
 
   // ---- Export Rekap Kehadiran BULANAN: 1 tabel per Kelas+Halaqoh, baris = santri, kolom = tanggal 1..N ----
-  static const judulKehadiran = 'REKAP KEHADIRAN SANTRI';
+  static const judulKehadiran = 'REKAP KEHADIRAN SISWA';
   static const attendanceTotalLabels = ['H', 'S', 'I', 'L', 'P', 'A'];
   static const attendanceLegend =
       'Keterangan: H = Hadir (termasuk tidak setoran/tahsin/murojaah), S = Sakit, I = Izin, '
@@ -70,7 +73,7 @@ class ExportRows {
 
   List<String> attendanceMonthHeaders(DateTime month) => [
         'No',
-        'Nama Murid',
+        'Nama Siswa',
         for (var d = 1; d <= daysInMonth(month); d++) '$d',
         ...attendanceTotalLabels,
       ];
@@ -128,11 +131,12 @@ class ExportRows {
   static const headersWithTanggal = [
     'No',
     'Hari/Tanggal',
-    'Nama Murid',
+    'Nama Siswa',
     'Capaian Tahsin/Tahfizh',
     'Ayat/Hal',
     'Baris',
     'Keterangan',
+    'Status',
     'Catatan',
   ];
 
@@ -223,6 +227,26 @@ class ExportRows {
     return (c == null || c.isEmpty) ? '-' : c;
   }
 
+  /// Kolom Status = KETUNTASAN setoran (tombol Tuntas/Tidak Tuntas di form laporan); '-' kalau belum ditandai.
+  String _statusText(SantriRecord r) => switch (r.tuntas) {
+        true => 'Tuntas',
+        false => 'Tidak Tuntas',
+        null => '-',
+      };
+
+  /// Ringkasan ketuntasan banyak laporan (1 siswa dalam 1 pekan/bulan): 1 laporan -> labelnya saja,
+  /// lebih dari itu "2x Tuntas, 1x Tidak Tuntas" (yang belum ditandai tidak dihitung), '-' kalau kosong.
+  String tuntasSummaryFor(List<SantriRecord> recs) {
+    final tuntas = recs.where((r) => r.tuntas == true).length;
+    final tidak = recs.where((r) => r.tuntas == false).length;
+    if (tuntas == 0 && tidak == 0) return '-';
+    if (recs.length == 1) return tuntas == 1 ? 'Tuntas' : 'Tidak Tuntas';
+    return [
+      if (tuntas > 0) '${tuntas}x Tuntas',
+      if (tidak > 0) '${tidak}x Tidak Tuntas',
+    ].join(', ');
+  }
+
   String joinUnique(Iterable<String> values) {
     final set = values.map((v) => v.trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
     return set.join(', ');
@@ -239,6 +263,7 @@ class ExportRows {
         _ayatHalRange(r),
         _barisText(r),
         r.keterangan.label,
+        _statusText(r),
         _catatanText(r),
       ]);
     }
@@ -260,6 +285,7 @@ class ExportRows {
         _ayatHalRange(r),
         _barisText(r),
         r.keterangan.label,
+        _statusText(r),
         _catatanText(r),
       ]);
     }
@@ -276,6 +302,8 @@ class ExportRows {
 
   String catatanTextFor(SantriRecord r) => _catatanText(r);
 
+  String statusTextFor(SantriRecord r) => _statusText(r);
+
   String hariTanggalTextFor(DateTime d) => _hariTanggalText(d);
 
   // ---- Generate Laporan Pekanan: gabung per SANTRI ----
@@ -284,10 +312,11 @@ class ExportRows {
   static const weeklyHeaders = [
     'No',
     'Hari/Tanggal',
-    'Nama Murid',
+    'Nama Siswa',
     'Capaian',
     'Baris',
     'Keterangan',
+    'Status',
     'Catatan',
   ];
 
@@ -402,6 +431,7 @@ class ExportRows {
       capaian: _weeklyCapaianForSantri(recs),
       totalBaris: recs.fold<int>(0, (sum, r) => sum + (r.totalBaris ?? 0)),
       keterangan: _weeklyKeteranganForSantri(recs),
+      status: tuntasSummaryFor(recs),
       catatan: _weeklyCatatanForSantri(recs),
     );
   }
@@ -422,6 +452,7 @@ class ExportRows {
           rows[i].capaian,
           '${rows[i].totalBaris}',
           rows[i].keterangan,
+          rows[i].status,
           rows[i].catatan,
         ],
     ];
@@ -453,10 +484,11 @@ class ExportRows {
 
   List<String> monthlyHeaders(int totalWeeks) => [
     'No',
-    'Nama Murid',
+    'Nama Siswa',
     for (var w = 1; w <= totalWeeks; w++) 'Pekan $w',
     'Total Baris',
     'Keterangan',
+    'Status',
   ];
 
   List<List<String>> monthlyRows(List<SantriMonthlyRecap> recaps, int totalWeeks) {
@@ -469,6 +501,7 @@ class ExportRows {
         for (var w = 1; w <= totalWeeks; w++) r.capaianForWeek(w),
         '${r.totalBaris}',
         r.keteranganSummaryText,
+        r.tuntasSummaryText,
       ]);
     }
     return rows;

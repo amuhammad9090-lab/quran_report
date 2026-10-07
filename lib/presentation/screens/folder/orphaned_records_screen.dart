@@ -170,8 +170,8 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
         title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
         content: Text(
           hasReports
-              ? 'Semua laporan pekanan santri ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
-              : 'Belum ada laporan yang tersimpan untuk santri ini.',
+              ? 'Semua laporan pekanan siswa ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
+              : 'Belum ada laporan yang tersimpan untuk siswa ini.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [

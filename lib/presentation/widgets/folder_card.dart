@@ -155,7 +155,7 @@ class FolderCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '$recordCount santri',
+                          '$recordCount siswa',
                           style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
                         ),
                       ],
@@ -173,7 +173,7 @@ class FolderCard extends StatelessWidget {
                   right: -6,
                   child: Tooltip(
                     message:
-                        '$matchingFilterCount santri di folder ini cocok filter aktif',
+                        '$matchingFilterCount siswa di folder ini cocok filter aktif',
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                       constraints: const BoxConstraints(minWidth: 20),

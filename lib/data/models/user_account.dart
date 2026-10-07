@@ -5,16 +5,21 @@ import 'kelas_halaqoh.dart';
 /// assignment (kelas+halaqoh) miliknya sendiri.
 enum UserRole {
   admin,
-  guruPembimbing;
+  guruPembimbing,
+  /// Pengawas (mis. kepala sekolah/wakakur): LIHAT semua data seperti admin, tapi READ-ONLY --
+  /// tidak bisa menambah/mengubah/menghapus apa pun (dijaga di UI, provider, DAN Firestore Rules).
+  pengawas;
 
   String get label => switch (this) {
         UserRole.admin => 'Admin',
         UserRole.guruPembimbing => 'Guru Pembimbing',
+        UserRole.pengawas => 'Pengawas',
       };
 
   static UserRole fromName(String name) {
     final n = name.trim().toLowerCase();
     if (n == 'admin') return UserRole.admin;
+    if (n == 'pengawas' || n == 'viewer') return UserRole.pengawas;
     // 'guru_pembimbing' (nama resmi terbaru), serta nama lama
     // 'musyrif'/'guru_alquran' (dari data sekolah versi sebelumnya)
     // dianggap sama. Nilai lain yang tidak dikenal juga fallback ke
@@ -79,6 +84,7 @@ class UserAccount {
   });
 
   bool get isAdmin => role == UserRole.admin;
+  bool get isPengawas => role == UserRole.pengawas;
 
   /// Kelas unik yang diampu (union dari [assignments]) — cuma buat
   /// keperluan TAMPILAN (mis. chip ringkasan di Profile). JANGAN dipakai

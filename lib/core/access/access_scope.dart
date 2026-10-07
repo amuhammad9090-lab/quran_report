@@ -44,8 +44,17 @@ class AccessScope {
 
   bool get isAdmin => user.isAdmin && adminModeActive;
 
+  /// Pengawas = akses BACA global, tanpa hak tulis (tidak terpengaruh toggle Mode Admin).
+  bool get isViewer => user.isPengawas;
+
+  /// Boleh MELIHAT semua kelas/halaqoh (admin yang mode-nya aktif, atau pengawas).
+  bool get canSeeAll => isAdmin || isViewer;
+
+  /// Pengawas tidak boleh menulis data apa pun.
+  bool get canWrite => !isViewer;
+
   bool canAccessKelasHalaqoh(String kelas, String halaqoh) {
-    if (isAdmin) return true;
+    if (canSeeAll) return true;
     return user.assignments.contains(KelasHalaqoh(kelas: kelas, halaqoh: halaqoh));
   }
 
@@ -56,12 +65,12 @@ class AccessScope {
       canAccessKelasHalaqoh(student.kelas, student.halaqoh);
 
   List<SantriRecord> scopeRecords(List<SantriRecord> all) {
-    if (isAdmin) return all;
+    if (canSeeAll) return all;
     return all.where(canAccessRecord).toList();
   }
 
   List<Student> scopeStudents(List<Student> all) {
-    if (isAdmin) return all;
+    if (canSeeAll) return all;
     return all.where(canAccessStudent).toList();
   }
 
@@ -83,7 +92,7 @@ class AccessScope {
   // diperlakukan seperti [ownerId] null -- global/tetap kelihatan,
   // demi kompatibilitas folder sebelum field ini ada.
   List<ReportFolder> scopeFolders(List<ReportFolder> all) {
-    if (isAdmin) return all;
+    if (canSeeAll) return all;
     return all
         .where((f) => f.createdAsAdmin != true)
         .where((f) => f.ownerId == null || f.ownerId == user.id)

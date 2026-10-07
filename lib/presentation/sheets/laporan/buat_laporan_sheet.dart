@@ -6,6 +6,7 @@ import '../../../core/access/access_scope.dart';
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/common/app_snackbar.dart';
+import '../../widgets/common/viewer_guard.dart';
 import '../../widgets/forms/select_field.dart';
 
 /// Tahap 1 alur "Buat Laporan" (lihat spesifikasi perubahan Laporan &
@@ -16,6 +17,7 @@ Future<void> showBuatLaporanSheet(
   String? folderId,
   ValueChanged<bool>? onFabVisibilityChanged,
 }) {
+  if (blockIfViewer(context)) return Future<void>.value();
   return showModalBottomSheet(
     context: context,
     constraints: const BoxConstraints(maxWidth: 640),
@@ -224,7 +226,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             Text(
-              'Pilih identitas santri dulu — capaian pekanan diisi belakangan lewat kartunya.',
+              'Pilih identitas siswa dulu — capaian pekanan diisi belakangan lewat kartunya.',
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5),
             ),
             const SizedBox(height: 18),
@@ -261,7 +263,7 @@ class _BuatLaporanSheetState extends State<BuatLaporanSheet> {
             SelectField(
               key: ValueKey('bl_nama_$_nama'),
               value: _nama,
-              label: 'Nama Santri',
+              label: 'Nama Siswa',
               hint: comboBelumLengkap ? 'Pilih kelas & halaqoh dulu' : null,
               icon: LucideIcons.user,
               options: namaOptions,

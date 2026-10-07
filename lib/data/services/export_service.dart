@@ -30,6 +30,7 @@ class ExportService {
   String ayatHalRangeFor(SantriRecord r) => _rows.ayatHalRangeFor(r);
   String barisTextFor(SantriRecord r) => _rows.barisTextFor(r);
   String catatanTextFor(SantriRecord r) => _rows.catatanTextFor(r);
+  String statusTextFor(SantriRecord r) => _rows.statusTextFor(r);
   String hariTanggalTextFor(DateTime d) => _rows.hariTanggalTextFor(d);
 
   List<SantriWeeklyRow> weeklyRowsGroupedBySantriFor(

@@ -138,6 +138,7 @@ class RecordsProvider extends ChangeNotifier {
     required String nama,
     String? folderId,
   }) async {
+    if (_scope?.isViewer ?? false) throw ScopeViolationException('Akun Pengawas hanya bisa melihat data.');
     if (_scope != null && !_scope!.canAccessKelasHalaqoh(kelas, halaqoh)) {
       throw ScopeViolationException(
         'Anda tidak punya akses untuk kelas $kelas / $halaqoh.',
@@ -229,6 +230,7 @@ class RecordsProvider extends ChangeNotifier {
   /// ditolak di sini — enforcement access-control yang sesungguhnya, bukan
   /// sekadar UI yang membatasi pilihan.
   Future<void> upsert(SantriRecord record) async {
+    if (_scope?.isViewer ?? false) throw ScopeViolationException('Akun Pengawas hanya bisa melihat data.');
     if (_scope != null && !_scope!.canAccessRecord(record)) {
       throw ScopeViolationException(
         'Anda tidak punya akses untuk kelas ${record.kelas} / ${record.halaqoh}.',
@@ -239,6 +241,7 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   Future<void> delete(String id) async {
+    if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     // Cari lewat data TER-SCOPE — guru pembimbing nggak bisa hapus record di luar
     // assignment-nya walau tahu id-nya (mis. dari deep link/cache lama).
     final record = _findById(id);
@@ -258,6 +261,7 @@ class RecordsProvider extends ChangeNotifier {
   /// Hapus PERMANEN semua laporan di folder [folderId] — dipakai saat folder
   /// dihapus (ikut menghapus isinya, bukan cuma mengeluarkan dari folder).
   Future<void> deleteAllInFolder(String folderId) async {
+    if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     final ids = _scoped.where((r) => r.folderId == folderId).map((r) => r.id).toList();
     for (final id in ids) {
       await StorageService.instance.delete(id);
@@ -273,6 +277,7 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   Future<void> moveManyToFolder(Iterable<String> recordIds, String? folderId) async {
+    if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     for (final id in recordIds) {
       final record = _findById(id);
       if (record == null) continue;
@@ -287,6 +292,7 @@ class RecordsProvider extends ChangeNotifier {
   /// (null = keluarkan) — dipakai [SantriReportCard]; beda dari [moveManyToFolder]
   /// yang per-id laporan.
   Future<void> moveAllForSantriToFolder(String namaAnak, String? folderId) async {
+    if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     final ids = recordsForSantri(namaAnak).map((r) => r.id).toList();
     await moveManyToFolder(ids, folderId);
   }
@@ -295,6 +301,7 @@ class RecordsProvider extends ChangeNotifier {
   /// Ikut menghapus dokumen `weeklyRecaps` (rekap yang di-"Deploy" ke Portal Ortu)
   /// supaya tak jadi dokumen yatim di Firestore.
   Future<void> deleteAllForSantri(String namaAnak, String identityKey) async {
+    if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     final ids = recordsForSantri(namaAnak).map((r) => r.id).toList();
     for (final id in ids) {
       await StorageService.instance.delete(id);
@@ -312,6 +319,7 @@ class RecordsProvider extends ChangeNotifier {
   /// laporannya dipindah; kartu KOSONG: disimpan sebagai mapping identitas sementara
   /// (lihat [SantriCardInfo.emptyCardFolderId]) yang basi begitu laporan pertama dibuat.
   Future<void> moveIdentityToFolder(SantriCardInfo card, String? folderId) async {
+    if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     if (card.hasAnyReport) {
       await moveAllForSantriToFolder(card.nama, folderId);
       return;
@@ -437,7 +445,7 @@ class RecordsProvider extends ChangeNotifier {
     // Guru pembimbing (bukan admin) hanya boleh lihat kartu di
     // kelas+halaqoh assignment-nya sendiri — termasuk kartu identitas
     // kosong (belum ada SantriRecord yang bisa discope lewat _scoped).
-    if (_scope == null || _scope!.isAdmin) return list;
+    if (_scope == null || _scope!.canSeeAll) return list;
     return list.where((c) => _scope!.canAccessKelasHalaqoh(c.kelas, c.halaqoh)).toList();
   }
 

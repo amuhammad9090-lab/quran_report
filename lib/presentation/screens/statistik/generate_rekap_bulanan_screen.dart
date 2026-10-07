@@ -74,7 +74,7 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                   icon: LucideIcons.wandSparkles,
                   title: 'Belum ada capaian untuk digabung',
                   subtitle:
-                  'Isi dulu laporan santri di salah satu Pekan bulan ini, baru rekap bulanan bisa di-generate.',
+                  'Isi dulu laporan siswa di salah satu Pekan bulan ini, baru rekap bulanan bisa di-generate.',
                 ),
               )
             else ...[
@@ -82,7 +82,7 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
                 sliver: SliverToBoxAdapter(
                   child: Text(
-                    '${recaps.length} santri • ${groups.length} kelompok Kelas/Halaqoh • gabungan Pekan 1-$totalWeeks',
+                    '${recaps.length} siswa • ${groups.length} kelompok Kelas/Halaqoh • gabungan Pekan 1-$totalWeeks',
                     style: TextStyle(
                       fontSize: 12.5,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,

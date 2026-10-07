@@ -54,7 +54,8 @@ class ExportPdf {
       4: pw.FlexColumnWidth(1.2),  // Ayat/Hal
       5: pw.FlexColumnWidth(0.7),  // Baris
       6: pw.FlexColumnWidth(1.2),  // Keterangan
-      7: pw.FlexColumnWidth(1.6),  // Catatan
+      7: pw.FlexColumnWidth(1.1),  // Status (ketuntasan)
+      8: pw.FlexColumnWidth(1.5),  // Catatan
     }
         : const {
       0: pw.FixedColumnWidth(26),  // No
@@ -63,11 +64,12 @@ class ExportPdf {
       3: pw.FlexColumnWidth(1.1),  // Ayat/Hal
       4: pw.FlexColumnWidth(0.8),  // Baris
       5: pw.FlexColumnWidth(1.4),  // Keterangan
-      6: pw.FlexColumnWidth(1.8),  // Catatan
+      6: pw.FlexColumnWidth(1.1),  // Status (ketuntasan)
+      7: pw.FlexColumnWidth(1.7),  // Catatan
     };
     final cellAlignments = includeTanggal
-        ? const {0: pw.Alignment.center, 5: pw.Alignment.center}
-        : const {0: pw.Alignment.center, 4: pw.Alignment.center};
+        ? const {0: pw.Alignment.center, 5: pw.Alignment.center, 7: pw.Alignment.center}
+        : const {0: pw.Alignment.center, 4: pw.Alignment.center, 6: pw.Alignment.center};
 
     doc.addPage(
       pw.MultiPage(
@@ -181,7 +183,8 @@ class ExportPdf {
       3: pw.FlexColumnWidth(3.2),
       4: pw.FlexColumnWidth(0.8),
       5: pw.FlexColumnWidth(1.6),
-      6: pw.FlexColumnWidth(1.8),
+      6: pw.FlexColumnWidth(1.2),
+      7: pw.FlexColumnWidth(1.7),
     }
         : const {
       0: pw.FixedColumnWidth(26),
@@ -190,11 +193,12 @@ class ExportPdf {
       3: pw.FlexColumnWidth(1.1),
       4: pw.FlexColumnWidth(0.8),
       5: pw.FlexColumnWidth(1.4),
-      6: pw.FlexColumnWidth(1.8),
+      6: pw.FlexColumnWidth(1.1),
+      7: pw.FlexColumnWidth(1.7),
     };
     final cellAlignments = includeTanggal
-        ? const {0: pw.Alignment.center, 4: pw.Alignment.center}
-        : const {0: pw.Alignment.center, 4: pw.Alignment.center};
+        ? const {0: pw.Alignment.center, 4: pw.Alignment.center, 6: pw.Alignment.center}
+        : const {0: pw.Alignment.center, 4: pw.Alignment.center, 6: pw.Alignment.center};
 
     final body = <pw.Widget>[];
     for (var s = 0; s < sections.length; s++) {
@@ -449,7 +453,7 @@ class ExportPdf {
         build: (context) => [
           ...body,
           pw.SizedBox(height: 12),
-          pw.Text('Total santri: $totalSantri',
+          pw.Text('Total siswa: $totalSantri',
               style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
         ],
       ),

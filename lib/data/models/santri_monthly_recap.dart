@@ -86,4 +86,22 @@ class SantriMonthlyRecap {
     }
     return parts.isEmpty ? '-' : parts.join(', ');
   }
+
+  /// Teks ringkas kolom Status (ketuntasan) bulan ini, mis. "3x Tuntas, 1x Tidak Tuntas".
+  /// Laporan yang belum ditandai tidak dihitung; '-' kalau tidak ada yang ditandai.
+  String get tuntasSummaryText {
+    var tuntas = 0;
+    var tidak = 0;
+    for (final recs in recordsByWeek.values) {
+      for (final r in recs) {
+        if (r.tuntas == true) tuntas++;
+        if (r.tuntas == false) tidak++;
+      }
+    }
+    if (tuntas == 0 && tidak == 0) return '-';
+    return [
+      if (tuntas > 0) '${tuntas}x Tuntas',
+      if (tidak > 0) '${tidak}x Tidak Tuntas',
+    ].join(', ');
+  }
 }

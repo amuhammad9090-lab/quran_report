@@ -59,7 +59,7 @@ class StatistikTab extends StatelessWidget {
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     Text(
-                      'Ringkasan progres tahfizh & tahsin santri',
+                      'Ringkasan progres tahfizh & tahsin siswa',
                       style: Theme.of(context)
                           .textTheme
                           .bodySmall
@@ -231,7 +231,7 @@ class _AyatWeeklyChartCard extends StatelessWidget {
                     Expanded(
                       child: _MiniStatPill(
                         value: '$totalSantri',
-                        label: 'Total Santri',
+                        label: 'Total Siswa',
                         icon: LucideIcons.users,
                         iconColor: cs.primary,
                         onTap: () => Navigator.of(context).push(

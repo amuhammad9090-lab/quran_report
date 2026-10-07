@@ -90,6 +90,7 @@ class SettingsScreen extends StatelessWidget {
                 _SectionCard(
                   title: 'Data',
                   children: [
+                    if (!(context.watch<AuthProvider>().scope?.isViewer ?? false))
                     ListTile(
                       leading: SoftIconBox(
                         icon: LucideIcons.cloudUpload,
@@ -127,7 +128,7 @@ class SettingsScreen extends StatelessWidget {
                       ListTile(
                         leading: SoftIconBox(icon: LucideIcons.idCard, color: cs.primary),
                         title: const Text('Halaman Kelola'),
-                        subtitle: const Text('Kelola guru & murid, export/import Excel, migrasi data'),
+                        subtitle: const Text('Kelola guru & siswa, export/import Excel, migrasi data'),
                         trailing: const Icon(LucideIcons.chevronRight),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const KelolaDataScreen()),
@@ -221,7 +222,7 @@ class SettingsScreen extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Berhasil! $count laporan ($totalSantri santri) tersinkron ke cloud.',
+            'Berhasil! $count laporan ($totalSantri siswa) tersinkron ke cloud.',
           ),
         ),
       );
@@ -247,27 +248,36 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Pulihkan dari Cloud?'),
+        title: const Text('Pulihkan dari Cloud'),
         content: const Text(
-          'Semua laporan yang pernah ter-backup ke cloud akan ditarik kembali ke HP ini. '
+          'Hanya yang baru (hemat): menarik laporan yang masuk cloud sejak pemulihan terakhir. '
+          'Pemulihan pertama otomatis penuh.\n\n'
+          'Semua (penuh): menarik ulang seluruh laporan di cloud, lebih boros kuota.\n\n'
           'Laporan yang sudah ada & lebih baru di HP ini tidak akan ditimpa. Butuh koneksi internet.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _restoreFromCloud(context, incremental: false);
+            },
+            child: const Text('Semua'),
+          ),
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
-              _restoreFromCloud(context);
+              _restoreFromCloud(context, incremental: true);
             },
-            child: const Text('Pulihkan'),
+            child: const Text('Hanya yang baru'),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _restoreFromCloud(BuildContext context) async {
+  Future<void> _restoreFromCloud(BuildContext context, {bool incremental = false}) async {
     // <-- BERUBAH: sama seperti _syncToCloud — PopScope(canPop: false)
     // biar tombol back Android gak bisa dismiss dialog ini di tengah
     // proses (lihat catatan lengkap di _syncToCloud).
@@ -290,10 +300,16 @@ class SettingsScreen extends StatelessWidget {
 
     try {
       // <-- BERUBAH: folder dipulihkan DULUAN sebelum laporan.
-      final scope = context.read<AuthProvider>().scope;
-      await StorageService.instance.restoreFoldersFromFirestore(scope: scope);
-      final count =
-          await StorageService.instance.restoreFromFirestore(scope: scope);
+      final auth = context.read<AuthProvider>();
+      final scope = auth.scope;
+      // Admin membaca per akun guru (bukan collectionGroup), jadi butuh daftar id akun.
+      final accountIds = [for (final a in auth.allAccounts) a.id];
+      await StorageService.instance.restoreFoldersFromFirestore(scope: scope, accountIds: accountIds);
+      final count = await StorageService.instance.restoreFromFirestore(
+        scope: scope,
+        accountIds: accountIds,
+        incremental: incremental,
+      );
 
       await AppPrefsService.instance.restoreActivatedMetaFromFirestore();
       if (!context.mounted) return;
@@ -308,7 +324,7 @@ class SettingsScreen extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Berhasil! $count laporan ($totalSantri santri) dipulihkan dari cloud.',
+            'Berhasil! $count laporan ($totalSantri siswa) dipulihkan dari cloud.',
           ),
         ),
       );
@@ -319,7 +335,9 @@ class SettingsScreen extends StatelessWidget {
         SnackBar(
           content: Text(
             FirebaseBootstrapStatus.ready
-                ? 'Gagal memulihkan: $e. Cek koneksi internet, lalu coba lagi.'
+                ? (e.toString().contains('permission-denied')
+                    ? 'Akses ditolak server (cek firestore.rules / role admin akun ini).'
+                    : 'Gagal memulihkan: $e. Cek koneksi internet, lalu coba lagi.')
                 : FirebaseBootstrapStatus.userMessage,
           ),
         ),

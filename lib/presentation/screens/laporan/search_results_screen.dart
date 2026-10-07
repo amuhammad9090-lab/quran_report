@@ -102,8 +102,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
         title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
         content: Text(
           hasReports
-              ? 'Semua laporan pekanan santri ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
-              : 'Belum ada laporan yang tersimpan untuk santri ini.',
+              ? 'Semua laporan pekanan siswa ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
+              : 'Belum ada laporan yang tersimpan untuk siswa ini.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
@@ -143,7 +143,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
               controller: _searchCtrl,
               onChanged: provider.setSearch,
               decoration: InputDecoration(
-                hintText: 'Cari nama santri...',
+                hintText: 'Cari nama siswa...',
                 prefixIcon: const Icon(LucideIcons.search),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
@@ -229,7 +229,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
           slivers: [
             PushedPageHeader(
               title: 'Hasil Pencarian',
-              subtitle: '${results.length} kartu santri ditemukan • semua folder',
+              subtitle: '${results.length} kartu siswa ditemukan • semua folder',
             ),
             SliverToBoxAdapter(child: _buildSearchAndFilter(context, provider)),
             if (results.isEmpty)

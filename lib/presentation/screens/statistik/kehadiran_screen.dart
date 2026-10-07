@@ -67,7 +67,7 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
       context,
       attendanceMonthSections: sections,
       attendanceMonth: month,
-      judul: 'Rekap Kehadiran Santri - $bulanLabel',
+      judul: 'Rekap Kehadiran Siswa - $bulanLabel',
       periode: bulanLabel,
     );
   }
@@ -126,7 +126,7 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
           slivers: [
             PushedPageHeader(
               title: 'Kehadiran',
-              subtitle: 'Rekap kehadiran santri per tanggal',
+              subtitle: 'Rekap kehadiran siswa per tanggal',
               trailing: AppActionChip(
                 icon: LucideIcons.upload,
                 label: 'Export',

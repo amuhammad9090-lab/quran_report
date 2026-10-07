@@ -259,7 +259,7 @@ class _AboutDescriptionCard extends StatelessWidget {
             const SizedBox(height: 14),
             const Text(
               'Quran Report adalah aplikasi pencatatan capaian hafalan '
-              '(tahfizh) dan bacaan (tahsin) Al-Qur\'an santri, lengkap dengan '
+              '(tahfizh) dan bacaan (tahsin) Al-Qur\'an siswa, lengkap dengan '
               'generator baris setoran otomatis berbasis pemetaan baris mushaf '
               'rasm Utsmani (Madinah 15 baris).',
               textAlign: TextAlign.justify,

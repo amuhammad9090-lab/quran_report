@@ -16,6 +16,7 @@ import '../../../data/services/quran_engine_service.dart';
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/common/status_icons.dart';
+import '../../widgets/common/viewer_guard.dart';
 import '../../widgets/forms/field_decoration.dart';
 import '../../widgets/forms/form_section_card.dart';
 import '../../widgets/record/keterangan_selector.dart';
@@ -45,6 +46,7 @@ Future<void> showRecordFormSheet(
   DateTime? presetTanggal,
   bool lockIdentity = false,
 }) {
+  if (blockIfViewer(context)) return Future<void>.value();
   return showModalBottomSheet(
     context: context,
     constraints: const BoxConstraints(maxWidth: 640),
@@ -835,7 +837,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                           if (!widget.lockIdentity) ...[
                             const SizedBox(height: 16),
                             FormSectionCard(
-                              title: 'Identitas Santri',
+                              title: 'Identitas Siswa',
                               icon: LucideIcons.medal,
                               child: RecordIdentityFields(
                                 kelas: _kelas,

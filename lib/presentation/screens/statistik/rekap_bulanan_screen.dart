@@ -394,7 +394,7 @@ class _PekanCard extends StatelessWidget {
                         Text(
                           w.laporanCount == 0
                               ? 'Belum ada laporan'
-                              : '${w.santriCount} santri • ${w.laporanCount} laporan • ${w.totalBaris} baris',
+                              : '${w.santriCount} siswa • ${w.laporanCount} laporan • ${w.totalBaris} baris',
                           style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                         ),
                       ],

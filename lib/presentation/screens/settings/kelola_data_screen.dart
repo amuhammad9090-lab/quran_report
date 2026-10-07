@@ -89,7 +89,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                             ),
                             ListTile(
                               leading: SoftIconBox(icon: LucideIcons.users, color: cs.primary),
-                              title: const Text('Kelola Murid'),
+                              title: const Text('Kelola Siswa'),
                               subtitle: const Text('Pindah kelas/halaqoh (mis. naik Tahsin → Tahfizh)'),
                               trailing: const Icon(LucideIcons.chevronRight),
                               onTap: () => Navigator.of(context).push(
@@ -105,7 +105,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                             ListTile(
                               leading: SoftIconBox(icon: LucideIcons.fileDown, color: cs.primary),
                               title: const Text('Export ke Excel'),
-                              subtitle: const Text('Satu file .xlsx, sheet "Murid" & "Guru"'),
+                              subtitle: const Text('Satu file .xlsx, sheet "Siswa" & "Guru"'),
                               onTap: () => _withBusy(() => _exportExcel(context)),
                             ),
                             ListTile(
@@ -128,7 +128,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                           children: [
                             ListTile(
                               leading: SoftIconBox(icon: LucideIcons.cloud, color: cs.primary),
-                              title: const Text('Migrasi Data Guru & Murid ke Cloud'),
+                              title: const Text('Migrasi Data Guru & Siswa ke Cloud'),
                               subtitle: const Text(
                                 'Sekali jalan — pindahin data bawaan APK ke cloud, aman dipencet berkali-kali',
                               ),
@@ -160,7 +160,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
     if (!context.mounted) return;
     if (students.isEmpty && accounts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Belum ada data guru/murid buat di-export.')),
+        const SnackBar(content: Text('Belum ada data guru/siswa buat di-export.')),
       );
       return;
     }
@@ -169,7 +169,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
       if (!context.mounted) return;
       await shareExportedFile(
         file,
-        subject: 'Data Guru & Murid — edit sheet "Murid"/"Guru", lalu upload balik lewat "Import dari Excel"',
+        subject: 'Data Guru & Siswa — edit sheet "Siswa"/"Guru", lalu upload balik lewat "Import dari Excel"',
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -182,7 +182,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
     if (!context.mounted) return;
     if (students.isEmpty && accounts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Belum ada data guru/murid buat di-export.')),
+        const SnackBar(content: Text('Belum ada data guru/siswa buat di-export.')),
       );
       return;
     }
@@ -263,7 +263,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(
-          content: Text('Berhasil! $writtenStudents murid & $writtenAccounts guru diperbarui.'),
+          content: Text('Berhasil! $writtenStudents siswa & $writtenAccounts guru diperbarui.'),
         ));
     } catch (e) {
       if (!context.mounted) return;
@@ -280,9 +280,9 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Migrasi data ke Cloud?'),
         content: const Text(
-          'Data guru & murid bawaan APK akan disalin ke cloud, TAPI id yang sudah ada di cloud '
+          'Data guru & siswa bawaan APK akan disalin ke cloud, TAPI id yang sudah ada di cloud '
           'akan dilewatin (tidak ditimpa) -- jadi perubahan yang sudah kamu buat lewat Kelola Guru/'
-          'Murid atau Import Excel tetap aman. Aman dijalankan berkali-kali. Butuh koneksi internet.',
+          'Siswa atau Import Excel tetap aman. Aman dijalankan berkali-kali. Butuh koneksi internet.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
@@ -321,7 +321,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
 
       Navigator.of(context).pop(); // tutup dialog loading
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Berhasil! $students murid & $accounts akun guru tersalin ke cloud.')),
+        SnackBar(content: Text('Berhasil! $students siswa & $accounts akun guru tersalin ke cloud.')),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -397,7 +397,7 @@ class _ImportPreviewScreenState extends State<_ImportPreviewScreen> {
                     ),
                 ],
                 if (studentChanges.isNotEmpty) ...[
-                  const _PreviewSectionLabel('Murid'),
+                  const _PreviewSectionLabel('Siswa'),
                   for (final row in studentChanges)
                     CheckboxListTile(
                       value: !_excludedStudents.contains(row.current.id),
@@ -486,7 +486,7 @@ class _UnknownIdsBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final parts = <String>[
       if (studentUnknownIds.isNotEmpty)
-        '${studentUnknownIds.length} baris murid id-nya gak dikenali: '
+        '${studentUnknownIds.length} baris siswa id-nya gak dikenali: '
             '${studentUnknownIds.take(5).join(', ')}${studentUnknownIds.length > 5 ? ', ...' : ''}',
       if (accountUnknownIds.isNotEmpty)
         '${accountUnknownIds.length} baris guru id-nya gak dikenali: '

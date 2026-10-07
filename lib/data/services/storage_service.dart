@@ -31,12 +31,18 @@ class StorageService {
   late Box<String> _folderBox;
   late Box<String> _pendingBox;
 
+  // Penanda "pemulihan terakhir" per akun+mode (admin/guru), buat Pulihkan mode hemat. Isinya
+  // jam SERVER (syncedAt terbesar yang pernah ditarik), bukan jam HP.
+  static const _metaBoxName = 'restore_meta';
+  late Box<String> _metaBox;
+
   Future<void> init() async {
     await Hive.initFlutter();
 
     _box = await Hive.openBox<String>(_boxName);
     _folderBox = await Hive.openBox<String>(_folderBoxName);
     _pendingBox = await Hive.openBox<String>(_pendingBoxName);
+    _metaBox = await Hive.openBox<String>(_metaBoxName);
 
     // MIGRASI SEKALI JALAN: mirror fire-and-forget bisa gagal diam-diam di versi lama, jadi
     // sekali ini semua id lokal ditandai pending agar "Backup" pertama tetap jaring pengaman
@@ -85,7 +91,13 @@ class StorageService {
   Future<void> clearAll() async {
     await _box.clear();
     await _folderBox.clear();
+    // Data lokal kosong -> penanda pemulihan terakhir tidak berlaku lagi (pemulihan berikutnya
+    // harus penuh, kalau tidak laporan lama tidak akan pernah balik).
+    await _metaBox.clear();
   }
+
+  String _cutoffKey(AccessScope? scope) =>
+      'lastRestore:${scope?.user.id ?? '-'}:${(scope == null || scope.canSeeAll) ? 'admin' : 'guru'}';
 
   /// <-- BARU (skema per-guru nested): dipanggil di titik transisi auth yang SAMA PERSIS
   /// seperti RecordsProvider.updateScope()/ParentNotesProvider.updateScope() (lihat
@@ -159,6 +171,8 @@ class StorageService {
   /// sengaja TANPA membaca Firestore (hemat write, bukan tukar dengan read). Guru pembimbing
   /// dibatasi lewat [scope] ke kelas+halaqoh assignment-nya (mis. sisa "Mode Admin"); admin bebas.
   Future<int> syncAllToFirestore({AccessScope? scope}) async {
+    // Pengawas read-only: tidak ada yang boleh dikirim ke cloud.
+    if (scope != null && scope.isViewer) return 0;
     final pendingIds = _pendingBox.keys
         .cast<String>()
         .where((k) => k != _pendingSeedKey)
@@ -221,14 +235,40 @@ class StorageService {
     return success;
   }
 
-  /// PULIHKAN LAPORAN DARI FIRESTORE. Guru pembimbing di-query langsung di server per pasangan
-  /// kelas+halaqoh assignment-nya (lihat [RecordsRemoteSource.fetchRecords]); admin/scope null full-get.
-  Future<int> restoreFromFirestore({AccessScope? scope}) async {
-    final docs = await _remote.fetchRecords(scope: scope);
+  /// PULIHKAN LAPORAN DARI FIRESTORE. [incremental] = true -> mode hemat: hanya laporan yang masuk
+  /// cloud SETELAH pemulihan terakhir (filter `syncedAt` di server, jadi dokumen lama tidak dibaca
+  /// dan tidak ditagih). Otomatis jatuh ke pemulihan PENUH kalau belum ada penanda pemulihan
+  /// terakhir atau data lokal kosong. Admin membaca per akun guru lewat [accountIds].
+  Future<int> restoreFromFirestore({
+    AccessScope? scope,
+    List<String> accountIds = const [],
+    bool incremental = false,
+  }) async {
+    final key = _cutoffKey(scope);
+    DateTime? since;
+    if (incremental && _box.isNotEmpty) {
+      since = DateTime.tryParse(_metaBox.get(key) ?? '');
+    }
+
+    final docs = since == null
+        ? await _remote.fetchRecords(scope: scope, accountIds: accountIds)
+        // Mundur 5 menit sebagai pengaman selisih jam/penulisan hampir bersamaan; dokumen yang
+        // terbaca dobel aman (dilewati oleh pengecekan versi di bawah).
+        : await _remote.fetchRecordsSince(
+            since.subtract(const Duration(minutes: 5)),
+            scope: scope,
+            accountIds: accountIds,
+          );
 
     var restored = 0;
+    DateTime? maxSyncedAt;
 
     for (final data in docs) {
+      final syncedAt = RecordsRemoteSource.syncedAtOf(data);
+      if (syncedAt != null && (maxSyncedAt == null || syncedAt.isAfter(maxSyncedAt))) {
+        maxSyncedAt = syncedAt;
+      }
+
       try {
         final cloudRecord =
         SantriRecord.fromJson(data);
@@ -275,12 +315,24 @@ class StorageService {
       }
     }
 
+    // Simpan penanda HANYA setelah semuanya sukses (kalau melempar di atas, penanda lama utuh).
+    // Pemulihan penuh yang tidak menemukan satu pun `syncedAt` (semua data dari versi lama) memakai
+    // "sekarang - 1 hari" sebagai titik awal, supaya pemulihan hemat berikutnya tidak mentok penuh.
+    final newCutoff = maxSyncedAt ??
+        (since == null ? DateTime.now().subtract(const Duration(days: 1)) : null);
+    if (newCutoff != null) {
+      final old = DateTime.tryParse(_metaBox.get(key) ?? '');
+      if (old == null || newCutoff.isAfter(old)) {
+        await _metaBox.put(key, newCutoff.toIso8601String());
+      }
+    }
+
     return restored;
   }
 
   // PULIHKAN FOLDER DARI FIRESTORE
-  Future<int> restoreFoldersFromFirestore({AccessScope? scope}) async {
-    final docs = await _remote.fetchFolders(scope: scope);
+  Future<int> restoreFoldersFromFirestore({AccessScope? scope, List<String> accountIds = const []}) async {
+    final docs = await _remote.fetchFolders(scope: scope, accountIds: accountIds);
 
     var restored = 0;
 

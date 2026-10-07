@@ -8,12 +8,14 @@ import '../../../providers/folders_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/common/soft_icon_box.dart';
+import '../../widgets/common/viewer_guard.dart';
 import '../../widgets/forms/select_field.dart';
 
 /// Bottom sheet buat folder baru, atau rename folder yang sudah ada kalau
 /// [existing] diisi. Muncul dengan animasi nyembul-dari-bawah bawaan
 /// [showModalBottomSheet].
 Future<void> showFolderFormSheet(BuildContext context, {ReportFolder? existing}) {
+  if (blockIfViewer(context)) return Future<void>.value();
   return showModalBottomSheet(
     context: context,
     constraints: const BoxConstraints(maxWidth: 640),

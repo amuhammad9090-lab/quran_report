@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/utils/week_utils.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/records_provider.dart';
 import 'common/edited_badge.dart';
 import 'status_badge.dart';
@@ -112,6 +113,11 @@ class SantriReportCard extends StatefulWidget {
 }
 
 class _SantriReportCardState extends State<SantriReportCard> {
+  // Pengawas read-only: aksi hapus & pindah folder disembunyikan dari kartu.
+  bool get _readOnly => context.read<AuthProvider>().scope?.isViewer ?? false;
+  VoidCallback? get _onHapus => _readOnly ? null : widget.onHapus;
+  VoidCallback? get _onPindah => _readOnly ? null : widget.onPindahkanKeFolder;
+
   void _showActions(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
@@ -165,7 +171,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
                   ),
                 ),
                 const Divider(height: 18, indent: 18, endIndent: 18),
-                if (widget.onPindahkanKeFolder != null)
+                if (_onPindah != null)
                   ListTile(
                     leading: Icon(
                       widget.isInsideFolder ? LucideIcons.folderMinus : LucideIcons.folderInput,
@@ -177,17 +183,17 @@ class _SantriReportCardState extends State<SantriReportCard> {
                     ),
                     onTap: () {
                       Navigator.pop(ctx);
-                      widget.onPindahkanKeFolder!();
+                      _onPindah!();
                     },
                   ),
-                if (widget.onHapus != null)
+                if (_onHapus != null)
                   ListTile(
                     leading: Icon(LucideIcons.trash2, color: cs.error),
                     title: Text('Hapus',
                         style: TextStyle(fontWeight: FontWeight.w600, color: cs.error)),
                     onTap: () {
                       Navigator.pop(ctx);
-                      widget.onHapus!();
+                      _onHapus!();
                     },
                   ),
                 const SizedBox(height: 8),
@@ -279,6 +285,19 @@ class _SantriReportCardState extends State<SantriReportCard> {
                   ],
                 ],
               ),
+              if (record.nilai != null && record.nilai!.trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(LucideIcons.hash, size: 13, color: cs.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Nilai: ${record.nilai!.trim()}',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ],
             ],
             const SizedBox(height: 10),
             SizedBox(
@@ -304,7 +323,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
     final thisMonth = WeekUtils.ownerMonth(now);
     final latest = widget.info.latestRecord;
 
-    final canOpenActions = widget.onPindahkanKeFolder != null || widget.onHapus != null;
+    final canOpenActions = _onPindah != null || _onHapus != null;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -474,6 +493,24 @@ class _SantriReportCardState extends State<SantriReportCard> {
                       EditedBadge(cs: cs),
                     ],
                     const Spacer(),
+                    if (latest.nilai != null && latest.nilai!.trim().isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: cs.tertiaryContainer.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Nilai ${latest.nilai!.trim()}',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            color: cs.onTertiaryContainer,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     KeteranganChip(keterangan: latest.keterangan, compact: true),
                   ],
                 ),
@@ -495,7 +532,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
     // digantung ke [SantriCardInfo.hasAnyReport] di sini -- kartu yang
     // masih kosong TETAP bisa didrag selama pemanggil menyediakan
     // [onPindahkanKeFolder] (lihat dokumentasi field itu).
-    final canDrag = widget.onPindahkanKeFolder != null && (!widget.selectionMode || widget.selected);
+    final canDrag = _onPindah != null && (!widget.selectionMode || widget.selected);
 
     if (canDrag) {
       final dragIds = (widget.selectionMode && widget.selected && (widget.selectedIds?.isNotEmpty ?? false))
@@ -552,14 +589,14 @@ class _SantriReportCardState extends State<SantriReportCard> {
       key: ValueKey(widget.info.identityKey),
       // Geser ke KANAN (drag dari kiri) -> buka pane di sisi awal (start),
       // sesuai request: hapus laporan tinggal geser card ke kanan.
-      startActionPane: (widget.onHapus == null || widget.selectionMode)
+      startActionPane: (_onHapus == null || widget.selectionMode)
           ? null
           : ActionPane(
               motion: const DrawerMotion(),
               extentRatio: 0.24,
               children: [
                 SlidableAction(
-                  onPressed: (_) => widget.onHapus!(),
+                  onPressed: (_) => _onHapus!(),
                   backgroundColor: Theme.of(context).colorScheme.errorContainer,
                   foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
                   icon: LucideIcons.trash2,

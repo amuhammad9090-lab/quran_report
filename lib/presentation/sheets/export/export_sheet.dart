@@ -118,7 +118,7 @@ class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<Expor
       }
       await _runExport(
         format,
-        judulDefault: 'Rekap Kehadiran Santri',
+        judulDefault: 'Rekap Kehadiran Siswa',
         build: (judul) => ExportService.instance.exportAttendanceMonthly(
           format,
           attendance,

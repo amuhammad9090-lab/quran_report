@@ -51,7 +51,7 @@ class SantriDetailScreen extends StatelessWidget {
                 child: EmptyState(
                   icon: LucideIcons.inbox,
                   title: 'Belum ada laporan',
-                  subtitle: 'Santri ini belum punya catatan laporan.',
+                  subtitle: 'Siswa ini belum punya catatan laporan.',
                 ),
               )
             else ...[

@@ -139,7 +139,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                 child: EmptyState(
                   icon: LucideIcons.wandSparkles,
                   title: 'Belum ada laporan untuk digabung',
-                  subtitle: 'Isi dulu laporan santri di salah satu hari pekan ini.',
+                  subtitle: 'Isi dulu laporan siswa di salah satu hari pekan ini.',
                 ),
               )
             else ...[
@@ -276,7 +276,7 @@ class _DeployChipState extends State<_DeployChip> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Rekap pekanan terkirim ke Portal Ortu (${widget.santriCount} santri).',
+            'Rekap pekanan terkirim ke Portal Ortu (${widget.santriCount} siswa).',
           ),
         ),
       );

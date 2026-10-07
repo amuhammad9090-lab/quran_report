@@ -9,7 +9,10 @@ import '../models/user_account.dart';
 import 'platform_file/exported_file.dart';
 import 'platform_file/file_actions.dart';
 
-const _sheetMurid = 'Murid';
+const _sheetMurid = 'Siswa';
+// Nama sheet LAMA (sebelum istilah diseragamkan jadi "Siswa"): file yang pernah di-export dengan
+// sheet "Murid" tetap harus bisa di-import. Export selalu memakai [_sheetMurid] yang baru.
+const _sheetMuridLegacy = 'Murid';
 const _sheetGuru = 'Guru';
 
 // ---------------------------------------------------------------------------
@@ -211,7 +214,7 @@ class SchoolDataExcelService {
   String _filename() {
     final now = DateTime.now();
     String two(int n) => n.toString().padLeft(2, '0');
-    return 'data_guru_dan_murid_${now.year}${two(now.month)}${two(now.day)}.xlsx';
+    return 'data_guru_dan_siswa_${now.year}${two(now.month)}${two(now.day)}.xlsx';
   }
 
   String _encodeAssignments(List<KelasHalaqoh> assignments) =>
@@ -262,7 +265,7 @@ class SchoolDataExcelService {
   }
 
   StudentImportResult _parseStudents(xls.Excel book, List<Student> currentStudents) {
-    final sheet = book.tables[_sheetMurid];
+    final sheet = book.tables[_sheetMurid] ?? book.tables[_sheetMuridLegacy];
     if (sheet == null) return const StudentImportResult(rows: [], unknownIds: []);
 
     final byId = {for (final s in currentStudents) s.id: s};

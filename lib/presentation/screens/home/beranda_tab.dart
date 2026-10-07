@@ -78,7 +78,7 @@ class BerandaTab extends StatelessWidget {
                 WelcomeHeroCard(
                 title: 'Selamat datang di\nAplikasi Laporan Al Quran!',
                 subtitle:
-                    'Kelola laporan Tahsin & Tahfizh santri dengan mudah dan terstruktur.',
+                    'Kelola laporan Tahsin & Tahfizh siswa dengan mudah dan terstruktur.',
                 actions: Row(
                   children: [
                     Expanded(
@@ -131,7 +131,7 @@ class BerandaTab extends StatelessWidget {
                     const VDivider(),
                     Expanded(
                       child: StatItem(
-                        label: 'Santri Aktif',
+                        label: 'Siswa Aktif',
                         value: '${provider.santriAktifHariIni}',
                         icon: LucideIcons.users,
                         color: AppColors.tahsinOn(context),
@@ -174,7 +174,7 @@ class BerandaTab extends StatelessWidget {
                       children: [
                         Expanded(
                           child: CategoryTile(
-                            label: 'Semua Santri',
+                            label: 'Semua Siswa',
                             icon: LucideIcons.users,
                             color: cs.primary,
                             active: !provider.hasActiveFilters,

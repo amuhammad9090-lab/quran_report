@@ -171,7 +171,10 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
               ],
             ),
           ),
-          floatingActionButton: _index == 1 && !_laporanSelecting && _snackbarHidingFab == 0
+          floatingActionButton: _index == 1 &&
+                  !_laporanSelecting &&
+                  _snackbarHidingFab == 0 &&
+                  !(context.watch<AuthProvider>().scope?.isViewer ?? false)
               ? SpeedDialFab(
             controller: _fabController,
             onBuatFolder: () => showFolderFormSheet(context),

@@ -19,8 +19,8 @@ class _OnboardingPage {
 const _pages = [
   _OnboardingPage(
     icon: LucideIcons.bookOpen,
-    title: 'Catat hafalan santri\nlebih rapi',
-    subtitle: 'Rekap capaian tahsin & tahfizh setiap santri dalam satu aplikasi.',
+    title: 'Catat hafalan siswa\nlebih rapi',
+    subtitle: 'Rekap capaian tahsin & tahfizh setiap siswa dalam satu aplikasi.',
   ),
   _OnboardingPage(
     icon: LucideIcons.users,

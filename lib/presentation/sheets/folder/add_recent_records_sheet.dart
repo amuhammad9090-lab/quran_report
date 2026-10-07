@@ -81,14 +81,14 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
               Text('Tambah Laporan',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              Text('Pilih dari kartu santri yang sudah ada ke folder ini',
+              Text('Pilih dari kartu siswa yang sudah ada ke folder ini',
                   style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
               const SizedBox(height: 12),
               TextField(
                 controller: _searchCtrl,
                 onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(
-                  hintText: 'Cari nama santri...',
+                  hintText: 'Cari nama siswa...',
                   prefixIcon: Icon(LucideIcons.search),
                 ),
               ),
@@ -97,7 +97,7 @@ class _AddRecentRecordsSheetState extends State<_AddRecentRecordsSheet> {
                 child: candidates.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: 18),
-                        child: Text('Tidak ada kartu santri yang bisa ditambahkan.',
+                        child: Text('Tidak ada kartu siswa yang bisa ditambahkan.',
                             style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
                       )
                     : ListView.separated(

@@ -156,7 +156,7 @@ class ApiAuthRepository implements AuthRepository {
       final selfAccount = UserAccount.fromJson(selfSnap.data()!);
 
       List<UserAccount> accounts;
-      if (selfAccount.isAdmin) {
+      if (selfAccount.isAdmin || selfAccount.isPengawas) {
         final snapshot = await _collection.get().timeout(const Duration(seconds: 10));
         accounts = snapshot.docs.isNotEmpty
             ? snapshot.docs.map((d) => UserAccount.fromJson(d.data())).toList()
@@ -333,7 +333,11 @@ class ApiAuthRepository implements AuthRepository {
   /// boleh-tidaknya tulis ke `accounts/{id}`. Pakai merge supaya cuma field `role` yang berubah.
   /// Nilai yang ditulis 'admin' / 'guru_pembimbing' (sama seperti seed; [UserRole.fromName] baca keduanya).
   Future<void> updateRole(UserAccount account, UserRole newRole) async {
-    final roleValue = newRole == UserRole.admin ? 'admin' : 'guru_pembimbing';
+    final roleValue = switch (newRole) {
+      UserRole.admin => 'admin',
+      UserRole.pengawas => 'pengawas',
+      UserRole.guruPembimbing => 'guru_pembimbing',
+    };
 
     // Dua dokumen dijaga sinkron dalam 1 batch: `accounts/{id}.role` (dibaca CLIENT) dan flag
     // `accountsByEmail/{email}.isAdmin` (dibaca Firestore Rules di isAdmin() -- INI yang
@@ -344,7 +348,11 @@ class ApiAuthRepository implements AuthRepository {
     if (email != null) {
       batch.set(
         _accountsByEmailCollection.doc(email),
-        {'accountId': account.id, 'isAdmin': newRole == UserRole.admin},
+        {
+          'accountId': account.id,
+          'isAdmin': newRole == UserRole.admin,
+          'isViewer': newRole == UserRole.pengawas,
+        },
         SetOptions(merge: true),
       );
     }
@@ -406,6 +414,7 @@ class ApiAuthRepository implements AuthRepository {
       batch.set(_accountsByEmailCollection.doc(normalizedOrNull), {
         'accountId': account.id,
         'isAdmin': updated.isAdmin,
+        'isViewer': updated.isPengawas,
       });
     }
     await batch.commit().timeout(const Duration(seconds: 15));

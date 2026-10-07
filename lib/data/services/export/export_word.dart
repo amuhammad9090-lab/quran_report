@@ -178,7 +178,7 @@ class ExportWord {
 
     final totalSantri = sections.fold<int>(0, (sum, s) => sum + s.items.length);
     builder.addSpacer();
-    builder.addParagraph('Total santri: $totalSantri', bold: true);
+    builder.addParagraph('Total siswa: $totalSantri', bold: true);
 
     final bytes = builder.build();
     return persistExportedFile('${exportFileSlug(judul)}.docx', bytes);

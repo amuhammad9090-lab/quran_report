@@ -273,8 +273,8 @@ class _LaporanTabState extends State<LaporanTab> {
         title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
         content: Text(
           hasReports
-              ? 'Semua laporan pekanan santri ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
-              : 'Belum ada laporan yang tersimpan untuk santri ini.',
+              ? 'Semua laporan pekanan siswa ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
+              : 'Belum ada laporan yang tersimpan untuk siswa ini.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
@@ -575,7 +575,7 @@ class _LaporanTabState extends State<LaporanTab> {
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),
           Text(
-            'Kelola kartu laporan hafalan santri',
+            'Kelola kartu laporan hafalan siswa',
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
@@ -610,7 +610,7 @@ class _LaporanTabState extends State<LaporanTab> {
                 child: TextField(
                   controller: _searchCtrl,
                   decoration: const InputDecoration(
-                    hintText: 'Cari nama santri...',
+                    hintText: 'Cari nama siswa...',
                     prefixIcon: Icon(LucideIcons.search),
                   ),
                 ),
@@ -661,7 +661,7 @@ class _LaporanTabState extends State<LaporanTab> {
         title: const Text('Hapus folder?'),
         content: Text(
           jumlahSantri > 0
-              ? 'Folder ini berisi laporan $jumlahSantri santri. Semua laporan di '
+              ? 'Folder ini berisi laporan $jumlahSantri siswa. Semua laporan di '
                   'dalamnya akan ikut TERHAPUS PERMANEN dan tidak bisa dikembalikan.'
               : 'Folder ini kosong dan akan dihapus.',
         ),
@@ -689,7 +689,14 @@ class _LaporanTabState extends State<LaporanTab> {
 ///
 /// BUG FIX: sebelumnya filter tanggal ini SAMA SEKALI tidak kelihatan di tab
 /// Laporan (cuma titik merah generik di ikon filter, dan filter tanggal juga
-/// tidak muncul sebagai chip apa pun di [FilterSheet])
+/// tidak muncul sebagai chip apa pun di [FilterSheet]) — jadi begitu user
+/// tap "Lihat Semua" dari Home, tab Laporan diam-diam KETERUSAN cuma
+/// nampilin laporan hari itu doang, tapi user nggak sadar kenapa (kelihatan
+/// kayak tab Laporan "nyangkut" di satu tanggal terus tiap dibuka, sampai
+/// nggak sengaja ketemu tombol "Reset" di Filter Lainnya yang nge-reset
+/// SEMUA filter sekaligus, bukan cuma tanggalnya). Banner ini bikin filter
+/// tanggal EKSPLISIT kelihatan + ada tombol hapus KHUSUS buat filter ini
+/// saja (filter lain seperti Status/Kelas/Halaqoh tetap dibiarkan aktif).
 class _DateFilterBanner extends StatelessWidget {
   final DateTime date;
   final VoidCallback onClear;

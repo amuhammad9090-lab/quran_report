@@ -41,8 +41,8 @@ class _SantriListScreenState extends State<SantriListScreen> {
         child: CustomScrollView(
           slivers: [
             PushedPageHeader(
-              title: 'Daftar Santri',
-              subtitle: '${all.length} santri tercatat',
+              title: 'Daftar Siswa',
+              subtitle: '${all.length} siswa tercatat',
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
@@ -51,7 +51,7 @@ class _SantriListScreenState extends State<SantriListScreen> {
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
-                    hintText: 'Cari nama santri...',
+                    hintText: 'Cari nama siswa...',
                     prefixIcon: const Icon(LucideIcons.search),
                     suffixIcon: _query.isNotEmpty
                         ? IconButton(
@@ -71,10 +71,10 @@ class _SantriListScreenState extends State<SantriListScreen> {
                 hasScrollBody: false,
                 child: EmptyState(
                   icon: _query.isNotEmpty ? LucideIcons.search : LucideIcons.users,
-                  title: _query.isNotEmpty ? 'Santri tidak ditemukan' : 'Belum ada santri',
+                  title: _query.isNotEmpty ? 'Siswa tidak ditemukan' : 'Belum ada siswa',
                   subtitle: _query.isNotEmpty
                       ? 'Coba kata kunci lain.'
-                      : 'Santri akan muncul di sini setelah ada laporan pertama.',
+                      : 'Siswa akan muncul di sini setelah ada laporan pertama.',
                 ),
               )
             else

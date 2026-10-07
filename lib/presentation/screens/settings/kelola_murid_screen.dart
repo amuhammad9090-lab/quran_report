@@ -71,7 +71,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
         child: CustomScrollView(
           slivers: [
             PushedPageHeader(
-              title: 'Kelola Data Murid',
+              title: 'Kelola Data Siswa',
               titleFontSize: 17,
               trailing: IconButton(
                 icon: _refreshing
@@ -87,7 +87,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                 child: TextField(
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _query = v),
-                  decoration: fieldDecoration(context, icon: LucideIcons.search, label: 'Cari nama santri'),
+                  decoration: fieldDecoration(context, icon: LucideIcons.search, label: 'Cari nama siswa'),
                 ),
               ),
             ),
@@ -96,7 +96,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                 hasScrollBody: false,
                 child: EmptyState(
                   icon: LucideIcons.users,
-                  title: 'Belum ada data murid',
+                  title: 'Belum ada data siswa',
                   subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
                 ),
               )

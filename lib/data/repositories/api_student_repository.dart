@@ -460,7 +460,7 @@ class ApiStudentRepository implements StudentRepository {
 
     if (resolutionError != null) {
       throw StateError(
-        'Kelas/halaqoh $written santri tersimpan, tapi guru pembimbing gagal disinkron '
+        'Kelas/halaqoh $written siswa tersimpan, tapi guru pembimbing gagal disinkron '
         '($resolutionError). guruAccountId lama dipertahankan -- coba lagi nanti, atau '
         'pakai "Sinkronkan Guru Pembimbing" di Kelola Guru.',
       );
@@ -543,7 +543,7 @@ class ApiStudentRepository implements StudentRepository {
 
     if (resolutionError != null) {
       throw StateError(
-        '${toWrite.length} santri baru tersimpan, tapi guru pembimbing gagal disinkron '
+        '${toWrite.length} siswa baru tersimpan, tapi guru pembimbing gagal disinkron '
         '($resolutionError) -- pakai "Sinkronkan Guru Pembimbing" di Kelola Guru setelah ini.',
       );
     }
