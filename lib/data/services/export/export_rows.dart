@@ -152,7 +152,7 @@ class ExportRows {
 
   String _tahfizhAyatRanges(SantriRecord r) {
     final segs = r.tahfizhSegmentsEffective;
-    return segs.isEmpty ? '-' : segs.map((s) => '${s.ayatMulai}-${s.ayatSelesai}').join(' + ');
+    return segs.isEmpty ? '-' : segs.map((s) => '${s.ayatMulai}-${s.ayatSelesai}').join(', ');
   }
 
   String _tahsinPartLabel(SantriRecord r) {
@@ -172,7 +172,7 @@ class ExportRows {
       final segs = r.tilawahSegmentsEffective;
       return segs.isEmpty
           ? '-'
-          : segs.map((s) => '${s.ayatMulai}-${s.ayatSelesai}').join(' + ');
+          : segs.map((s) => '${s.ayatMulai}-${s.ayatSelesai}').join(', ');
     }
     final hal = r.halamanWafa?.trim();
     return (hal == null || hal.isEmpty) ? '-' : hal;
@@ -208,7 +208,7 @@ class ExportRows {
         final segs = r.tilawahSegmentsEffective;
         return segs.isEmpty
             ? '-'
-            : segs.map((s) => '${s.ayatMulai}-${s.ayatSelesai}').join(' + ');
+            : segs.map((s) => '${s.ayatMulai}-${s.ayatSelesai}').join(', ');
     }
   }
 
@@ -361,7 +361,7 @@ class ExportRows {
   String _murojaahDetailNoLabel(SantriRecord r) {
     final segs = r.tilawahSegmentsEffective;
     if (segs.isEmpty) return '-';
-    return segs.map((s) => '${s.surahName} (${s.ayatMulai}-${s.ayatSelesai})').join(' + ');
+    return segs.map((s) => '${s.surahName} (${s.ayatMulai}-${s.ayatSelesai})').join(', ');
   }
 
   // Gabung SEMUA laporan jenis yang sama dalam 1 pekan jadi 1 blok "Label: ..." — 1 laporan tetap 1

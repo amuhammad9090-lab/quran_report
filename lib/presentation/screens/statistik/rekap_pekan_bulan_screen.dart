@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/day_summary.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/santri_record.dart';
@@ -185,7 +186,6 @@ class _DayCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isToday = DateUtils.isSameDay(date, DateTime.now());
     final count = records.length;
-    final totalBaris = records.fold<int>(0, (sum, r) => sum + (r.totalBaris ?? 0));
 
     return Card(
       margin: EdgeInsets.zero,
@@ -235,7 +235,7 @@ class _DayCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      count == 0 ? 'Belum ada laporan' : '$count laporan • $totalBaris baris',
+                      daySummaryText(records),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,

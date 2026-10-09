@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/day_summary.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../providers/records_provider.dart';
@@ -494,7 +495,6 @@ class _DayRow extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isToday = DateUtils.isSameDay(date, DateTime.now());
     final count = records.length;
-    final totalBaris = records.fold<int>(0, (sum, r) => sum + (r.totalBaris ?? 0));
 
     return InkWell(
       onTap: () => Navigator.of(context).push(
@@ -524,13 +524,13 @@ class _DayRow extends StatelessWidget {
             ),
             Expanded(
               child: Text(
-                count == 0 ? 'Belum ada laporan' : '$count laporan • $totalBaris baris',
+                daySummaryText(records),
                 style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                   color: count == 0 ? cs.onSurfaceVariant : cs.primary,
                 ),
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
               ),
             ),
             Icon(LucideIcons.chevronRight, size: 18, color: cs.onSurfaceVariant),

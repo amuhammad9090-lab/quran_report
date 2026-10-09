@@ -321,7 +321,7 @@ class SantriRecord {
     if (mode == TahsinMode.tilawah) {
       final segs = tilawahSegmentsEffective;
       if (segs.isEmpty) return 'Tilawah • -';
-      return 'Tilawah • ${segs.map((s) => s.partText).join(' + ')}';
+      return 'Tilawah • ${segs.map((s) => s.partText).join(', ')}';
     }
     final level = wafaLevel?.label ?? '-';
     final hal = halamanWafa ?? '-';
@@ -330,18 +330,18 @@ class SantriRecord {
 
   /// Teks ringkas bagian Tahfizh saja (hafalan baru, hasil generate baris).
   /// Kalau lebih dari 1 surah (setoran nyambung lintas surah), digabung
-  /// dengan " + ", mis. "Al-Baqarah • Ayat 280–286 + Ali 'Imran • Ayat 1–5".
+  /// dengan ", ", mis. "Al-Baqarah • Ayat 280–286, Ali 'Imran • Ayat 1–5".
   String get _tahfizhPartText {
     final segs = tahfizhSegmentsEffective;
     if (segs.isEmpty) return '-';
-    return segs.map((s) => s.partText).join(' + ');
+    return segs.map((s) => s.partText).join(', ');
   }
 
   /// Teks ringkas untuk status Muroja'ah/Tasmi' (selalu bentuk Tilawah).
   String get _murojaahPartText {
     final segs = tilawahSegmentsEffective;
     if (segs.isEmpty) return '-';
-    return segs.map((s) => s.partText).join(' + ');
+    return segs.map((s) => s.partText).join(', ');
   }
 
   /// Total jumlah ayat yang disetorkan di laporan ini — dijumlahkan dari
