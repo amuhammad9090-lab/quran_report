@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
+import '../../../data/models/records_view_models.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../data/services/export_service.dart';
 import '../../../data/services/weekly_recap_deploy_service.dart';
@@ -40,7 +41,7 @@ import '../../widgets/weekly_santri_recap_table.dart';
 /// Hasil export-nya 1 dokumen berisi semua grup (1 tabel per Kelas+
 /// Halaqoh, bukan 1 tabel besar gabungan) + baris Guru Pembimbing per
 /// grup kalau ada (lihat ExportService.exportGroupedPdf/Word/Excel).
-class GenerateRekapPekananScreen extends StatelessWidget {
+class GenerateRekapPekananScreen extends StatefulWidget {
   final List<SantriRecord> records;
   final int weekIndex;
   final String bulanLabel;
@@ -54,6 +55,47 @@ class GenerateRekapPekananScreen extends StatelessWidget {
     required this.rangeLabel,
     required this.range,
   });
+
+  @override
+  State<GenerateRekapPekananScreen> createState() => _GenerateRekapPekananScreenState();
+}
+
+/// Cara mengelompokkan tabel (hanya bisa diubah di mode admin).
+enum _Tampilan {
+  kelasHalaqoh('Per Kelas & Halaqoh'),
+  kelas('Per Kelas'),
+  halaqoh('Per Halaqoh');
+
+  final String label;
+  const _Tampilan(this.label);
+}
+
+class _GenerateRekapPekananScreenState extends State<GenerateRekapPekananScreen> {
+  _Tampilan _tampilan = _Tampilan.kelasHalaqoh;
+
+  /// Kelompokkan [sorted] sesuai [tampilan]. Per Kelas menggabung semua halaqoh dalam satu kelas,
+  /// Per Halaqoh menggabung semua kelas dalam satu halaqoh (label sisi yang digabung = 'Semua').
+  List<KelasHalaqohGroup> _buildGroups(
+    RecordsProvider provider,
+    List<SantriRecord> sorted,
+    _Tampilan tampilan,
+  ) {
+    if (tampilan == _Tampilan.kelasHalaqoh) return provider.groupByKelasHalaqoh(sorted);
+    final byKey = <String, List<SantriRecord>>{};
+    for (final r in sorted) {
+      final key = tampilan == _Tampilan.kelas ? r.kelas : r.halaqoh;
+      byKey.putIfAbsent(key, () => []).add(r);
+    }
+    final keys = byKey.keys.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return [
+      for (final k in keys)
+        KelasHalaqohGroup(
+          kelas: tampilan == _Tampilan.kelas ? k : 'Semua',
+          halaqoh: tampilan == _Tampilan.halaqoh ? k : 'Semua',
+          records: byKey[k]!,
+        ),
+    ];
+  }
 
   /// Label tanggal laporan TERAKHIR di pekan ini, digabung dari SEMUA
   /// kelas/halaqoh — HANYA untuk teks informasi di header layar
@@ -86,6 +128,11 @@ class GenerateRekapPekananScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final records = widget.records;
+    final weekIndex = widget.weekIndex;
+    final bulanLabel = widget.bulanLabel;
+    final rangeLabel = widget.rangeLabel;
+    final range = widget.range;
     // read, bukan watch: `records` sudah dikirim lewat constructor (bukan
     // ditarik dari provider), dan groupByKelasHalaqoh() murni fungsi dari
     // argumennya (tidak baca state RecordsProvider) — jadi widget ini
@@ -101,7 +148,11 @@ class GenerateRekapPekananScreen extends StatelessWidget {
         return a.namaAnak.toLowerCase().compareTo(b.namaAnak.toLowerCase());
       });
     final lastFilledLabel = _lastFilledLabel(sorted);
-    final groups = recordsProvider.groupByKelasHalaqoh(sorted);
+    final isAdminMode = authProvider.scope?.isAdmin ?? false;
+    final tampilan = isAdminMode ? _tampilan : _Tampilan.kelasHalaqoh;
+    final groups = _buildGroups(recordsProvider, sorted, tampilan);
+    // Kirim ke Portal Ortu tetap per Kelas+Halaqoh, jadi tidak ada di tampilan gabungan.
+    final canDeploy = tampilan == _Tampilan.kelasHalaqoh;
     final periodeText = WeekUtils.periodeLabel(weekIndex, range);
 
     final exportSections = [
@@ -156,8 +207,31 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (isAdminMode)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                  sliver: SliverToBoxAdapter(
+                    child: DropdownButtonFormField<_Tampilan>(
+                      initialValue: _tampilan,
+                      isDense: true,
+                      decoration: InputDecoration(
+                        labelText: 'Tampilan',
+                        prefixIcon: const Icon(LucideIcons.layoutList, size: 18),
+                        isDense: true,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      items: [
+                        for (final t in _Tampilan.values)
+                          DropdownMenuItem(value: t, child: Text(t.label)),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setState(() => _tampilan = v);
+                      },
+                    ),
+                  ),
+                ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 sliver: SliverList.list(
                   children: [
                     for (var i = 0; i < groups.length; i++) ...[
@@ -202,6 +276,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                                 // tiap santri pakai tanggalnya sendiri.
                               ),
                             ),
+                            if (canDeploy) ...[
                             const SizedBox(width: 8),
                             _DeployChip(
                               tooltip: 'Kirim rekap Kelas ${groups[i].kelas} — Halaqoh '
@@ -224,6 +299,7 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                                 weekEnd: range.end,
                               ),
                             ),
+                            ],
                           ],
                         ),
                       ),

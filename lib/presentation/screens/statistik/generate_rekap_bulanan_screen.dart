@@ -17,17 +17,41 @@ import '../../widgets/common/pushed_page_header.dart';
 /// Hasil "Generate" dari Rekap Bulanan — menghimpun laporan tiap santri
 /// dari Pekan 1 s/d Pekan terakhir bulan itu jadi SATU baris per santri,
 /// dikelompokkan per Kelas+Halaqoh (tiap grup = 1 tabel kecil sendiri)
-class GenerateRekapBulananScreen extends StatelessWidget {
+class GenerateRekapBulananScreen extends StatefulWidget {
   final DateTime month;
   const GenerateRekapBulananScreen({super.key, required this.month});
 
+  @override
+  State<GenerateRekapBulananScreen> createState() => _GenerateRekapBulananScreenState();
+}
+
+/// Cara mengelompokkan tabel (hanya bisa diubah di mode admin).
+enum _Tampilan {
+  kelasHalaqoh('Per Kelas & Halaqoh'),
+  kelas('Per Kelas'),
+  halaqoh('Per Halaqoh');
+
+  final String label;
+  const _Tampilan(this.label);
+}
+
+class _GenerateRekapBulananScreenState extends State<GenerateRekapBulananScreen> {
+  _Tampilan _tampilan = _Tampilan.kelasHalaqoh;
+
+  /// Per Kelas menggabung semua halaqoh dalam satu kelas, Per Halaqoh menggabung semua kelas
+  /// dalam satu halaqoh (sisi yang digabung ditulis 'Semua', tanpa guru pembimbing).
   List<ExportKelasHalaqohSection<SantriMonthlyRecap>> _groupByKelasHalaqoh(
       List<SantriMonthlyRecap> recaps,
       AuthProvider auth,
+      _Tampilan tampilan,
       ) {
     final map = <String, List<SantriMonthlyRecap>>{};
     for (final r in recaps) {
-      final key = '${r.kelas}|${r.halaqoh}';
+      final key = switch (tampilan) {
+        _Tampilan.kelasHalaqoh => '${r.kelas}|${r.halaqoh}',
+        _Tampilan.kelas => '${r.kelas}|Semua',
+        _Tampilan.halaqoh => 'Semua|${r.halaqoh}',
+      };
       map.putIfAbsent(key, () => []).add(r);
     }
     final groups = map.entries.map((e) {
@@ -37,7 +61,9 @@ class GenerateRekapBulananScreen extends StatelessWidget {
       return ExportKelasHalaqohSection<SantriMonthlyRecap>(
         kelas: parts[0],
         halaqoh: parts[1],
-        guruPembimbing: auth.guruPembimbingNameFor(parts[0], parts[1]),
+        guruPembimbing: tampilan == _Tampilan.kelasHalaqoh
+            ? auth.guruPembimbingNameFor(parts[0], parts[1])
+            : null,
         items: list,
       );
     }).toList()
@@ -51,13 +77,16 @@ class GenerateRekapBulananScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final month = widget.month;
     final recaps = context.select<RecordsProvider, List<SantriMonthlyRecap>>(
       (p) => p.monthlySantriRecaps(month),
     );
     final authProvider = context.watch<AuthProvider>();
     final totalWeeks = WeekUtils.weeksInMonth(month);
     final bulanLabel = DateFormat('MMMM yyyy', 'id_ID').format(month);
-    final groups = _groupByKelasHalaqoh(recaps, authProvider);
+    final isAdminMode = authProvider.scope?.isAdmin ?? false;
+    final tampilan = isAdminMode ? _tampilan : _Tampilan.kelasHalaqoh;
+    final groups = _groupByKelasHalaqoh(recaps, authProvider, tampilan);
 
     return Scaffold(
       body: SafeArea(
@@ -90,8 +119,31 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (isAdminMode)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                  sliver: SliverToBoxAdapter(
+                    child: DropdownButtonFormField<_Tampilan>(
+                      initialValue: _tampilan,
+                      isDense: true,
+                      decoration: InputDecoration(
+                        labelText: 'Tampilan',
+                        prefixIcon: const Icon(LucideIcons.layoutList, size: 18),
+                        isDense: true,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      items: [
+                        for (final t in _Tampilan.values)
+                          DropdownMenuItem(value: t, child: Text(t.label)),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setState(() => _tampilan = v);
+                      },
+                    ),
+                  ),
+                ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 sliver: SliverList.list(
                   children: [
                     for (final g in groups) ...[
