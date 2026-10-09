@@ -9,6 +9,7 @@ import '../../../providers/records_provider.dart';
 import '../../widgets/common/section_label.dart';
 import '../../widgets/statistik/distribusi_row.dart';
 import 'kehadiran_screen.dart';
+import 'rata_nilai_screen.dart';
 import 'rekap_bulanan_screen.dart';
 import 'santri_list_screen.dart';
 
@@ -125,6 +126,35 @@ class StatistikTab extends StatelessWidget {
                                   Icon(LucideIcons.chevronRight, size: 18, color: cs.onSurfaceVariant),
                                 ],
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const SectionLabel('Rata-rata Nilai'),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const RataNilaiScreen()),
+                      ),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Row(
+                            children: [
+                              Icon(LucideIcons.hash, size: 20, color: cs.primary),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  'Lihat rata-rata nilai tiap siswa',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              Icon(LucideIcons.chevronRight, size: 18, color: cs.onSurfaceVariant),
                             ],
                           ),
                         ),

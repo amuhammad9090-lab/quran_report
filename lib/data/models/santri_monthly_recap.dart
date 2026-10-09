@@ -1,4 +1,5 @@
 import '../../core/utils/nilai_average.dart';
+import '../../core/utils/standar_ketuntasan.dart';
 import 'enums.dart';
 import 'santri_record.dart';
 
@@ -88,23 +89,8 @@ class SantriMonthlyRecap {
     return parts.isEmpty ? '-' : parts.join(', ');
   }
 
-  /// Teks ringkas kolom Status (ketuntasan) bulan ini, mis. "3x Tuntas, 1x Tidak Tuntas".
-  /// Laporan yang belum ditandai tidak dihitung; '-' kalau tidak ada yang ditandai.
-  String get tuntasSummaryText {
-    var tuntas = 0;
-    var tidak = 0;
-    for (final recs in recordsByWeek.values) {
-      for (final r in recs) {
-        if (r.tuntas == true) tuntas++;
-        if (r.tuntas == false) tidak++;
-      }
-    }
-    if (tuntas == 0 && tidak == 0) return '-';
-    return [
-      if (tuntas > 0) '${tuntas}x Tuntas',
-      if (tidak > 0) '${tidak}x Tidak Tuntas',
-    ].join(', ');
-  }
+  /// Kolom Status bulan ini: Tuntas / Tidak Tuntas menurut standar (lihat [StandarKetuntasan]), '-' kalau tidak bisa dinilai.
+  String get tuntasSummaryText => StandarKetuntasan.bulanText(recordsByWeek);
 
   /// Kolom Nilai bulan ini = rata-rata dari rata-rata nilai tiap pekan ('-' kalau tidak ada nilai).
   String get nilaiSummaryText {

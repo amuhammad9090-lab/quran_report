@@ -30,7 +30,6 @@ import '../../widgets/record/segment_states.dart';
 import '../../widgets/record/tahfizh_fields.dart';
 import '../../widgets/record/tahsin_fields.dart';
 import '../../widgets/record/tilawah_fields.dart';
-import '../../widgets/record/tuntas_selector.dart';
 import 'record_form_options.dart';
 
 /// Modal bottom sheet full-height untuk tambah/edit laporan. [presetKelas]/[presetHalaqoh]/
@@ -140,9 +139,8 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
 
   final _catatanCtrl = TextEditingController();
 
-  // Nilai (ketik bebas) & ketuntasan (null = belum ditandai).
+  // Nilai (ketik bebas). Ketuntasan dihitung otomatis di rekap pekanan/bulanan.
   final _nilaiCtrl = TextEditingController();
-  bool? _tuntas;
 
   // Pembatasan admin kini mengikuti toggle GLOBAL "Mode Admin" di Profil (AccessScope.adminModeActive,
   // AuthProvider.setAdminModeActive) yang mengatur form, folder, dan statistik sekaligus,
@@ -208,7 +206,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     _tahsinMode = e?.tahsinMode ?? TahsinMode.wafa;
     _catatanCtrl.text = e?.catatan ?? '';
     _nilaiCtrl.text = e?.nilai ?? '';
-    _tuntas = e?.tuntas;
 
     if (e == null) {
       // Laporan baru & user hanya punya 1 assignment -> pre-fill kelas+halaqoh (tetap bisa diganti).
@@ -409,7 +406,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
             .toList(),
         'catatan': _catatanCtrl.text,
         'nilai': _nilaiCtrl.text,
-        'tuntas': _tuntas,
       };
 
   Future<void> _persistDraftNow() async {
@@ -471,7 +467,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         }
         _catatanCtrl.text = (d['catatan'] as String?) ?? '';
         _nilaiCtrl.text = (d['nilai'] as String?) ?? '';
-        _tuntas = d['tuntas'] as bool?;
       });
     } catch (_) {
       // Draf format lama/nggak dikenal sebagian field-nya — biarkan aja
@@ -733,7 +728,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       catatan:
           _catatanCtrl.text.trim().isEmpty ? null : _catatanCtrl.text.trim(),
       nilai: _nilaiCtrl.text.trim().isEmpty ? null : _nilaiCtrl.text.trim(),
-      tuntas: _tuntas,
       folderId: widget.existing?.folderId ?? widget.initialFolderId,
       // Dicatat untuk audit "siapa yang input laporan ini" (terutama admin di luar kelas/halaqoh-nya,
       // lihat _maybeWarnOwnership). Laporan lama yang diedit tetap memakai ownerId aslinya agar jejak
@@ -928,18 +922,6 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                               },
                               onTanpaCapaianChanged: (v) {
                                 setState(() => _tanpaCapaian = v);
-                                _markEditedAndScheduleDraftSave();
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          FormSectionCard(
-                            title: 'Ketuntasan',
-                            icon: LucideIcons.circleCheck,
-                            child: TuntasSelector(
-                              selected: _tuntas,
-                              onChanged: (v) {
-                                setState(() => _tuntas = v);
                                 _markEditedAndScheduleDraftSave();
                               },
                             ),

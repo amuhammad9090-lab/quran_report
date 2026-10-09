@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import '../../../core/utils/nilai_average.dart';
+import '../../../core/utils/standar_ketuntasan.dart';
 import '../../models/enums.dart';
 import '../../models/santri_monthly_recap.dart';
 import '../../models/santri_record.dart';
@@ -450,7 +451,7 @@ class ExportRows {
       totalBaris: recs.fold<int>(0, (sum, r) => sum + (r.totalBaris ?? 0)),
       keterangan: _weeklyKeteranganForSantri(recs),
       nilai: nilaiSummaryFor(recs),
-      status: tuntasSummaryFor(recs),
+      status: StandarKetuntasan.pekanText(recs),
       catatan: _weeklyCatatanForSantri(recs),
     );
   }
