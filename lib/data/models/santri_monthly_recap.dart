@@ -1,3 +1,4 @@
+import '../../core/utils/nilai_average.dart';
 import 'enums.dart';
 import 'santri_record.dart';
 
@@ -105,14 +106,15 @@ class SantriMonthlyRecap {
     ].join(', ');
   }
 
-  /// Teks ringkas kolom Nilai bulan ini: semua nilai yang diisi, urut tanggal, dipisah koma ('-' kalau kosong).
+  /// Kolom Nilai bulan ini = rata-rata dari rata-rata nilai tiap pekan ('-' kalau tidak ada nilai).
   String get nilaiSummaryText {
-    final all = [for (final recs in recordsByWeek.values) ...recs]
-      ..sort((a, b) => a.tanggal.compareTo(b.tanggal));
-    final vals = [
-      for (final r in all)
-        if ((r.nilai ?? '').trim().isNotEmpty) r.nilai!.trim(),
+    final weekly = [
+      for (final recs in recordsByWeek.values)
+        if (NilaiAverage.ofValues(recs.map((r) => r.nilai)) != null)
+          NilaiAverage.ofValues(recs.map((r) => r.nilai))!,
     ];
-    return vals.isEmpty ? '-' : vals.join(', ');
+    final avg = NilaiAverage.mean(weekly);
+    if (avg != null) return NilaiAverage.format(avg);
+    return NilaiAverage.summaryText([for (final recs in recordsByWeek.values) ...recs.map((r) => r.nilai)]);
   }
 }

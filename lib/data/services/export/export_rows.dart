@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../../../core/utils/nilai_average.dart';
 import '../../models/enums.dart';
 import '../../models/santri_monthly_recap.dart';
 import '../../models/santri_record.dart';
@@ -237,15 +238,8 @@ class ExportRows {
     return v.isEmpty ? '-' : v;
   }
 
-  /// Nilai banyak laporan (1 siswa dalam 1 pekan): urut tanggal, dipisah koma, '-' kalau tidak ada.
-  String nilaiSummaryFor(List<SantriRecord> recs) {
-    final sorted = [...recs]..sort((a, b) => a.tanggal.compareTo(b.tanggal));
-    final vals = [
-      for (final r in sorted)
-        if ((r.nilai ?? '').trim().isNotEmpty) r.nilai!.trim(),
-    ];
-    return vals.isEmpty ? '-' : vals.join(', ');
-  }
+  /// Nilai 1 siswa dalam 1 pekan = rata-rata nilai harian ('-' kalau tidak ada nilai).
+  String nilaiSummaryFor(List<SantriRecord> recs) => NilaiAverage.summaryText(recs.map((r) => r.nilai));
 
   /// Kolom Status = KETUNTASAN setoran (tombol Tuntas/Tidak Tuntas di form laporan); '-' kalau belum ditandai.
   String _statusText(SantriRecord r) => switch (r.tuntas) {
