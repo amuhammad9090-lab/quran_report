@@ -27,6 +27,7 @@ class SantriWeeklyRow {
   final String capaian;
   final int totalBaris;
   final String keterangan;
+  final String nilai;
   final String status;
   final String catatan;
 
@@ -36,6 +37,7 @@ class SantriWeeklyRow {
     required this.capaian,
     required this.totalBaris,
     required this.keterangan,
+    required this.nilai,
     required this.status,
     required this.catatan,
   });
@@ -58,6 +60,7 @@ class ExportRows {
     'Ayat/Hal',
     'Baris',
     'Keterangan',
+    'Nilai',
     'Status',
     'Catatan',
   ];
@@ -136,6 +139,7 @@ class ExportRows {
     'Ayat/Hal',
     'Baris',
     'Keterangan',
+    'Nilai',
     'Status',
     'Catatan',
   ];
@@ -227,6 +231,22 @@ class ExportRows {
     return (c == null || c.isEmpty) ? '-' : c;
   }
 
+  /// Kolom Nilai = isian "Nilai" di form laporan (ketik bebas); '-' kalau kosong.
+  String _nilaiText(SantriRecord r) {
+    final v = r.nilai?.trim() ?? '';
+    return v.isEmpty ? '-' : v;
+  }
+
+  /// Nilai banyak laporan (1 siswa dalam 1 pekan): urut tanggal, dipisah koma, '-' kalau tidak ada.
+  String nilaiSummaryFor(List<SantriRecord> recs) {
+    final sorted = [...recs]..sort((a, b) => a.tanggal.compareTo(b.tanggal));
+    final vals = [
+      for (final r in sorted)
+        if ((r.nilai ?? '').trim().isNotEmpty) r.nilai!.trim(),
+    ];
+    return vals.isEmpty ? '-' : vals.join(', ');
+  }
+
   /// Kolom Status = KETUNTASAN setoran (tombol Tuntas/Tidak Tuntas di form laporan); '-' kalau belum ditandai.
   String _statusText(SantriRecord r) => switch (r.tuntas) {
         true => 'Tuntas',
@@ -263,6 +283,7 @@ class ExportRows {
         _ayatHalRange(r),
         _barisText(r),
         r.keterangan.label,
+        _nilaiText(r),
         _statusText(r),
         _catatanText(r),
       ]);
@@ -285,6 +306,7 @@ class ExportRows {
         _ayatHalRange(r),
         _barisText(r),
         r.keterangan.label,
+        _nilaiText(r),
         _statusText(r),
         _catatanText(r),
       ]);
@@ -303,6 +325,7 @@ class ExportRows {
   String catatanTextFor(SantriRecord r) => _catatanText(r);
 
   String statusTextFor(SantriRecord r) => _statusText(r);
+  String nilaiTextFor(SantriRecord r) => _nilaiText(r);
 
   String hariTanggalTextFor(DateTime d) => _hariTanggalText(d);
 
@@ -316,6 +339,7 @@ class ExportRows {
     'Capaian',
     'Baris',
     'Keterangan',
+    'Nilai',
     'Status',
     'Catatan',
   ];
@@ -431,6 +455,7 @@ class ExportRows {
       capaian: _weeklyCapaianForSantri(recs),
       totalBaris: recs.fold<int>(0, (sum, r) => sum + (r.totalBaris ?? 0)),
       keterangan: _weeklyKeteranganForSantri(recs),
+      nilai: nilaiSummaryFor(recs),
       status: tuntasSummaryFor(recs),
       catatan: _weeklyCatatanForSantri(recs),
     );
@@ -452,6 +477,7 @@ class ExportRows {
           rows[i].capaian,
           '${rows[i].totalBaris}',
           rows[i].keterangan,
+          rows[i].nilai,
           rows[i].status,
           rows[i].catatan,
         ],
@@ -488,6 +514,7 @@ class ExportRows {
     for (var w = 1; w <= totalWeeks; w++) 'Pekan $w',
     'Total Baris',
     'Keterangan',
+    'Nilai',
     'Status',
   ];
 
@@ -501,6 +528,7 @@ class ExportRows {
         for (var w = 1; w <= totalWeeks; w++) r.capaianForWeek(w),
         '${r.totalBaris}',
         r.keteranganSummaryText,
+        r.nilaiSummaryText,
         r.tuntasSummaryText,
       ]);
     }

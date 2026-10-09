@@ -36,9 +36,9 @@ class WeeklySantriRecapTable extends StatelessWidget {
   const WeeklySantriRecapTable({super.key, required this.records, this.fixedTanggalLabel});
 
   // Lebar tiap kolom (No, Hari/Tanggal, Nama Murid, Capaian, Baris,
-  // Keterangan, Status, Catatan) — tinggal diubah angkanya kalau mau lebih
+  // Keterangan, Nilai, Status, Catatan) — tinggal diubah angkanya kalau mau lebih
   // lebar/sempit. Total = lebar tabel (di dalam horizontal scroll).
-  static const _colWidths = <double>[32, 100, 100, 190, 44, 110, 90, 110];
+  static const _colWidths = <double>[32, 100, 100, 190, 44, 110, 70, 90, 110];
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +71,7 @@ class WeeklySantriRecapTable extends StatelessWidget {
                   _HeaderCell('Capaian'),
                   _HeaderCell('Baris'),
                   _HeaderCell('Keterangan'),
+                  _HeaderCell('Nilai'),
                   _HeaderCell('Status'),
                   _HeaderCell('Catatan'),
                 ],
@@ -84,6 +85,7 @@ class WeeklySantriRecapTable extends StatelessWidget {
                     _Cell(rows[i].capaian),
                     _Cell('${rows[i].totalBaris}', bold: true),
                     _Cell(rows[i].keterangan),
+                    _Cell(rows[i].nilai),
                     _Cell(rows[i].status),
                     _Cell(rows[i].catatan),
                   ],

@@ -91,8 +91,9 @@ class ExportExcel {
       sheet.setColumnWidth(4, 12);  // Ayat/Hal
       sheet.setColumnWidth(5, 8);   // Baris
       sheet.setColumnWidth(6, 18);  // Keterangan
-      sheet.setColumnWidth(7, 14);  // Status (ketuntasan)
-      sheet.setColumnWidth(8, 22);  // Catatan
+      sheet.setColumnWidth(7, 10);  // Nilai
+      sheet.setColumnWidth(8, 14);  // Status (ketuntasan)
+      sheet.setColumnWidth(9, 22);  // Catatan
     } else {
       sheet.setColumnWidth(0, 5);   // No
       sheet.setColumnWidth(1, 22);  // Nama
@@ -100,8 +101,9 @@ class ExportExcel {
       sheet.setColumnWidth(3, 12);  // Ayat/Hal
       sheet.setColumnWidth(4, 8);   // Baris
       sheet.setColumnWidth(5, 18);  // Keterangan
-      sheet.setColumnWidth(6, 14);  // Status (ketuntasan)
-      sheet.setColumnWidth(7, 22);  // Catatan
+      sheet.setColumnWidth(6, 10);  // Nilai
+      sheet.setColumnWidth(7, 14);  // Status (ketuntasan)
+      sheet.setColumnWidth(8, 22);  // Catatan
     }
 
     row += rows.length;
@@ -269,15 +271,16 @@ class ExportExcel {
 
     if (includeTanggal) {
       // 8 kolom versi gabungan-per-siswa: No, Hari/Tanggal, Nama Murid,
-      // Capaian, Baris, Keterangan, Status, Catatan (lihat ExportRows.weeklyHeaders).
+      // Capaian, Baris, Keterangan, Nilai, Status, Catatan (lihat ExportRows.weeklyHeaders).
       sheet.setColumnWidth(0, 5);
       sheet.setColumnWidth(1, 18);
       sheet.setColumnWidth(2, 20);
       sheet.setColumnWidth(3, 40);
       sheet.setColumnWidth(4, 8);
       sheet.setColumnWidth(5, 18);
-      sheet.setColumnWidth(6, 16);
-      sheet.setColumnWidth(7, 22);
+      sheet.setColumnWidth(6, 12);
+      sheet.setColumnWidth(7, 16);
+      sheet.setColumnWidth(8, 22);
     } else {
       sheet.setColumnWidth(0, 5);
       sheet.setColumnWidth(1, 22);
@@ -285,8 +288,9 @@ class ExportExcel {
       sheet.setColumnWidth(3, 12);
       sheet.setColumnWidth(4, 8);
       sheet.setColumnWidth(5, 18);
-      sheet.setColumnWidth(6, 14);
-      sheet.setColumnWidth(7, 22);
+      sheet.setColumnWidth(6, 10);
+      sheet.setColumnWidth(7, 14);
+      sheet.setColumnWidth(8, 22);
     }
 
     final allRecords = [for (final s in sections) ...s.items];
@@ -379,7 +383,8 @@ class ExportExcel {
     }
     sheet.setColumnWidth(2 + totalWeeks, 12);
     sheet.setColumnWidth(3 + totalWeeks, 20);
-    sheet.setColumnWidth(4 + totalWeeks, 20); // Status (ketuntasan)
+    sheet.setColumnWidth(4 + totalWeeks, 14); // Nilai
+    sheet.setColumnWidth(5 + totalWeeks, 20); // Status (ketuntasan)
 
     final bytes = book.encode()!;
     return persistExportedFile('${exportFileSlug(judul)}.xlsx', Uint8List.fromList(bytes));

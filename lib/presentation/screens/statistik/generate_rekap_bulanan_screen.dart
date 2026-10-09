@@ -171,11 +171,13 @@ class _MonthlyRecapTable extends StatelessWidget {
   static const _pekanWidth = 150.0;
   static const _barisWidth = 60.0;
   static const _keteranganWidth = 110.0;
+  static const _nilaiWidth = 90.0;
+  static const _statusWidth = 110.0;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final totalWidth = _namaWidth + (_pekanWidth * totalWeeks) + _barisWidth + _keteranganWidth;
+    final totalWidth = _namaWidth + (_pekanWidth * totalWeeks) + _barisWidth + _keteranganWidth + _nilaiWidth + _statusWidth;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -190,6 +192,8 @@ class _MonthlyRecapTable extends StatelessWidget {
               for (var w = 1; w <= totalWeeks; w++) w: const FixedColumnWidth(_pekanWidth),
               totalWeeks + 1: const FixedColumnWidth(_barisWidth),
               totalWeeks + 2: const FixedColumnWidth(_keteranganWidth),
+              totalWeeks + 3: const FixedColumnWidth(_nilaiWidth),
+              totalWeeks + 4: const FixedColumnWidth(_statusWidth),
             },
             border: TableBorder(
               horizontalInside: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
@@ -202,6 +206,8 @@ class _MonthlyRecapTable extends StatelessWidget {
                   for (var w = 1; w <= totalWeeks; w++) _MonthlyHeaderCell('Pekan $w'),
                   const _MonthlyHeaderCell('Total Baris'),
                   const _MonthlyHeaderCell('Keterangan'),
+                  const _MonthlyHeaderCell('Nilai'),
+                  const _MonthlyHeaderCell('Status'),
                 ],
               ),
               for (final r in recaps)
@@ -239,6 +245,8 @@ class _MonthlyRecapTable extends StatelessWidget {
                         ),
                       ),
                     ),
+                    _MonthlyCell(r.nilaiSummaryText),
+                    _MonthlyCell(r.tuntasSummaryText),
                   ],
                 ),
             ],

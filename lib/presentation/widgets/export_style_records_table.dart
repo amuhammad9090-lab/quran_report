@@ -45,6 +45,7 @@ class ExportStyleRecordsTable extends StatelessWidget {
             DataColumn(label: Text('Ayat/Hal', style: TextStyle(fontWeight: FontWeight.w800))),
             DataColumn(label: Text('Baris', style: TextStyle(fontWeight: FontWeight.w800))),
             DataColumn(label: Text('Keterangan', style: TextStyle(fontWeight: FontWeight.w800))),
+            DataColumn(label: Text('Nilai', style: TextStyle(fontWeight: FontWeight.w800))),
             DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w800))),
             DataColumn(label: Text('Catatan', style: TextStyle(fontWeight: FontWeight.w800))),
           ],
@@ -73,6 +74,7 @@ class ExportStyleRecordsTable extends StatelessWidget {
                   DataCell(Text(export.ayatHalRangeFor(records[i]))),
                   DataCell(Text(export.barisTextFor(records[i]))),
                   DataCell(Text(records[i].keterangan.label)),
+                  DataCell(Text(export.nilaiTextFor(records[i]))),
                   DataCell(Text(export.statusTextFor(records[i]))),
                   DataCell(
                     ConstrainedBox(

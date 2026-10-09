@@ -104,4 +104,15 @@ class SantriMonthlyRecap {
       if (tidak > 0) '${tidak}x Tidak Tuntas',
     ].join(', ');
   }
+
+  /// Teks ringkas kolom Nilai bulan ini: semua nilai yang diisi, urut tanggal, dipisah koma ('-' kalau kosong).
+  String get nilaiSummaryText {
+    final all = [for (final recs in recordsByWeek.values) ...recs]
+      ..sort((a, b) => a.tanggal.compareTo(b.tanggal));
+    final vals = [
+      for (final r in all)
+        if ((r.nilai ?? '').trim().isNotEmpty) r.nilai!.trim(),
+    ];
+    return vals.isEmpty ? '-' : vals.join(', ');
+  }
 }
