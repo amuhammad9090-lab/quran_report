@@ -40,10 +40,10 @@ class NotificationsScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Hapus semua notifikasi?'),
+        title: const Text('Sembunyikan semua notifikasi?'),
         content: Text(
-          '$count catatan akan disembunyikan dari daftar ini. Catatan asli dari '
-          'orang tua tetap tersimpan, tidak terhapus.',
+          '$count catatan akan disembunyikan dari daftar ini. Catatan asli '
+          'orang tua tidak terhapus.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
@@ -52,7 +52,7 @@ class NotificationsScreen extends StatelessWidget {
               context.read<ParentNotesProvider>().dismissAll();
               Navigator.pop(ctx);
             },
-            child: const Text('Hapus semua'),
+            child: const Text('Sembunyikan semua'),
           ),
         ],
       ),
@@ -74,7 +74,7 @@ class NotificationsScreen extends StatelessWidget {
                   ? null
                   : TextButton(
                       onPressed: () => _confirmDismissAll(context, notes.length),
-                      child: const Text('Hapus semua'),
+                      child: const Text('Sembunyikan semua'),
                     ),
             ),
             SliverPadding(
@@ -88,7 +88,7 @@ class NotificationsScreen extends StatelessWidget {
                         icon: LucideIcons.cloudOff,
                         title: 'Gagal Memuat Notifikasi',
                         subtitle:
-                            'Periksa koneksi internet, lalu coba lagi. Data laporan lain tidak terpengaruh.',
+                            'Periksa koneksi internet, lalu coba lagi.',
                       ),
                     )
                   else if (notes.isEmpty)

@@ -187,9 +187,9 @@ class GenerateRekapPekananScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             AppActionChip(
                               icon: LucideIcons.upload,
-                              label: 'Export',
+                              label: 'Ekspor',
                               color: AppColors.deployOn(context),
-                              tooltip: 'Export Kelas ${groups[i].kelas} — Halaqoh ${groups[i].halaqoh}',
+                              tooltip: 'Ekspor Kelas ${groups[i].kelas} — Halaqoh ${groups[i].halaqoh}',
                               onTap: () => showExportSheet(
                                 context,
                                 groupedSections: [exportSections[i]],
@@ -284,7 +284,7 @@ class _DeployChipState extends State<_DeployChip> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Waktu habis (20 detik), server tidak merespons. Cek koneksi internet, lalu coba lagi.'),
+          content: Text('Waktu habis. Cek koneksi internet, lalu coba lagi.'),
         ),
       );
     } catch (e) {

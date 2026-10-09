@@ -102,7 +102,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
         title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
         content: Text(
           hasReports
-              ? 'Semua laporan pekanan siswa ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
+              ? 'Semua laporan siswa ini ikut terhapus dan tidak bisa dikembalikan.'
               : 'Belum ada laporan yang tersimpan untuk siswa ini.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),

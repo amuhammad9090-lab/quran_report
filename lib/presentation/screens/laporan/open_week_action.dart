@@ -194,8 +194,8 @@ Future<_PilihHari?> _pilihHariSheet(
               ),
               const SizedBox(height: 4),
               Text(
-                '${card.nama} sudah punya laporan di hari lain pekan ${isCurrentWeek ? "ini" : "itu"}. '
-                'Mau isi laporan $defaultDayLabel, atau betulkan salah satu laporan di bawah?',
+                '${card.nama} sudah punya laporan di pekan ${isCurrentWeek ? "ini" : "itu"}. '
+                'Isi laporan $defaultDayLabel, atau ubah laporan yang sudah ada?',
                 style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
               ),
               const SizedBox(height: 12),

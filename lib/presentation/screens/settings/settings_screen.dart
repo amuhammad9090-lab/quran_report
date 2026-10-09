@@ -96,8 +96,8 @@ class SettingsScreen extends StatelessWidget {
                         icon: LucideIcons.cloudUpload,
                         color: cs.primary,
                       ),
-                      title: const Text('Backup ke Cloud'),
-                      subtitle: const Text('Kirim ulang semua laporan ke Portal Orang Tua'),
+                      title: const Text('Kirim Laporan Tertunda'),
+                      subtitle: const Text('Kirim laporan yang belum masuk ke cloud (mis. dibuat saat offline)'),
                       onTap: () => _confirmSyncToCloud(context),
                     ),
                     ListTile(
@@ -106,7 +106,7 @@ class SettingsScreen extends StatelessWidget {
                         color: cs.primary,
                       ),
                       title: const Text('Pulihkan dari Cloud'),
-                      subtitle: const Text('Tarik kembali laporan yang pernah di-backup'),
+                      subtitle: const Text('Ambil laporan dari cloud ke HP ini'),
                       onTap: () => _confirmRestoreFromCloud(context),
                     ),
                     ListTile(
@@ -114,8 +114,8 @@ class SettingsScreen extends StatelessWidget {
                         icon: LucideIcons.trash,
                         color: cs.error,
                       ),
-                      title: const Text('Hapus Semua Data'),
-                      subtitle: const Text('Menghapus seluruh laporan tersimpan'),
+                      title: const Text('Hapus Data di HP Ini'),
+                      subtitle: const Text('Hapus semua laporan di HP ini (data di cloud tetap ada)'),
                       onTap: () => _confirmClearAll(context),
                     ),
                   ],
@@ -123,12 +123,12 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 if (context.watch<AuthProvider>().scope?.isAdmin ?? false) ...[
                   _SectionCard(
-                    title: 'Kelola Sekolah (Admin)',
+                    title: 'Kelola Sekolah',
                     children: [
                       ListTile(
                         leading: SoftIconBox(icon: LucideIcons.idCard, color: cs.primary),
-                        title: const Text('Halaman Kelola'),
-                        subtitle: const Text('Kelola guru & siswa, export/import Excel, migrasi data'),
+                        title: const Text('Kelola Guru & Siswa'),
+                        subtitle: const Text('Akun guru, data siswa, ekspor/impor Excel'),
                         trailing: const Icon(LucideIcons.chevronRight),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const KelolaDataScreen()),
@@ -168,10 +168,10 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Backup ke Cloud?'),
+        title: const Text('Kirim laporan tertunda?'),
         content: const Text(
-          'Semua laporan yang tersimpan di HP ini akan dikirim ulang ke Portal Orang Tua. '
-          'Data lama di cloud dengan laporan yang sama akan ditimpa. Butuh koneksi internet.',
+          'Laporan di HP ini yang belum terkirim akan dikirim ke cloud. '
+          'Butuh koneksi internet.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
@@ -181,7 +181,7 @@ class SettingsScreen extends StatelessWidget {
               Navigator.pop(ctx);
               _syncToCloud(context);
             },
-            child: const Text('Backup'),
+            child: const Text('Kirim'),
           ),
         ],
       ),
@@ -200,7 +200,7 @@ class SettingsScreen extends StatelessWidget {
             children: [
               SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
               SizedBox(width: 16),
-              Expanded(child: Text('Menyinkronkan laporan...')),
+              Expanded(child: Text('Mengirim laporan...')),
             ],
           ),
         ),
@@ -212,17 +212,12 @@ class SettingsScreen extends StatelessWidget {
       final count = await StorageService.instance.syncAllToFirestore(scope: scope);
       if (!context.mounted) return;
       Navigator.of(context).pop(); // tutup dialog loading
-      // <-- BERUBAH: nambahin jumlah santri (bukan cuma jumlah laporan)
-      // di pesannya -- guru pembimbing biasanya lebih kebayang lewat
-      // "berapa anak" ketimbang "berapa baris laporan". `totalSantri`
-      // sudah otomatis ke-scope ke kelas/halaqoh guru ini sendiri (lihat
-      // RecordsProvider._scoped), jadi buat guru non-admin ini beneran
-      // jumlah anak-anaknya dia doang, bukan seluruh sekolah.
-      final totalSantri = context.read<RecordsProvider>().totalSantri;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Berhasil! $count laporan ($totalSantri siswa) tersinkron ke cloud.',
+            count == 0
+                ? 'Semua laporan sudah terkirim ke cloud.'
+                : 'Berhasil! $count laporan terkirim ke cloud.',
           ),
         ),
       );
@@ -233,7 +228,7 @@ class SettingsScreen extends StatelessWidget {
         SnackBar(
           content: Text(
             FirebaseBootstrapStatus.ready
-                ? 'Gagal sinkron: $e. Cek koneksi internet, lalu coba lagi.'
+                ? 'Gagal mengirim: $e. Cek koneksi internet, lalu coba lagi.'
                 : FirebaseBootstrapStatus.userMessage,
           ),
         ),
@@ -250,10 +245,10 @@ class SettingsScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Pulihkan dari Cloud'),
         content: const Text(
-          'Hanya yang baru (hemat): menarik laporan yang masuk cloud sejak pemulihan terakhir. '
-          'Pemulihan pertama otomatis penuh.\n\n'
-          'Semua (penuh): menarik ulang seluruh laporan di cloud, lebih boros kuota.\n\n'
-          'Laporan yang sudah ada & lebih baru di HP ini tidak akan ditimpa. Butuh koneksi internet.',
+          'Hanya yang baru: ambil laporan yang masuk cloud sejak pemulihan terakhir (hemat kuota). '
+          'Pemulihan pertama selalu penuh.\n\n'
+          'Semua: ambil ulang seluruh laporan (lebih boros kuota).\n\n'
+          'Laporan di HP yang lebih baru tidak ditimpa. Butuh koneksi internet.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
@@ -349,9 +344,9 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus semua data?'),
+        title: const Text('Hapus data di HP ini?'),
         content: const Text(
-            'Seluruh laporan yang tersimpan akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.'),
+            'Semua laporan di HP ini akan dihapus. Data di cloud tidak ikut terhapus dan bisa dipulihkan.'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),

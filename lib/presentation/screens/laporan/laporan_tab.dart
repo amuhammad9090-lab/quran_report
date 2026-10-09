@@ -130,7 +130,7 @@ class _LaporanTabState extends State<LaporanTab> {
       builder: (ctx) => AlertDialog(
         title: Text('Hapus $count kartu?'),
         content: const Text(
-            'Semua laporan pekanan di dalamnya ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'),
+            'Semua laporan di dalamnya ikut terhapus dan tidak bisa dikembalikan.'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
@@ -273,7 +273,7 @@ class _LaporanTabState extends State<LaporanTab> {
         title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
         content: Text(
           hasReports
-              ? 'Semua laporan pekanan siswa ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
+              ? 'Semua laporan siswa ini ikut terhapus dan tidak bisa dikembalikan.'
               : 'Belum ada laporan yang tersimpan untuk siswa ini.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -661,8 +661,8 @@ class _LaporanTabState extends State<LaporanTab> {
         title: const Text('Hapus folder?'),
         content: Text(
           jumlahSantri > 0
-              ? 'Folder ini berisi laporan $jumlahSantri siswa. Semua laporan di '
-                  'dalamnya akan ikut TERHAPUS PERMANEN dan tidak bisa dikembalikan.'
+              ? 'Folder berisi laporan $jumlahSantri siswa. Semuanya '
+                  'akan terhapus permanen dan tidak bisa dikembalikan.'
               : 'Folder ini kosong dan akan dihapus.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -771,7 +771,7 @@ class _OrphanedRecordsBanner extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '$count kartu folder-nya hilang',
+                      '$count kartu tanpa folder',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13.5,

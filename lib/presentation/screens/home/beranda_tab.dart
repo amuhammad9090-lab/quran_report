@@ -78,7 +78,7 @@ class BerandaTab extends StatelessWidget {
                 WelcomeHeroCard(
                 title: 'Selamat datang di\nAplikasi Laporan Al Quran!',
                 subtitle:
-                    'Kelola laporan Tahsin & Tahfizh siswa dengan mudah dan terstruktur.',
+                    'Catat dan pantau laporan tahsin & tahfizh siswa.',
                 actions: Row(
                   children: [
                     Expanded(

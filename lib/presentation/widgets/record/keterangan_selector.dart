@@ -114,8 +114,8 @@ class KeteranganSelector extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      'Hadir tanpa capaian hari ini (mis. ada arahan/kegiatan lain) — '
-                      'capaian boleh dikosongkan, tapi catatan wajib diisi.',
+                      'Hadir tanpa capaian (misal ada kegiatan lain). '
+                      'Catatan wajib diisi.',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

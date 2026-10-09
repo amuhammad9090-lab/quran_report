@@ -179,7 +179,7 @@ class _RekapBulananScreenState extends State<RekapBulananScreen> {
                         ),
                       ),
                       icon: const Icon(LucideIcons.wandSparkles, size: 18),
-                      label: const Text('Generate Rekap Bulanan (Pekan 1-Terakhir)'),
+                      label: const Text('Generate Rekap Bulanan'),
                     ),
                   ),
                 ),

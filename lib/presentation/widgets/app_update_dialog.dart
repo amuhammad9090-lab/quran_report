@@ -38,7 +38,7 @@ Future<void> _checkWebUpdate(BuildContext context,
           context,
           latest == null
               ? 'Gagal mengecek pembaruan. Coba lagi nanti.'
-              : 'Kamu sudah memakai versi terbaru.');
+              : 'Anda sudah memakai versi terbaru.');
     }
     return;
   }
@@ -85,7 +85,7 @@ Future<void> checkForAppUpdate(BuildContext context,
           context,
           failed
               ? 'Gagal mengecek pembaruan. Coba lagi nanti.'
-              : 'Kamu sudah memakai versi terbaru.');
+              : 'Anda sudah memakai versi terbaru.');
     }
     return;
   }

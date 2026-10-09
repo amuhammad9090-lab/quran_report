@@ -360,8 +360,8 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         SnackBar(
           content: Text(
             scope.isAdmin
-                ? 'Anda mengisi laporan ini sebagai Admin — kelas/halaqoh ini bukan tanggung jawab Anda sendiri.'
-                : 'Kelas/halaqoh ini bukan tanggung jawab Anda.',
+                ? 'Anda mengisi sebagai Admin. Ini bukan kelas/halaqoh Anda.'
+                : 'Ini bukan kelas/halaqoh Anda.',
           ),
           duration: const Duration(seconds: 4),
         ),
@@ -529,7 +529,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     if (_nama == null || _nama!.trim().isEmpty) {
       if (!silent) {
         setState(() => _generateError =
-            'Pilih nama anak dulu — dipakai untuk cek riwayat baris.');
+            'Pilih nama siswa dulu.');
       }
       return;
     }
@@ -588,7 +588,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       _generating = false;
       if (anyUnavailable) {
         _generateError =
-            'Mapping baris belum tersedia untuk salah satu surah pada dataset aktif (${QuranEngineService.instance.missingText()}).';
+            'Data baris belum tersedia untuk salah satu surah (${QuranEngineService.instance.missingText()}).';
       }
     });
   }
@@ -655,7 +655,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     if (_tanpaCapaian && _catatanCtrl.text.trim().isEmpty) {
       _localMessengerKey.currentState?.showSnackBar(
         const SnackBar(
-          content: Text('Isi catatan dulu -- wajib buat jelasin kenapa nggak ada capaian hari ini.'),
+          content: Text('Isi catatan dulu: wajib jika tidak ada capaian hari ini.'),
         ),
       );
       return;
@@ -675,8 +675,8 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
         _localMessengerKey.currentState?.showSnackBar(
           SnackBar(
               content: Text(anyUnavailable
-                  ? 'Isi jumlah baris manual dulu untuk surah yang belum ada di dataset.'
-                  : 'Generate baris dulu sebelum simpan (untuk hafalan Tahfizh).')),
+                  ? 'Isi jumlah baris manual untuk surah yang datanya belum ada.'
+                  : 'Tekan Generate Baris dulu sebelum menyimpan.')),
         );
         return;
       }
@@ -956,8 +956,8 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                                 icon: LucideIcons.fileText,
                                 label: _tanpaCapaian ? 'Catatan (wajib diisi)' : 'Catatan',
                                 hint: _tanpaCapaian
-                                    ? 'Jelasin kenapa nggak ada capaian hari ini...'
-                                    : 'Catatan tambahan untuk guru pembimbing/ortu...',
+                                    ? 'Alasan tidak ada capaian hari ini...'
+                                    : 'Catatan tambahan untuk guru atau orang tua...',
                                 accent: cs.primary,
                               ),
                               onChanged: (_) => _markEditedAndScheduleDraftSave(),

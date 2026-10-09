@@ -220,8 +220,8 @@ class ProfileScreen extends StatelessWidget {
                             style: TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text(
                           auth.adminModeActive
-                              ? 'Aktif — akses semua kelas & halaqoh (form laporan, folder, statistik)'
-                              : 'Nonaktif — hanya kelas/halaqoh yang Anda ampu sendiri',
+                              ? 'Aktif: melihat semua kelas & halaqoh'
+                              : 'Nonaktif: hanya kelas & halaqoh yang Anda ampu',
                           style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
                         ),
                         value: auth.adminModeActive,
@@ -242,7 +242,7 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                   ],
                   SectionLabel(
-                      isEffectivelyAdmin ? 'Ringkasan Global' : 'Ringkasan Assignment Saya'),
+                      isEffectivelyAdmin ? 'Ringkasan Global' : 'Ringkasan Saya'),
                   IntrinsicHeight(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,

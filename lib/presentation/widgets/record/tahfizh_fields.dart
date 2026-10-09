@@ -78,7 +78,7 @@ class TahfizhFields extends StatelessWidget {
           child: TextButton.icon(
             onPressed: onAddSegment,
             icon: const Icon(LucideIcons.circlePlus, size: 18),
-            label: const Text('Tambah Surah (nyambung)'),
+            label: const Text('Tambah Surah Lanjutan'),
             style: TextButton.styleFrom(
               foregroundColor: cs.primary,
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -192,7 +192,7 @@ class _TahfizhSegmentField extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Surah ke-${index + 1} (nyambung)',
+                    'Surah ke-${index + 1} (lanjutan)',
                     style: TextStyle(
                         fontSize: 12, fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
                   ),
@@ -316,9 +316,9 @@ class _ManualBarisFallback extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Mapping baris belum tersedia untuk surah ini '
+                  'Data baris belum tersedia untuk surah ini '
                   '(${missingText()}). '
-                  'Isi jumlah baris secara manual.',
+                  'Isi jumlah baris manual.',
                   style: TextStyle(fontSize: 12, color: cs.onErrorContainer),
                 ),
               ),

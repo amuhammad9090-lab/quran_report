@@ -74,7 +74,7 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                   icon: LucideIcons.wandSparkles,
                   title: 'Belum ada capaian untuk digabung',
                   subtitle:
-                  'Isi dulu laporan siswa di salah satu Pekan bulan ini, baru rekap bulanan bisa di-generate.',
+                  'Isi dulu laporan siswa di salah satu pekan bulan ini.',
                 ),
               )
             else ...[
@@ -121,9 +121,9 @@ class GenerateRekapBulananScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             AppActionChip(
                               icon: LucideIcons.upload,
-                              label: 'Export',
+                              label: 'Ekspor',
                               color: AppColors.deployOn(context),
-                              tooltip: 'Export Kelas ${g.kelas} — Halaqoh ${g.halaqoh}',
+                              tooltip: 'Ekspor Kelas ${g.kelas} — Halaqoh ${g.halaqoh}',
                               onTap: () => showExportSheet(
                                 context,
                                 groupedMonthlySections: [g],

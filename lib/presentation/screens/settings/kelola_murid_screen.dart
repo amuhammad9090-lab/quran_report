@@ -97,7 +97,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                 child: EmptyState(
                   icon: LucideIcons.users,
                   title: 'Belum ada data siswa',
-                  subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
+                  subtitle: 'Coba muat ulang, atau jalankan migrasi data di Pengaturan > Kelola Sekolah.',
                 ),
               )
             else

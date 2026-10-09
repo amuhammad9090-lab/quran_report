@@ -28,7 +28,7 @@ class RecordDraftBanner extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Ada draf laporan yang belum sempat disimpan.',
+                  'Ada draf laporan yang belum disimpan.',
                   style: TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w700, color: cs.primary),
                 ),
@@ -37,7 +37,7 @@ class RecordDraftBanner extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Kelihatannya form sebelumnya sempat tertutup sebelum disimpan. Lanjutkan isian tadi?',
+            'Form sebelumnya tertutup sebelum disimpan. Lanjutkan?',
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 12),

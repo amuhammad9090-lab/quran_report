@@ -68,7 +68,7 @@ class GeneratedLinesPanel extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '${result.alreadyCountedLines.length} baris sudah pernah dihitung di laporan sebelumnya (tidak dihitung dobel)',
+                        '${result.alreadyCountedLines.length} baris sudah dihitung di laporan sebelumnya (tidak dihitung ganda)',
                         style: TextStyle(
                             fontSize: 11.5,
                             color: AppColors.tahsinOn(context),
@@ -83,7 +83,7 @@ class GeneratedLinesPanel extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
               child: Text(
-                'Semua baris di rentang ini sudah pernah dihitung sebelumnya.',
+                'Semua baris di rentang ini sudah dihitung sebelumnya.',
                 style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
               ),
             ),

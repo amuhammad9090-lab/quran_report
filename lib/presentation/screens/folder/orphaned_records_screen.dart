@@ -170,7 +170,7 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
         title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
         content: Text(
           hasReports
-              ? 'Semua laporan pekanan siswa ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
+              ? 'Semua laporan siswa ini ikut terhapus dan tidak bisa dikembalikan.'
               : 'Belum ada laporan yang tersimpan untuk siswa ini.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -264,9 +264,9 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Laporan kartu-kartu ini masih aman tersimpan, tapi folder '
-                              'tujuannya sudah tidak ada lagi. Pindahkan ke folder lain, '
-                              'atau keluarkan dari folder supaya muncul lagi di daftar Laporan.',
+                              'Laporan aman, tapi folder tujuannya sudah tidak ada. '
+                              'Pindahkan ke folder lain, '
+                              'atau keluarkan dari folder agar muncul lagi di daftar Laporan.',
                               style: TextStyle(
                                 fontSize: 12.5,
                                 height: 1.4,
@@ -284,7 +284,7 @@ class _OrphanedRecordsScreenState extends State<OrphanedRecordsScreen> {
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: LucideIcons.circleCheck,
-                      title: 'Semua sudah diselamatkan',
+                      title: 'Semua sudah dipindahkan',
                       subtitle: 'Tidak ada lagi kartu dengan folder yang hilang.',
                     ),
                   )

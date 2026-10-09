@@ -68,7 +68,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
               child: CustomScrollView(
                 slivers: [
                   const PushedPageHeader(
-                    title: 'Halaman Kelola',
+                    title: 'Kelola Sekolah',
                     titleFontSize: 17,
                   ),
                   SliverPadding(
@@ -81,7 +81,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                             ListTile(
                               leading: SoftIconBox(icon: LucideIcons.medal, color: cs.primary),
                               title: const Text('Kelola Guru'),
-                              subtitle: const Text('Ubah nama & assignment kelas/halaqoh guru pembimbing'),
+                              subtitle: const Text('Ubah nama, role, dan kelas/halaqoh guru'),
                               trailing: const Icon(LucideIcons.chevronRight),
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const KelolaGuruScreen()),
@@ -100,24 +100,24 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                         ),
                         const SizedBox(height: 20),
                         _SectionCard(
-                          title: 'Export & Import',
+                          title: 'Ekspor & Impor',
                           children: [
                             ListTile(
                               leading: SoftIconBox(icon: LucideIcons.fileDown, color: cs.primary),
-                              title: const Text('Export ke Excel'),
+                              title: const Text('Ekspor ke Excel'),
                               subtitle: const Text('Satu file .xlsx, sheet "Siswa" & "Guru"'),
                               onTap: () => _withBusy(() => _exportExcel(context)),
                             ),
                             ListTile(
                               leading: SoftIconBox(icon: LucideIcons.cloudUpload, color: cs.primary),
-                              title: const Text('Import dari Excel'),
-                              subtitle: const Text('Upload balik file yang sudah diedit, ada preview dulu'),
+                              title: const Text('Impor dari Excel'),
+                              subtitle: const Text('Unggah file yang sudah diedit (ada pratinjau dulu)'),
                               onTap: () => _withBusy(() => _importExcel(context)),
                             ),
                             ListTile(
                               leading: SoftIconBox(icon: LucideIcons.code, color: cs.primary),
                               title: const Text('Export sebagai kode seed (.dart)'),
-                              subtitle: const Text('Buat developer, sebelum build APK berikutnya'),
+                              subtitle: const Text('Untuk developer: cadangan data awal di dalam app'),
                               onTap: () => _withBusy(() => _exportSeedCode(context)),
                             ),
                           ],
@@ -130,7 +130,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                               leading: SoftIconBox(icon: LucideIcons.cloud, color: cs.primary),
                               title: const Text('Migrasi Data Guru & Siswa ke Cloud'),
                               subtitle: const Text(
-                                'Sekali jalan — pindahin data bawaan APK ke cloud, aman dipencet berkali-kali',
+                                'Salin data bawaan app ke cloud (aman diulang)',
                               ),
                               onTap: () => _confirmMigrateSeed(context),
                             ),
@@ -160,7 +160,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
     if (!context.mounted) return;
     if (students.isEmpty && accounts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Belum ada data guru/siswa buat di-export.')),
+        const SnackBar(content: Text('Belum ada data guru/siswa untuk diekspor.')),
       );
       return;
     }
@@ -169,11 +169,11 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
       if (!context.mounted) return;
       await shareExportedFile(
         file,
-        subject: 'Data Guru & Siswa — edit sheet "Siswa"/"Guru", lalu upload balik lewat "Import dari Excel"',
+        subject: 'Data Guru & Siswa. Edit sheet "Siswa"/"Guru", lalu unggah lewat "Impor dari Excel".',
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal export: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal ekspor: $e')));
     }
   }
 
@@ -182,7 +182,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
     if (!context.mounted) return;
     if (students.isEmpty && accounts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Belum ada data guru/siswa buat di-export.')),
+        const SnackBar(content: Text('Belum ada data guru/siswa untuk diekspor.')),
       );
       return;
     }
@@ -215,7 +215,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('File gak kebaca -- pastikan formatnya .xlsx hasil export dari sini. ($e)')),
+        SnackBar(content: Text('File tidak terbaca. Gunakan file .xlsx hasil ekspor dari sini. ($e)')),
       );
       return;
     }
@@ -228,8 +228,8 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
         SnackBar(
           content: Text(
             unknownTotal == 0
-                ? 'Gak ada perubahan yang terdeteksi di file ini.'
-                : 'Gak ada perubahan valid. $unknownTotal baris id-nya gak dikenali.',
+                ? 'Tidak ada perubahan di file ini.'
+                : 'Tidak ada perubahan valid. $unknownTotal baris dengan ID tidak dikenali.',
           ),
         ),
       );
@@ -280,9 +280,9 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Migrasi data ke Cloud?'),
         content: const Text(
-          'Data guru & siswa bawaan APK akan disalin ke cloud, TAPI id yang sudah ada di cloud '
-          'akan dilewatin (tidak ditimpa) -- jadi perubahan yang sudah kamu buat lewat Kelola Guru/'
-          'Siswa atau Import Excel tetap aman. Aman dijalankan berkali-kali. Butuh koneksi internet.',
+          'Data guru & siswa bawaan app akan disalin ke cloud. Data yang sudah ada di cloud '
+          'tidak ditimpa, jadi perubahan lewat Kelola Guru/'
+          'Siswa atau Impor Excel tetap aman. Butuh koneksi internet.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
@@ -391,8 +391,8 @@ class _ImportPreviewScreenState extends State<_ImportPreviewScreen> {
                       }),
                       title: Text(row.current.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
-                        '${row.current.displayName} (${row.current.assignments.length} assignment)  →  '
-                        '${row.newDisplayName} (${row.newAssignments.length} assignment)',
+                        '${row.current.displayName} (${row.current.assignments.length} kelas/halaqoh)  →  '
+                        '${row.newDisplayName} (${row.newAssignments.length} kelas/halaqoh)',
                       ),
                     ),
                 ],
@@ -419,7 +419,7 @@ class _ImportPreviewScreenState extends State<_ImportPreviewScreen> {
                     padding: EdgeInsets.only(top: 40),
                     child: EmptyState(
                       icon: LucideIcons.folderLock,
-                      title: 'Gak ada perubahan',
+                      title: 'Tidak ada perubahan',
                       subtitle: 'Semua baris di file sama persis dengan data sekarang.',
                     ),
                   ),
@@ -486,10 +486,10 @@ class _UnknownIdsBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final parts = <String>[
       if (studentUnknownIds.isNotEmpty)
-        '${studentUnknownIds.length} baris siswa id-nya gak dikenali: '
+        '${studentUnknownIds.length} baris siswa dengan ID tidak dikenali: '
             '${studentUnknownIds.take(5).join(', ')}${studentUnknownIds.length > 5 ? ', ...' : ''}',
       if (accountUnknownIds.isNotEmpty)
-        '${accountUnknownIds.length} baris guru id-nya gak dikenali: '
+        '${accountUnknownIds.length} baris guru dengan ID tidak dikenali: '
             '${accountUnknownIds.take(5).join(', ')}${accountUnknownIds.length > 5 ? ', ...' : ''}',
     ];
     return Container(
@@ -533,12 +533,12 @@ class _SeedCodeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.copy),
-            tooltip: 'Copy semua',
+            tooltip: 'Salin semua',
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: code));
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Kode disalin ke clipboard.')),
+                const SnackBar(content: Text('Kode disalin.')),
               );
             },
           ),
@@ -551,9 +551,9 @@ class _SeedCodeScreen extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.4),
             child: const Text(
-              'Copy kode di bawah, tempel ke local_seed_data.dart (ganti isi kSeedAccountsJson '
-              'dan kSeedStudentsJson yang lama), lalu build APK versi berikutnya. Ini cuma '
-              'nyegerin fallback darurat -- data yang beneran kepakai sehari-hari tetap dari cloud.',
+              'Salin kode di bawah ke local_seed_data.dart (ganti isi kSeedAccountsJson '
+              'dan kSeedStudentsJson yang lama), lalu build ulang APK. Ini hanya '
+              'cadangan darurat; data yang dipakai sehari-hari tetap dari cloud.',
               style: TextStyle(fontSize: 12.5),
             ),
           ),

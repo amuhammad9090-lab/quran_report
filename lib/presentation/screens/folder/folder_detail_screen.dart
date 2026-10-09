@@ -116,7 +116,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Hapus $count kartu?'),
-        content: const Text('Semua laporan pekanan di dalamnya ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'),
+        content: const Text('Semua laporan di dalamnya ikut terhapus dan tidak bisa dikembalikan.'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
@@ -151,7 +151,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
         title: Text(hasReports ? 'Hapus kartu "${card.nama}"?' : 'Hapus kartu ini?'),
         content: Text(
           hasReports
-              ? 'Semua laporan pekanan siswa ini akan ikut terhapus. Data yang dihapus tidak dapat dikembalikan.'
+              ? 'Semua laporan siswa ini ikut terhapus dan tidak bisa dikembalikan.'
               : 'Belum ada laporan yang tersimpan untuk siswa ini.',
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),

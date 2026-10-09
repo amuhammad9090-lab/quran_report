@@ -85,7 +85,7 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
-              child: Text('Pilih bulan untuk diexport',
+              child: Text('Pilih bulan untuk diekspor',
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             ),
             Flexible(
@@ -129,9 +129,9 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
               subtitle: 'Rekap kehadiran siswa per tanggal',
               trailing: AppActionChip(
                 icon: LucideIcons.upload,
-                label: 'Export',
+                label: 'Ekspor',
                 color: AppColors.deployOn(context),
-                tooltip: 'Export rekap kehadiran per bulan',
+                tooltip: 'Ekspor rekap kehadiran per bulan',
                 // Nonaktif kalau belum ada laporan sama sekali.
                 onTap: all.isEmpty ? null : () => _export(all),
               ),

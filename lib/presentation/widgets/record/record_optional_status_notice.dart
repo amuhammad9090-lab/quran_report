@@ -35,8 +35,8 @@ class RecordOptionalStatusNotice extends StatelessWidget {
             Expanded(
               child: Text(
                 tanpaCapaian
-                    ? 'Ditandai "tanpa capaian" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan. Jangan lupa isi catatan.'
-                    : 'Keterangan "$keteranganLabel" — kolom status capaian nggak wajib diisi, akan dikosongkan saat disimpan.',
+                    ? 'Tanpa capaian: status capaian tidak wajib dan akan dikosongkan. Catatan wajib diisi.'
+                    : 'Keterangan "$keteranganLabel": status capaian tidak wajib dan akan dikosongkan.',
                 style: TextStyle(
                   fontSize: 11.5,
                   color: AppColors.tahsinOn(context),

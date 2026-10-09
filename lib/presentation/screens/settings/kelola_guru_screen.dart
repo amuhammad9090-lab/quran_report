@@ -46,7 +46,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
         SnackBar(
           content: Text(
             changed == 0
-                ? 'Sudah sinkron -- tidak ada siswa yang perlu diperbarui.'
+                ? 'Semua siswa sudah sesuai.'
                 : 'Berhasil! $changed siswa disinkronkan ke guru pembimbing terbaru.',
           ),
         ),
@@ -117,7 +117,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                 child: EmptyState(
                   icon: LucideIcons.medal,
                   title: 'Belum ada akun guru',
-                  subtitle: 'Coba muat ulang, atau jalankan migrasi data dari Pengaturan dulu.',
+                  subtitle: 'Coba muat ulang, atau jalankan migrasi data di Pengaturan > Kelola Sekolah.',
                 ),
               )
             else
@@ -141,7 +141,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                       subtitle: Text(
                         [
                           '@${acc.username}',
-                          if (acc.assignments.isNotEmpty) '${acc.assignments.length} assignment' else acc.role.label,
+                          if (acc.assignments.isNotEmpty) '${acc.assignments.length} kelas/halaqoh' else acc.role.label,
                           if (noGoogleEmail) 'belum ada email Google' else acc.googleEmail!,
                         ].join(' • '),
                         style: noGoogleEmail ? TextStyle(color: cs.error) : null,
@@ -231,12 +231,12 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                         decoration: fieldDecoration(
                           ctx,
                           icon: LucideIcons.mail,
-                          label: 'Email Google (buat login)',
+                          label: 'Email Google (untuk login)',
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Guru login pakai akun Google ini. Kosongkan untuk mencabut akses login.',
+                        'Dipakai untuk login dengan Google. Kosongkan untuk mencabut akses.',
                         style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 11.5),
                       ),
                       Text('Role', style: Theme.of(ctx).textTheme.labelLarge),
@@ -257,14 +257,14 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                             ? 'Role akun yang sedang dipakai tidak bisa diubah dari sini.'
                             : switch (selectedRole) {
                                 UserRole.admin => 'Admin: akses global, boleh mengubah data dan mengelola sekolah.',
-                                UserRole.pengawas => 'Pengawas: melihat semua kelas, halaqoh, statistik, dan export. Tidak bisa mengubah data.',
+                                UserRole.pengawas => 'Pengawas: melihat semua kelas, halaqoh, statistik, dan ekspor. Tidak bisa mengubah data.',
                                 UserRole.guruPembimbing => 'Guru: hanya kelas dan halaqoh yang diampu.',
                               },
                         style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 11.5),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Assignment kelas+halaqoh (${selectedRole.label})',
+                        'Kelas & halaqoh yang diampu',
                         style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 12.5),
                       ),
                       const SizedBox(height: 4),

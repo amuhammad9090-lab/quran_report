@@ -81,7 +81,7 @@ class RecordIdentityFields extends StatelessWidget {
         SelectField(
           key: ValueKey('nama_$nama'),
           value: nama,
-          label: 'Nama Anak',
+          label: 'Nama Siswa',
           hint: comboBelumLengkap
               ? 'Pilih kelas & halaqoh dulu'
               : null,
