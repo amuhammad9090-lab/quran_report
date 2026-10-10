@@ -153,12 +153,6 @@ class ApiStudentRepository implements StudentRepository {
     } catch (_) {}
   }
 
-  /// Cek Firestore & sinkronkan cache Hive kalau perlu (dipanggil
-  /// eksplisit — mis. admin buka layar "Kelola Data Murid"/"Kelola
-  /// Murid" [supaya lihat data terbaru sebelum edit], tombol refresh
-  /// manual, ATAU dari background sync di [_refreshInBackgroundIfDue]
-  /// kalau cooldown-nya sudah lewat).
-  ///
   /// <-- BERUBAH: dulu method ini SELALU melakukan full
   /// `students.get()` (±302 reads) tiap dipanggil. Sekarang lewat
   /// [_performRefresh]: kalau metadata `schools/{id}/metadata/students`
@@ -282,16 +276,6 @@ class ApiStudentRepository implements StudentRepository {
     await AppPrefsService.instance.setStudentsMetaVersion(version);
   }
 
-  /// <-- BERUBAH (bug fix): dulu method ini nelan SEMUA error dari
-  /// [ApiAuthRepository.refresh] diam-diam dan return `[]` -- niatnya
-  /// "aman", TAPI akibatnya kebalik: [_matchGuruAccountId] dipanggil
-  /// dengan list KOSONG selalu balikin `null`, jadi tiap kali resolusi
-  /// ini gagal (offline/timeout/permission-denied sesaat), SEMUA santri
-  /// yang lagi ditulis (updateKelasHalaqoh/bulkUpdateKelasHalaqoh) ikut
-  /// KETIMPA `guruAccountId: null` -- padahal sebelumnya sudah benar --
-  /// TANPA ada error apa pun yang kelihatan ke admin. Ini yang bikin
-  /// santri yang guru pembimbingnya sudah di-assign tetap balik null.
-  ///
   /// Sekarang: error DILEMPAR APA ADANYA ke pemanggil (updateKelasHalaqoh/
   /// bulkUpdateKelasHalaqoh/migrateSeedToFirestore/resyncAllGuruAccountIds)
   /// -- masing-masing yang mutuskan cara aman buat handle-nya (biasanya:
@@ -301,17 +285,18 @@ class ApiStudentRepository implements StudentRepository {
     return ApiAuthRepository.instance.refresh();
   }
 
-  /// Cocokkan [kelas]+[halaqoh] ke SATU akun guru dari [accounts] (hasil
-  /// [_accountsForGuruResolution]) lewat [KelasHalaqoh.==] (yang sudah menormalisasi
-  /// [halaqoh], lihat KelasHalaqoh.fromJson) -- BUKAN `arrayContains` Firestore, supaya
-  /// tidak rapuh kalau ejaan halaqoh di assignment guru & di data santri beda kapitalisasi
-  /// /spasi. Fakta "1 halaqoh = 1 guru" (dikonfirmasi user) berarti hasilnya seharusnya
-  /// selalu 0 atau 1 kecocokan -- kalau ternyata >1 (data tidak konsisten), yang dipakai
-  /// yang PERTAMA ketemu, bukan error, supaya penyimpanan kelas/halaqoh tetap jalan.
-  String? _matchGuruAccountId(List<UserAccount> accounts, String kelas, String halaqoh) {
+  /// <-- BERUBAH: dulu cuma balikin `String? accountId` (nama method lama:
+  /// `_matchGuruAccountId`). Sekarang balikin [UserAccount]-nya UTUH supaya
+  /// pemanggil bisa sekalian ambil [UserAccount.displayName] buat field
+  /// [Student.guruNama] (denormalisasi nama guru pembimbing ke
+  /// `students/{id}` -- Portal Ortu tidak boleh baca dokumen
+  /// `accounts/{accountId}` langsung, lihat firestore.rules). SATU kali
+  /// pencarian buat id & nama sekaligus -- bukan 2 method terpisah yang bisa
+  /// beda hasil kalau `accounts` berubah di antara 2 panggilan.
+  UserAccount? _matchGuruAccount(List<UserAccount> accounts, String kelas, String halaqoh) {
     final target = KelasHalaqoh(kelas: kelas, halaqoh: normalizeHalaqoh(halaqoh));
     for (final acc in accounts) {
-      if (acc.assignments.contains(target)) return acc.id;
+      if (acc.assignments.contains(target)) return acc;
     }
     return null;
   }
@@ -346,15 +331,15 @@ class ApiStudentRepository implements StudentRepository {
       resolutionError = e;
     }
 
+    final matchedAccount = resolutionError == null ? _matchGuruAccount(accounts, kelas, halaqoh) : null;
     final updated = Student(
       id: student.id,
       nama: student.nama,
       kelas: kelas,
       halaqoh: halaqoh,
       schoolId: student.schoolId,
-      guruAccountId: resolutionError == null
-          ? _matchGuruAccountId(accounts, kelas, halaqoh)
-          : student.guruAccountId,
+      guruAccountId: resolutionError == null ? matchedAccount?.id : student.guruAccountId,
+      guruNama: resolutionError == null ? matchedAccount?.displayName : student.guruNama,
     );
 
     final version = DateTime.now().millisecondsSinceEpoch;
@@ -419,16 +404,18 @@ class ApiStudentRepository implements StudentRepository {
 
     updatedStudents = [
       for (final s in updatedStudents)
-        Student(
-          id: s.id,
-          nama: s.nama,
-          kelas: s.kelas,
-          halaqoh: s.halaqoh,
-          schoolId: s.schoolId,
-          guruAccountId: resolutionError == null
-              ? _matchGuruAccountId(accounts, s.kelas, s.halaqoh)
-              : s.guruAccountId,
-        ),
+        () {
+          final matchedAccount = resolutionError == null ? _matchGuruAccount(accounts, s.kelas, s.halaqoh) : null;
+          return Student(
+            id: s.id,
+            nama: s.nama,
+            kelas: s.kelas,
+            halaqoh: s.halaqoh,
+            schoolId: s.schoolId,
+            guruAccountId: resolutionError == null ? matchedAccount?.id : s.guruAccountId,
+            guruNama: resolutionError == null ? matchedAccount?.displayName : s.guruNama,
+          );
+        }(),
     ];
 
     for (var i = 0; i < updatedStudents.length; i += batchSize) {
@@ -509,14 +496,18 @@ class ApiStudentRepository implements StudentRepository {
     final toWrite = [
       for (final s in seedStudents)
         if (!existingIds.contains(s.id))
-          Student(
-            id: s.id,
-            nama: s.nama,
-            kelas: s.kelas,
-            halaqoh: s.halaqoh,
-            schoolId: s.schoolId,
-            guruAccountId: _matchGuruAccountId(accounts, s.kelas, s.halaqoh),
-          ),
+          () {
+            final matchedAccount = _matchGuruAccount(accounts, s.kelas, s.halaqoh);
+            return Student(
+              id: s.id,
+              nama: s.nama,
+              kelas: s.kelas,
+              halaqoh: s.halaqoh,
+              schoolId: s.schoolId,
+              guruAccountId: matchedAccount?.id,
+              guruNama: matchedAccount?.displayName,
+            );
+          }(),
     ];
 
     const batchSize = 400;
@@ -575,8 +566,10 @@ class ApiStudentRepository implements StudentRepository {
 
     final changed = <Student>[];
     for (final s in students) {
-      final resolved = _matchGuruAccountId(accounts, s.kelas, s.halaqoh);
-      if (resolved != s.guruAccountId) {
+      final matchedAccount = _matchGuruAccount(accounts, s.kelas, s.halaqoh);
+      final resolved = matchedAccount?.id;
+      final resolvedNama = matchedAccount?.displayName;
+      if (resolved != s.guruAccountId || resolvedNama != s.guruNama) {
         changed.add(Student(
           id: s.id,
           nama: s.nama,
@@ -584,6 +577,7 @@ class ApiStudentRepository implements StudentRepository {
           halaqoh: s.halaqoh,
           schoolId: s.schoolId,
           guruAccountId: resolved,
+          guruNama: resolvedNama,
         ));
       }
     }

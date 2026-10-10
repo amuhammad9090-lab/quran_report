@@ -24,6 +24,15 @@ class Student {
   /// dipegang guru mana pun saat itu di-set.
   final String? guruAccountId;
 
+  /// <-- BARU: nama tampilan ([UserAccount.displayName]) guru pemegang
+  /// [kelas]+[halaqoh] santri ini SAAT terakhir field ini ditulis — ditulis
+  /// bebarengan dengan [guruAccountId] di ApiStudentRepository. Dipakai
+  /// Portal Ortu buat nampilin "Guru Pembimbing" tanpa perlu baca dokumen
+  /// `accounts/{accountId}` (yang memang tidak boleh dibaca Portal Ortu —
+  /// lihat firestore.rules). Null dengan alasan yang sama seperti
+  /// [guruAccountId] null.
+  final String? guruNama;
+
   const Student({
     required this.id,
     required this.nama,
@@ -31,6 +40,7 @@ class Student {
     required this.halaqoh,
     this.schoolId,
     this.guruAccountId,
+    this.guruNama,
   });
 
   Map<String, dynamic> toJson() => {
@@ -40,6 +50,7 @@ class Student {
         'halaqoh': halaqoh,
         'schoolId': schoolId,
         'guruAccountId': guruAccountId,
+        'guruNama': guruNama,
       };
 
   factory Student.fromJson(Map<String, dynamic> json) => Student(
@@ -49,5 +60,6 @@ class Student {
         halaqoh: normalizeHalaqoh(json['halaqoh'] as String),
         schoolId: json['schoolId'] as String?,
         guruAccountId: json['guruAccountId'] as String?,
+        guruNama: json['guruNama'] as String?,
       );
 }
