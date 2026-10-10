@@ -21,6 +21,32 @@ import '../../core/utils/text_utils.dart';
 // pemakai (model laporan, model catatan ortu, assignment guru).
 String buildKelasHalaqohKey(String kelas, String halaqoh) => '$kelas|$halaqoh';
 
+/// Pilihan halaqoh BAKU (dropdown Kelola Siswa & checklist Kelola Guru).
+/// Tahsin 1/2 kedepannya = Tahfizh 2/3, tapi dua-duanya tetap ditawarkan
+/// biar admin gak perlu rename; data lama tetap muncul lewat union.
+const List<String> kStandardHalaqoh = [
+  'Tahfizh',
+  'Tahfizh 1',
+  'Tahfizh 2',
+  'Tahfizh 3',
+  'Tahsin',
+  'Tahsin 1',
+  'Tahsin 2',
+  'Tahsin 3',
+  'A',
+  'B',
+  'C',
+  'D',
+];
+
+/// Halaqoh baku per kelas: kelas 9 -> A-D, selain itu Tahfizh/Tahsin.
+List<String> standardHalaqohForKelas(String kelas) {
+  final is9 = RegExp(r'^\s*(IX|9)(\b|\s|$)', caseSensitive: false).hasMatch(kelas);
+  return is9
+      ? const ['A', 'B', 'C', 'D']
+      : const ['Tahfizh', 'Tahfizh 1', 'Tahfizh 2', 'Tahfizh 3', 'Tahsin', 'Tahsin 1', 'Tahsin 2', 'Tahsin 3'];
+}
+
 class KelasHalaqoh {
   final String kelas;
   final String halaqoh;

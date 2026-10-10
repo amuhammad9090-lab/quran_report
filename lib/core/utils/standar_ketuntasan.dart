@@ -18,7 +18,7 @@ class StandarKetuntasan {
   static const int batasTidakMurojaah = 2;
 
   /// Target baris Tahfizh per pekan, dari standar yang diisi admin (lihat [KetuntasanConfig]).
-  /// Kelas 8 halaqoh selain A/B/C memakai target "Halaqoh Tahfizh".
+  /// Kelas 7: hanya halaqoh Tahfizh. Kelas 8: satu target untuk semua halaqoh. Kelas 9: per halaqoh A-D.
   static int? targetBarisPekan(String kelas, String halaqoh) {
     final level = RegExp(r'^\s*(IX|VIII|VII|9|8|7)', caseSensitive: false)
         .firstMatch(kelas)
@@ -33,7 +33,8 @@ class StandarKetuntasan {
         return h.contains('TAHFIZH') ? cfg.barisFor('k7') : null;
       case 'VIII':
       case '8':
-        return cfg.barisFor(const {'A', 'B', 'C'}.contains(h) ? 'k8_$h' : 'k8_Tahfizh');
+        // Kelas 8: satu target untuk semua halaqoh Tahfizh (Tahfizh 1/2/3), juga halaqoh lama A/B/C.
+        return cfg.barisFor('k8_Tahfizh');
       case 'IX':
       case '9':
         return const {'A', 'B', 'C', 'D'}.contains(h) ? cfg.barisFor('k9_$h') : null;
@@ -42,12 +43,9 @@ class StandarKetuntasan {
     }
   }
 
-  /// KKM nilai Tahsin: halaqoh "Tahsin 2" memakai KKM Tahsin 2, lainnya KKM Tahsin 1.
-  static double kkmTahsin(String halaqoh) {
-    final cfg = KetuntasanSettingsService.instance.config;
-    final h = halaqoh.toLowerCase();
-    return h.contains('2') ? cfg.kkmTahsin2 : cfg.kkmTahsin1;
-  }
+  /// KKM nilai Tahsin (satu angka untuk semua halaqoh Tahsin).
+  static double kkmTahsin(String halaqoh) =>
+      KetuntasanSettingsService.instance.config.kkmTahsin;
 
   /// Hanya "Tidak Setoran/Tahsin/Murojaah" yang ikut dihitung; Sakit, Izin, Lomba, Pelatihan, Alpa tidak.
   static bool _dikecualikan(SantriRecord r) =>

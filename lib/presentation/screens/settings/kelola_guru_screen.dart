@@ -177,6 +177,16 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
         allPairs[p.key] = p;
       }
     }
+    final kelasList = <String>{
+      ...studentsProvider.all.map((s) => s.kelas),
+      ...authProvider.allAccounts.expand((a) => a.assignments.map((x) => x.kelas)),
+    };
+    for (final k in kelasList) {
+      for (final h in standardHalaqohForKelas(k)) {
+        final p = KelasHalaqoh(kelas: k, halaqoh: h);
+        allPairs.putIfAbsent(p.key, () => p);
+      }
+    }
     final pairOptions = allPairs.values.toList()
       ..sort((a, b) => a.label.compareTo(b.label));
 

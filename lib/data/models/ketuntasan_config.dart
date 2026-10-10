@@ -3,9 +3,6 @@ class KetuntasanConfig {
   /// Field target baris: key, label, nilai bawaan.
   static const barisFields = <({String key, String label, int def})>[
     (key: 'k7', label: 'Kelas 7 • Halaqoh Tahfizh', def: 10),
-    (key: 'k8_A', label: 'Kelas 8 • Halaqoh A', def: 12),
-    (key: 'k8_B', label: 'Kelas 8 • Halaqoh B', def: 10),
-    (key: 'k8_C', label: 'Kelas 8 • Halaqoh C', def: 9),
     (key: 'k8_Tahfizh', label: 'Kelas 8 • Halaqoh Tahfizh', def: 12),
     (key: 'k9_A', label: 'Kelas 9 • Halaqoh A', def: 15),
     (key: 'k9_B', label: 'Kelas 9 • Halaqoh B', def: 12),
@@ -14,13 +11,11 @@ class KetuntasanConfig {
   ];
 
   final Map<String, int> baris;
-  final double kkmTahsin1;
-  final double kkmTahsin2;
+  final double kkmTahsin;
 
   const KetuntasanConfig({
     required this.baris,
-    this.kkmTahsin1 = 80,
-    this.kkmTahsin2 = 80,
+    this.kkmTahsin = 80,
   });
 
   factory KetuntasanConfig.defaults() => KetuntasanConfig(
@@ -31,8 +26,7 @@ class KetuntasanConfig {
 
   Map<String, dynamic> toJson() => {
         'baris': baris,
-        'kkmTahsin1': kkmTahsin1,
-        'kkmTahsin2': kkmTahsin2,
+        'kkmTahsin': kkmTahsin,
       };
 
   /// Field yang hilang/rusak jatuh ke nilai bawaan.
@@ -46,8 +40,8 @@ class KetuntasanConfig {
               ? (rawMap[f.key] as num).toInt()
               : f.def,
       },
-      kkmTahsin1: _kkm(json['kkmTahsin1']),
-      kkmTahsin2: _kkm(json['kkmTahsin2']),
+      // 'kkmTahsin1' = format lama (sebelum KKM disatukan).
+      kkmTahsin: _kkm(json['kkmTahsin'] ?? json['kkmTahsin1']),
     );
   }
 

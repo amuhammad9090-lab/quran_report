@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/models/kelas_halaqoh.dart';
 import '../../../data/models/student.dart';
 import '../../../data/repositories/api_student_repository.dart';
 import '../../../providers/auth_provider.dart';
@@ -138,6 +139,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
     List<String> halaqohOptionsFor(String? k) {
       if (k == null) return const [];
       return <String>{
+        ...kStandardHalaqoh,
         ...studentsProvider.all.where((s) => s.kelas == k).map((s) => s.halaqoh),
         ...authProvider.allAccounts
             .expand((a) => a.assignments)

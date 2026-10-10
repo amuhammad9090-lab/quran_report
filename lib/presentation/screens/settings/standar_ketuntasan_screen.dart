@@ -18,8 +18,7 @@ class StandarKetuntasanScreen extends StatefulWidget {
 
 class _StandarKetuntasanScreenState extends State<StandarKetuntasanScreen> {
   final _baris = <String, TextEditingController>{};
-  late final TextEditingController _kkm1;
-  late final TextEditingController _kkm2;
+  late final TextEditingController _kkm;
   bool _saving = false;
 
   @override
@@ -29,8 +28,7 @@ class _StandarKetuntasanScreenState extends State<StandarKetuntasanScreen> {
     for (final f in KetuntasanConfig.barisFields) {
       _baris[f.key] = TextEditingController(text: '${cfg.barisFor(f.key) ?? f.def}');
     }
-    _kkm1 = TextEditingController(text: _fmt(cfg.kkmTahsin1));
-    _kkm2 = TextEditingController(text: _fmt(cfg.kkmTahsin2));
+    _kkm = TextEditingController(text: _fmt(cfg.kkmTahsin));
   }
 
   @override
@@ -38,8 +36,7 @@ class _StandarKetuntasanScreenState extends State<StandarKetuntasanScreen> {
     for (final c in _baris.values) {
       c.dispose();
     }
-    _kkm1.dispose();
-    _kkm2.dispose();
+    _kkm.dispose();
     super.dispose();
   }
 
@@ -52,15 +49,14 @@ class _StandarKetuntasanScreenState extends State<StandarKetuntasanScreen> {
       if (v == null || v <= 0) return _snack('Isi ${f.label} dengan angka lebih dari 0.');
       baris[f.key] = v;
     }
-    final k1 = double.tryParse(_kkm1.text.trim().replaceAll(',', '.'));
-    final k2 = double.tryParse(_kkm2.text.trim().replaceAll(',', '.'));
-    if (k1 == null || k1 <= 0 || k2 == null || k2 <= 0) {
+    final k = double.tryParse(_kkm.text.trim().replaceAll(',', '.'));
+    if (k == null || k <= 0) {
       return _snack('Isi KKM Tahsin dengan angka lebih dari 0.');
     }
     setState(() => _saving = true);
     try {
       await KetuntasanSettingsService.instance.save(
-        KetuntasanConfig(baris: baris, kkmTahsin1: k1, kkmTahsin2: k2),
+        KetuntasanConfig(baris: baris, kkmTahsin: k),
       );
       _snack('Standar tersimpan.');
     } catch (_) {
@@ -216,9 +212,6 @@ class _StandarKetuntasanScreenState extends State<StandarKetuntasanScreen> {
                   ]),
                   const SizedBox(height: 12),
                   _group('KELAS 8', [
-                    _barisRow('k8_A', 'Halaqoh A', editable),
-                    _barisRow('k8_B', 'Halaqoh B', editable),
-                    _barisRow('k8_C', 'Halaqoh C', editable),
                     _barisRow('k8_Tahfizh', 'Halaqoh Tahfizh', editable),
                   ]),
                   const SizedBox(height: 12),
@@ -237,8 +230,7 @@ class _StandarKetuntasanScreenState extends State<StandarKetuntasanScreen> {
                     ),
                   ),
                   _group('TAHSIN', [
-                    _row('Tahsin 1', _kkm1, 'nilai', editable, decimal: true),
-                    _row('Tahsin 2', _kkm2, 'nilai', editable, decimal: true),
+                    _row('Halaqoh Tahsin', _kkm, 'nilai', editable, decimal: true),
                   ]),
                   if (editable) ...[
                     const SizedBox(height: 18),
