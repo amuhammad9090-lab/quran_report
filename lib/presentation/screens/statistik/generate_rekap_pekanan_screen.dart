@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
-import '../../../data/models/records_view_models.dart';
 import '../../../data/models/santri_record.dart';
 import '../../../data/services/export_service.dart';
 import '../../../data/services/weekly_recap_deploy_service.dart';

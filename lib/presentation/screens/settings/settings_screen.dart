@@ -13,6 +13,7 @@ import '../../widgets/common/section_label.dart';
 import '../../widgets/common/soft_icon_box.dart';
 import '../about/about_screen.dart';
 import 'kelola_data_screen.dart';
+import 'standar_ketuntasan_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -132,6 +133,15 @@ class SettingsScreen extends StatelessWidget {
                         trailing: const Icon(LucideIcons.chevronRight),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const KelolaDataScreen()),
+                        ),
+                      ),
+                      ListTile(
+                        leading: SoftIconBox(icon: LucideIcons.circleCheck, color: cs.primary),
+                        title: const Text('Standar Ketuntasan'),
+                        subtitle: const Text('Target baris Tahfizh dan KKM nilai Tahsin'),
+                        trailing: const Icon(LucideIcons.chevronRight),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const StandarKetuntasanScreen()),
                         ),
                       ),
                     ],

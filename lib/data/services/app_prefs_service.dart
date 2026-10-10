@@ -34,10 +34,19 @@ class AppPrefsService {
   static const _keyStudentsLastSync = 'students_last_sync'; // <-- BARU
   static const _keyStudentsMetaVersion = 'students_meta_version'; // <-- BARU
 
+  static const _keyKetuntasan = 'ketuntasan_config';
+
   late Box<String> _box;
 
   Future<void> init() async {
     _box = await Hive.openBox<String>(_boxName);
+  }
+
+  /// Cache standar ketuntasan (JSON) dari Firestore.
+  String? get ketuntasanJson => _box.get(_keyKetuntasan);
+
+  Future<void> setKetuntasanJson(String json) async {
+    await _box.put(_keyKetuntasan, json);
   }
 
   bool get onboardingComplete => _box.get(_keyOnboardingComplete) == 'true';

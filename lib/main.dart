@@ -10,6 +10,7 @@ import 'app.dart';
 import 'data/services/app_prefs_service.dart';
 import 'data/services/download_notification_service.dart';
 import 'data/services/firebase_bootstrap_status.dart';
+import 'data/services/ketuntasan_settings_service.dart';
 import 'data/services/parent_reply_notification_service.dart';
 import 'data/services/quran_engine_service.dart';
 import 'data/services/storage_service.dart';
@@ -57,6 +58,7 @@ void main() async {
   await initializeDateFormatting('id_ID', null);
   await StorageService.instance.init();
   await AppPrefsService.instance.init();
+  KetuntasanSettingsService.instance.loadCached();
   await QuranEngineService.instance.load();
   await DownloadNotificationService.instance.init();
   // Navigasi tap notifikasi: service data tidak mengenal UI, jadi rutenya dipasang di sini.

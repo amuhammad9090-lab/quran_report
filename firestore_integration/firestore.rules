@@ -152,6 +152,13 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
 
+      // Standar ketuntasan (target baris & KKM nilai): semua pengguna app guru boleh baca,
+      // hanya admin yang boleh mengubah.
+      match /settings/{docId} {
+        allow read: if isAdmin() || isGuruApp();
+        allow write: if isAdmin();
+      }
+
       // Data master santri (dipakai autocomplete + Portal Ortu resolve
       // guruAccountId). Field baru `guruAccountId` ditulis di sini juga.
       //

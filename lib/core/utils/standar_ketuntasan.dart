@@ -1,102 +1,122 @@
 import '../../data/models/enums.dart';
 import '../../data/models/santri_record.dart';
+import '../../data/services/ketuntasan_settings_service.dart';
 import 'nilai_average.dart';
 
 /// Standar ketuntasan siswa per pekan/bulan (dihitung otomatis, bukan dari tombol Tuntas harian).
-///
+/// Jalur dipilih dari status laporan siswa di pekan itu, urutannya:
 /// - Tahfizh (termasuk Tahsin+Tahfizh): total baris sepekan >= target baris kelas/halaqoh.
-///   Hari Sakit/Izin/Lomba/Pelatihan/Alpa tidak dihitung dan target dikurangi sebanding hari itu.
-///   Halaqoh bernama "Tahfizh"/"Tahsin" menentukan jalurnya; halaqoh A/B/C/D mengikuti status laporan.
 /// - Tahsin: rata-rata nilai sepekan >= [kkmTahsin].
-/// - Pekan tanpa Tahfizh/Tahsin (mis. hanya Muroja'ah) atau tanpa nilai tidak dinilai ('-').
+/// - Muroja'ah/Tasmi' (pekan tanpa Tahfizh/Tahsin): Tuntas, kecuali "Tidak Murojaah" 2x atau lebih.
+/// Di semua jalur, "Tidak Murojaah" 2x atau lebih sepekan = Tidak Tuntas.
+/// Hari Sakit/Izin/Lomba/Pelatihan/Alpa tidak dihitung; di jalur Tahfizh, target dikurangi sebanding
+/// hari itu dan hari Muroja'ah (baris memang 0).
 class StandarKetuntasan {
   StandarKetuntasan._();
 
-  /// KKM nilai Tahsin.
-  static const double kkmTahsin = 80;
+  /// Batas "Tidak Murojaah" dalam sepekan; sebanyak ini atau lebih = Tidak Tuntas.
+  static const int batasTidakMurojaah = 2;
 
-  /// Target baris Tahfizh per pekan. Kelas 7 = 10, kelas 8 = 12, kelas 9 per halaqoh.
+  /// Target baris Tahfizh per pekan, dari standar yang diisi admin (lihat [KetuntasanConfig]).
+  /// Kelas 8 halaqoh selain A/B/C memakai target "Halaqoh Tahfizh".
   static int? targetBarisPekan(String kelas, String halaqoh) {
     final level = RegExp(r'^\s*(IX|VIII|VII|9|8|7)', caseSensitive: false)
         .firstMatch(kelas)
         ?.group(1)
         ?.toUpperCase();
+    final h = halaqoh.trim().toUpperCase();
+    final cfg = KetuntasanSettingsService.instance.config;
     switch (level) {
       case 'VII':
       case '7':
-        return 10;
+        // Kelas 7: hanya halaqoh Tahfizh yang punya target baris.
+        return h.contains('TAHFIZH') ? cfg.barisFor('k7') : null;
       case 'VIII':
       case '8':
-        return 12;
+        return cfg.barisFor(const {'A', 'B', 'C'}.contains(h) ? 'k8_$h' : 'k8_Tahfizh');
       case 'IX':
       case '9':
-        return switch (halaqoh.trim().toUpperCase()) {
-          'A' => 15,
-          'B' => 12,
-          'C' => 10,
-          'D' => 9,
-          _ => null,
-        };
+        return const {'A', 'B', 'C', 'D'}.contains(h) ? cfg.barisFor('k9_$h') : null;
       default:
         return null;
     }
   }
 
-  /// Jalur penilaian dari NAMA halaqoh ("Tahfizh", "Tahsin 1", "Tahsin 2"); null untuk halaqoh A/B/C/D
-  /// (ikuti status laporan).
-  static bool? _tahfizhDariHalaqoh(String halaqoh) {
+  /// KKM nilai Tahsin: halaqoh "Tahsin 2" memakai KKM Tahsin 2, lainnya KKM Tahsin 1.
+  static double kkmTahsin(String halaqoh) {
+    final cfg = KetuntasanSettingsService.instance.config;
     final h = halaqoh.toLowerCase();
-    if (h.contains('tahsin')) return false;
-    if (h.contains('tahfizh')) return true;
-    return null;
+    return h.contains('2') ? cfg.kkmTahsin2 : cfg.kkmTahsin1;
   }
 
   /// Hanya "Tidak Setoran/Tahsin/Murojaah" yang ikut dihitung; Sakit, Izin, Lomba, Pelatihan, Alpa tidak.
   static bool _dikecualikan(SantriRecord r) =>
       r.keterangan != Keterangan.hadir && !r.keterangan.isSanksiTanpaSetoran;
 
+  static bool _hariMurojaah(SantriRecord r) =>
+      r.status == HafalanStatus.murojaahTasmi || r.keterangan == Keterangan.tidakMurojaah;
+
   static _Pekan _evalPekan(List<SantriRecord> recs) {
     if (recs.isEmpty) return const _Pekan.kosong();
 
-    // Hari dikecualikan kalau SEMUA laporan hari itu berketerangan Sakit/Izin/Lomba/Pelatihan/Alpa.
     final perHari = <String, List<SantriRecord>>{};
     for (final r in recs) {
       final t = r.tanggal;
       perHari.putIfAbsent('${t.year}-${t.month}-${t.day}', () => []).add(r);
     }
+    // Hari dikecualikan kalau SEMUA laporan hari itu Sakit/Izin/Lomba/Pelatihan/Alpa.
     final hariDinilai = perHari.values.where((d) => !d.every(_dikecualikan)).toList();
     if (hariDinilai.isEmpty) return const _Pekan.kosong();
     final dinilai = [for (final d in hariDinilai) ...d];
-    final rasio = hariDinilai.length / perHari.length;
 
-    final first = recs.first;
-    var tahfizh = _tahfizhDariHalaqoh(first.halaqoh);
-    tahfizh ??= dinilai.any(
-      (r) => r.status == HafalanStatus.tahfizh || r.status == HafalanStatus.tahsinTahfizh,
-    )
-        ? true
-        : (dinilai.any((r) => r.status == HafalanStatus.tahsin) ? false : null);
-    if (tahfizh == null) return const _Pekan.kosong();
+    final gagalMurojaah =
+        dinilai.where((r) => r.keterangan == Keterangan.tidakMurojaah).length >= batasTidakMurojaah;
 
-    if (tahfizh) {
+    final tahfizhRecs = dinilai.where(
+      (r) =>
+          !_hariMurojaah(r) &&
+          (r.status == HafalanStatus.tahfizh || r.status == HafalanStatus.tahsinTahfizh),
+    );
+    final tahsinRecs = dinilai.where((r) => !_hariMurojaah(r) && r.status == HafalanStatus.tahsin);
+
+    if (tahfizhRecs.isNotEmpty) {
+      final first = tahfizhRecs.first;
       final target = targetBarisPekan(first.kelas, first.halaqoh);
       if (target == null) return const _Pekan.kosong();
+      // Hari Muroja'ah tidak ikut dihitung (barisnya memang 0).
+      final hariTahfizh = hariDinilai.where((d) => !d.every(_hariMurojaah)).length;
+      final rasio = hariTahfizh / perHari.length;
       final baris = dinilai.fold<int>(0, (s, r) => s + (r.totalBaris ?? 0));
-      return _Pekan(tahfizh: true, baris: baris, target: target * rasio);
+      return _Pekan(jenis: _Jenis.tahfizh, baris: baris, target: target * rasio, gagalMurojaah: gagalMurojaah);
     }
 
-    // Tahsin: hari "Tidak Tahsin" dihitung bernilai 0, laporan lain tanpa nilai diabaikan.
-    final nilai = <double>[];
-    for (final r in dinilai) {
-      final v = NilaiAverage.parse(r.nilai);
-      if (v != null) {
-        nilai.add(v);
-      } else if (r.keterangan == Keterangan.tidakTahsin) {
-        nilai.add(0);
+    if (tahsinRecs.isNotEmpty) {
+      // Hari "Tidak Tahsin" dihitung bernilai 0, laporan lain tanpa nilai diabaikan.
+      final nilai = <double>[];
+      for (final r in tahsinRecs) {
+        final v = NilaiAverage.parse(r.nilai);
+        if (v != null) {
+          nilai.add(v);
+        } else if (r.keterangan == Keterangan.tidakTahsin) {
+          nilai.add(0);
+        }
       }
+      final avg = NilaiAverage.mean(nilai);
+      if (avg != null) {
+        return _Pekan(
+          jenis: _Jenis.tahsin,
+          nilai: avg,
+          kkm: kkmTahsin(tahsinRecs.first.halaqoh),
+          gagalMurojaah: gagalMurojaah,
+        );
+      }
+      return gagalMurojaah ? const _Pekan(jenis: _Jenis.murojaah, gagalMurojaah: true) : const _Pekan.kosong();
     }
-    final avg = NilaiAverage.mean(nilai);
-    return avg == null ? const _Pekan.kosong() : _Pekan(tahfizh: false, nilai: avg);
+
+    if (dinilai.any(_hariMurojaah)) {
+      return _Pekan(jenis: _Jenis.murojaah, gagalMurojaah: gagalMurojaah);
+    }
+    return const _Pekan.kosong();
   }
 
   static String _label(bool? tuntas) => switch (tuntas) {
@@ -109,48 +129,76 @@ class StandarKetuntasan {
   static String pekanText(List<SantriRecord> recs) => _label(_evalPekan(recs).tuntas);
 
   /// Status satu siswa untuk satu bulan, dari laporan per pekan.
-  /// Tahfizh: total baris >= total target semua pekan Tahfizh; Tahsin: rata-rata nilai pekanan >= KKM.
-  /// Kalau bulan itu ada keduanya, dua-duanya harus terpenuhi.
+  /// Tahfizh: total baris >= total target semua pekan Tahfizh; Tahsin: rata-rata nilai pekanan >= KKM;
+  /// Muroja'ah: tidak ada pekan yang gagal. Kalau bulan itu ada beberapa jalur, semuanya harus terpenuhi.
   static String bulanText(Map<int, List<SantriRecord>> byWeek) {
     var baris = 0;
     var target = 0.0;
     final nilaiPekan = <double>[];
+    var kkm = 80.0;
+    var ada = false;
+    var gagalMurojaah = false;
     for (final recs in byWeek.values) {
       final p = _evalPekan(recs);
       if (p.kosong) continue;
-      if (p.tahfizh) {
-        baris += p.baris;
-        target += p.target;
-      } else {
-        nilaiPekan.add(p.nilai);
+      ada = true;
+      if (p.gagalMurojaah) gagalMurojaah = true;
+      switch (p.jenis) {
+        case _Jenis.tahfizh:
+          baris += p.baris;
+          target += p.target;
+        case _Jenis.tahsin:
+          nilaiPekan.add(p.nilai);
+          kkm = p.kkm;
+        case _Jenis.murojaah:
+          break;
       }
     }
+    if (!ada) return '-';
     final checks = <bool>[
+      !gagalMurojaah,
       if (target > 0) baris + 1e-9 >= target,
-      if (nilaiPekan.isNotEmpty) NilaiAverage.mean(nilaiPekan)! >= kkmTahsin,
+      if (nilaiPekan.isNotEmpty) NilaiAverage.mean(nilaiPekan)! >= kkm,
     ];
-    if (checks.isEmpty) return '-';
     return _label(checks.every((c) => c));
   }
 }
 
+enum _Jenis { tahfizh, tahsin, murojaah }
+
 class _Pekan {
   final bool kosong;
-  final bool tahfizh;
+  final _Jenis jenis;
   final int baris;
   final double target;
   final double nilai;
+  final double kkm;
+  final bool gagalMurojaah;
 
-  const _Pekan({required this.tahfizh, this.baris = 0, this.target = 0.0, this.nilai = 0.0}) : kosong = false;
+  const _Pekan({
+    required this.jenis,
+    this.baris = 0,
+    this.target = 0.0,
+    this.nilai = 0.0,
+    this.kkm = 80.0,
+    this.gagalMurojaah = false,
+  }) : kosong = false;
   const _Pekan.kosong()
       : kosong = true,
-        tahfizh = false,
+        jenis = _Jenis.murojaah,
         baris = 0,
         target = 0.0,
-        nilai = 0.0;
+        nilai = 0.0,
+        kkm = 80.0,
+        gagalMurojaah = false;
 
   bool? get tuntas {
     if (kosong) return null;
-    return tahfizh ? baris + 1e-9 >= target : nilai >= StandarKetuntasan.kkmTahsin;
+    if (gagalMurojaah) return false;
+    return switch (jenis) {
+      _Jenis.tahfizh => baris + 1e-9 >= target,
+      _Jenis.tahsin => nilai >= kkm,
+      _Jenis.murojaah => true,
+    };
   }
 }

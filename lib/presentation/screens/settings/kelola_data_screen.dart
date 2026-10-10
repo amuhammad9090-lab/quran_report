@@ -122,20 +122,6 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        _SectionCard(
-                          title: 'Migrasi',
-                          children: [
-                            ListTile(
-                              leading: SoftIconBox(icon: LucideIcons.cloud, color: cs.primary),
-                              title: const Text('Migrasi Data Guru & Siswa ke Cloud'),
-                              subtitle: const Text(
-                                'Salin data bawaan app ke cloud (aman diulang)',
-                              ),
-                              onTap: () => _confirmMigrateSeed(context),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),
@@ -270,65 +256,6 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
-    }
-  }
-
-  // Migrasi Data Guru & Murid ke Cloud.
-  void _confirmMigrateSeed(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Migrasi data ke Cloud?'),
-        content: const Text(
-          'Data guru & siswa bawaan app akan disalin ke cloud. Data yang sudah ada di cloud '
-          'tidak ditimpa, jadi perubahan lewat Kelola Guru/'
-          'Siswa atau Impor Excel tetap aman. Butuh koneksi internet.',
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _migrateSeed(context);
-            },
-            child: const Text('Migrasi'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _migrateSeed(BuildContext context) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const PopScope(
-        canPop: false,
-        child: Center(child: CircularProgressIndicator()),
-      ),
-    );
-
-    try {
-      final students = await ApiStudentRepository.instance.migrateSeedToFirestore();
-      final accounts = await ApiAuthRepository.instance.migrateSeedToFirestore();
-
-      if (!context.mounted) return;
-      await context.read<StudentsProvider>().load();
-      if (!context.mounted) return;
-      await context.read<AuthProvider>().reloadAccounts();
-      if (!context.mounted) return;
-
-      Navigator.of(context).pop(); // tutup dialog loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Berhasil! $students siswa & $accounts akun guru tersalin ke cloud.')),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal migrasi: $e')),
-      );
     }
   }
 }

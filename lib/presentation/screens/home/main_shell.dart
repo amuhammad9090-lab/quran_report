@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/services/app_prefs_service.dart';
+import '../../../data/services/ketuntasan_settings_service.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_notes_provider.dart';
@@ -92,6 +93,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     if (auth.currentUser == null) return;
     if (force) _lastForcedRefresh = DateTime.now();
     await auth.reloadAccounts(forceRefresh: force);
+    if (force) await KetuntasanSettingsService.instance.refresh();
     if (!mounted) return;
     context.read<RecordsProvider>().updateScope(auth.scope);
     context.read<ParentNotesProvider>().updateScope(auth.scope);
