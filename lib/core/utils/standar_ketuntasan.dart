@@ -51,6 +51,17 @@ class StandarKetuntasan {
   static bool _dikecualikan(SantriRecord r) =>
       r.keterangan != Keterangan.hadir && !r.keterangan.isSanksiTanpaSetoran;
 
+  /// Laporan "hadir" tapi tanpa isi sama sekali (0 baris, tanpa nilai/halaman/ayat) dan tanpa
+  /// keterangan Tidak Setoran/Tahsin/Murojaah: guru tidak mengisi atau lupa, jadi tidak diketahui
+  /// (bukan Tuntas, bukan Tidak Tuntas) dan tidak ikut dinilai.
+  static bool _tanpaIsi(SantriRecord r) {
+    if (r.keterangan != Keterangan.hadir) return false;
+    final adaBaris = (r.totalBaris ?? 0) > 0;
+    final adaNilai = NilaiAverage.parse(r.nilai) != null;
+    final adaHalaman = (r.halamanWafa ?? '').trim().isNotEmpty;
+    return !adaBaris && !adaNilai && !adaHalaman && r.jumlahAyat == 0;
+  }
+
   static bool _hariMurojaah(SantriRecord r) =>
       r.status == HafalanStatus.murojaahTasmi || r.keterangan == Keterangan.tidakMurojaah;
 
@@ -63,9 +74,13 @@ class StandarKetuntasan {
       perHari.putIfAbsent('${t.year}-${t.month}-${t.day}', () => []).add(r);
     }
     // Hari dikecualikan kalau SEMUA laporan hari itu Sakit/Izin/Lomba/Pelatihan/Alpa.
-    final hariDinilai = perHari.values.where((d) => !d.every(_dikecualikan)).toList();
+    // Hari yang semua laporannya tanpa isi (lihat [_tanpaIsi]) juga tidak dinilai.
+    final hariDinilai =
+        perHari.values.where((d) => !d.every((r) => _dikecualikan(r) || _tanpaIsi(r))).toList();
     if (hariDinilai.isEmpty) return const _Pekan.kosong();
-    final dinilai = [for (final d in hariDinilai) ...d];
+    final dinilai = [
+      for (final d in hariDinilai) ...d.where((r) => !_tanpaIsi(r)),
+    ];
 
     final gagalMurojaah =
         dinilai.where((r) => r.keterangan == Keterangan.tidakMurojaah).length >= batasTidakMurojaah;
@@ -73,9 +88,12 @@ class StandarKetuntasan {
     final tahfizhRecs = dinilai.where(
       (r) =>
           !_hariMurojaah(r) &&
-          (r.status == HafalanStatus.tahfizh || r.status == HafalanStatus.tahsinTahfizh),
+          r.status == HafalanStatus.tahfizh,
     );
-    final tahsinRecs = dinilai.where((r) => !_hariMurojaah(r) && r.status == HafalanStatus.tahsin);
+    // Tahsin+Tahfizh dinilai dengan standar Tahsin (nilai vs KKM), bukan baris.
+    final tahsinRecs = dinilai.where(
+      (r) => !_hariMurojaah(r) && (r.status == HafalanStatus.tahsin || r.status == HafalanStatus.tahsinTahfizh),
+    );
 
     if (tahfizhRecs.isNotEmpty) {
       final first = tahfizhRecs.first;
