@@ -5,17 +5,13 @@ import 'nilai_average.dart';
 
 /// Standar ketuntasan siswa per pekan/bulan (dihitung otomatis, bukan dari tombol Tuntas harian).
 /// Jalur dipilih dari status laporan siswa di pekan itu, urutannya:
-/// - Tahfizh (termasuk Tahsin+Tahfizh): total baris sepekan >= target baris kelas/halaqoh.
-/// - Tahsin: rata-rata nilai sepekan >= [kkmTahsin].
-/// - Muroja'ah/Tasmi' (pekan tanpa Tahfizh/Tahsin): Tuntas, kecuali "Tidak Murojaah" 2x atau lebih.
-/// Di semua jalur, "Tidak Murojaah" 2x atau lebih sepekan = Tidak Tuntas.
+/// - Tahfizh: total baris sepekan >= target baris kelas/halaqoh.
+/// - Tahsin (termasuk Tahsin+Tahfizh): rata-rata nilai sepekan >= [kkmTahsin].
+/// - Muroja'ah/Tasmi' TIDAK masuk standar (guru menulisnya di catatan): pekan tanpa Tahfizh/Tahsin = "-".
 /// Hari Sakit/Izin/Lomba/Pelatihan/Alpa tidak dihitung; di jalur Tahfizh, target dikurangi sebanding
 /// hari itu dan hari Muroja'ah (baris memang 0).
 class StandarKetuntasan {
   StandarKetuntasan._();
-
-  /// Batas "Tidak Murojaah" dalam sepekan; sebanyak ini atau lebih = Tidak Tuntas.
-  static const int batasTidakMurojaah = 2;
 
   /// Target baris Tahfizh per pekan, dari standar yang diisi admin (lihat [KetuntasanConfig]).
   /// Kelas 7: hanya halaqoh Tahfizh. Kelas 8: satu target untuk semua halaqoh. Kelas 9: per halaqoh A-D.
@@ -82,9 +78,6 @@ class StandarKetuntasan {
       for (final d in hariDinilai) ...d.where((r) => !_tanpaIsi(r)),
     ];
 
-    final gagalMurojaah =
-        dinilai.where((r) => r.keterangan == Keterangan.tidakMurojaah).length >= batasTidakMurojaah;
-
     final tahfizhRecs = dinilai.where(
       (r) =>
           !_hariMurojaah(r) &&
@@ -103,7 +96,7 @@ class StandarKetuntasan {
       final hariTahfizh = hariDinilai.where((d) => !d.every(_hariMurojaah)).length;
       final rasio = hariTahfizh / perHari.length;
       final baris = dinilai.fold<int>(0, (s, r) => s + (r.totalBaris ?? 0));
-      return _Pekan(jenis: _Jenis.tahfizh, baris: baris, target: target * rasio, gagalMurojaah: gagalMurojaah);
+      return _Pekan(jenis: _Jenis.tahfizh, baris: baris, target: target * rasio);
     }
 
     if (tahsinRecs.isNotEmpty) {
@@ -123,15 +116,12 @@ class StandarKetuntasan {
           jenis: _Jenis.tahsin,
           nilai: avg,
           kkm: kkmTahsin(tahsinRecs.first.halaqoh),
-          gagalMurojaah: gagalMurojaah,
         );
       }
-      return gagalMurojaah ? const _Pekan(jenis: _Jenis.murojaah, gagalMurojaah: true) : const _Pekan.kosong();
     }
 
-    if (dinilai.any(_hariMurojaah)) {
-      return _Pekan(jenis: _Jenis.murojaah, gagalMurojaah: gagalMurojaah);
-    }
+    // Muroja'ah/Tasmi' tidak masuk standar ketuntasan (guru menulisnya di catatan): pekan tanpa
+    // Tahfizh/Tahsin yang bisa dinilai = "-".
     return const _Pekan.kosong();
   }
 
@@ -153,12 +143,10 @@ class StandarKetuntasan {
     final nilaiPekan = <double>[];
     var kkm = 80.0;
     var ada = false;
-    var gagalMurojaah = false;
     for (final recs in byWeek.values) {
       final p = _evalPekan(recs);
       if (p.kosong) continue;
       ada = true;
-      if (p.gagalMurojaah) gagalMurojaah = true;
       switch (p.jenis) {
         case _Jenis.tahfizh:
           baris += p.baris;
@@ -166,13 +154,10 @@ class StandarKetuntasan {
         case _Jenis.tahsin:
           nilaiPekan.add(p.nilai);
           kkm = p.kkm;
-        case _Jenis.murojaah:
-          break;
       }
     }
     if (!ada) return '-';
     final checks = <bool>[
-      !gagalMurojaah,
       if (target > 0) baris + 1e-9 >= target,
       if (nilaiPekan.isNotEmpty) NilaiAverage.mean(nilaiPekan)! >= kkm,
     ];
@@ -180,7 +165,7 @@ class StandarKetuntasan {
   }
 }
 
-enum _Jenis { tahfizh, tahsin, murojaah }
+enum _Jenis { tahfizh, tahsin }
 
 class _Pekan {
   final bool kosong;
@@ -189,7 +174,6 @@ class _Pekan {
   final double target;
   final double nilai;
   final double kkm;
-  final bool gagalMurojaah;
 
   const _Pekan({
     required this.jenis,
@@ -197,24 +181,20 @@ class _Pekan {
     this.target = 0.0,
     this.nilai = 0.0,
     this.kkm = 80.0,
-    this.gagalMurojaah = false,
   }) : kosong = false;
   const _Pekan.kosong()
       : kosong = true,
-        jenis = _Jenis.murojaah,
+        jenis = _Jenis.tahfizh,
         baris = 0,
         target = 0.0,
         nilai = 0.0,
-        kkm = 80.0,
-        gagalMurojaah = false;
+        kkm = 80.0;
 
   bool? get tuntas {
     if (kosong) return null;
-    if (gagalMurojaah) return false;
     return switch (jenis) {
       _Jenis.tahfizh => baris + 1e-9 >= target,
       _Jenis.tahsin => nilai >= kkm,
-      _Jenis.murojaah => true,
     };
   }
 }
