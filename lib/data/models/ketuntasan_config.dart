@@ -2,9 +2,9 @@
 class KetuntasanConfig {
   /// Field target baris: key, label, nilai bawaan.
   static const barisFields = <({String key, String label, int def})>[
-    (key: 'k7', label: 'Kelas 7 • Halaqoh Tahfizh', def: 10),
+    (key: 'k7', label: 'Kelas 7 • Halaqoh Tahfizh', def: 12),
     (key: 'k8_Tahfizh', label: 'Kelas 8 • Halaqoh Tahfizh', def: 12),
-    (key: 'k9_A', label: 'Kelas 9 • Halaqoh A', def: 15),
+    (key: 'k9_A', label: 'Kelas 9 • Halaqoh A', def: 12),
     (key: 'k9_B', label: 'Kelas 9 • Halaqoh B', def: 12),
     (key: 'k9_C', label: 'Kelas 9 • Halaqoh C', def: 10),
     (key: 'k9_D', label: 'Kelas 9 • Halaqoh D', def: 9),

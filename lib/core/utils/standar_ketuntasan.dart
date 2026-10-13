@@ -8,12 +8,12 @@ import 'nilai_average.dart';
 /// - Tahfizh: total baris sepekan >= target baris kelas/halaqoh.
 /// - Tahsin (termasuk Tahsin+Tahfizh): rata-rata nilai sepekan >= [kkmTahsin].
 /// Aturan keterangan:
-/// - Sakit/Izin/Lomba/Pelatihan: harinya tidak dihitung (target dikurangi sebanding), dan kalau standar
-///   tetap tidak tercapai pekan itu tetap Tuntas, kecuali ada Alpa/Tidak Setoran/Tidak Tahsin.
-/// - Alpa/Tidak Setoran/Tidak Tahsin: harinya tetap dihitung (barisnya 0 / nilai Tidak Tahsin 0), jadi
+/// - Alpa/Tidak Setoran/Tidak Tahsin (melanggar): hari tetap dihitung (baris 0 / nilai Tidak Tahsin 0),
 ///   pekan Tidak Tuntas kecuali standar tetap tercapai.
-/// - Tidak Murojaah dan Muroja'ah/Tasmi' tidak punya aturan ketuntasan (tidak dihitung).
-/// Laporan Hadir tanpa isi sama sekali tidak dinilai.
+/// - Sakit/Izin/Lomba/Pelatihan: hari tidak dihitung (target dikurangi sebanding), dan kalau standar
+///   tidak tercapai pekan tetap Tuntas, kecuali ada pelanggaran di atas.
+/// - Muroja'ah/Tasmi' dan Tidak Murojaah tidak punya aturan ketuntasan: "-" (guru menulis catatannya sendiri).
+/// - Hadir tanpa isi sama sekali (termasuk toggle "tanpa capaian hari ini") tidak dinilai.
 class StandarKetuntasan {
   StandarKetuntasan._();
 
@@ -79,11 +79,13 @@ class StandarKetuntasan {
     final adaIzin = recs.any(_dikecualikan);
     // Standar tidak tercapai tapi ada Sakit/Izin/Lomba/Pelatihan tanpa Alpa/Tidak Setoran/Tidak Tahsin: Tuntas.
     final override = adaIzin && !adaGagal;
-    // Tidak ada yang bisa dinilai dengan standar: Alpa/Tidak Setoran/Tidak Tahsin = Tidak Tuntas;
-    // Sakit/Izin/Lomba/Pelatihan = Tuntas; selain itu "-".
-    final _Pekan tanpaNilai = adaGagal
-        ? const _Pekan.gagal()
-        : adaIzin
+    // Tidak ada yang bisa dinilai dengan standar (belum ada baris/nilai):
+    // - pekan murojaah (dikerjakan atau Tidak Murojaah): "-", tuntas atau tidaknya ditulis guru di catatan;
+    // - ada hari izin tanpa Alpa/Tidak Setoran/Tidak Tahsin: Tuntas;
+    // - selain itu "-" sampai laporannya diedit dan ada isinya.
+    final _Pekan tanpaNilai = recs.any(_hariMurojaah)
+        ? const _Pekan.kosong()
+        : adaIzin && !adaGagal
             ? const _Pekan.lulus()
             : const _Pekan.kosong();
 
@@ -101,14 +103,15 @@ class StandarKetuntasan {
       for (final d in hariDinilai) ...d.where((r) => !_tanpaIsi(r)),
     ];
 
-    final tahfizhRecs = dinilai.where(
-      (r) =>
-          !_hariMurojaah(r) &&
-          r.status == HafalanStatus.tahfizh,
-    );
+    // Jalur (Tahfizh/Tahsin) ditentukan dari laporan Hadir yang ada isinya, karena laporan non-Hadir
+    // (Alpa, Tidak Setoran, dst) disimpan dengan status bawaan Tahfizh walau siswanya Tahsin.
+    final jalur = dinilai.where((r) => !_hariMurojaah(r)).toList();
+    final bukti = jalur.where((r) => r.keterangan == Keterangan.hadir).toList();
+    final penentu = bukti.isNotEmpty ? bukti : jalur;
+    final tahfizhRecs = penentu.where((r) => r.status == HafalanStatus.tahfizh);
     // Tahsin+Tahfizh dinilai dengan standar Tahsin (nilai vs KKM), bukan baris.
-    final tahsinRecs = dinilai.where(
-      (r) => !_hariMurojaah(r) && (r.status == HafalanStatus.tahsin || r.status == HafalanStatus.tahsinTahfizh),
+    final tahsinRecs = penentu.where(
+      (r) => r.status == HafalanStatus.tahsin || r.status == HafalanStatus.tahsinTahfizh,
     );
 
     if (tahfizhRecs.isNotEmpty) {
@@ -127,7 +130,13 @@ class StandarKetuntasan {
     if (tahsinRecs.isNotEmpty) {
       // Hari "Tidak Tahsin" dihitung bernilai 0, laporan lain tanpa nilai diabaikan.
       final nilai = <double>[];
-      for (final r in tahsinRecs) {
+      final untukNilai = jalur.where(
+        (r) =>
+            r.status == HafalanStatus.tahsin ||
+            r.status == HafalanStatus.tahsinTahfizh ||
+            r.keterangan == Keterangan.tidakTahsin,
+      );
+      for (final r in untukNilai) {
         final v = NilaiAverage.parse(r.nilai);
         if (v != null) {
           nilai.add(v);
@@ -177,7 +186,6 @@ class StandarKetuntasan {
     final nilaiPekan = <double>[];
     var kkm = 80.0;
     var ada = false;
-    var gagalTanpaStandar = false;
     for (final recs in byWeek.values) {
       final p = _evalPekan(recs);
       if (p.kosong) continue;
@@ -185,8 +193,6 @@ class StandarKetuntasan {
       switch (p.jenis) {
         case _Jenis.lulus:
           break;
-        case _Jenis.gagal:
-          gagalTanpaStandar = true;
         case _Jenis.tahfizh:
           baris += p.override && p.baris < p.target ? p.target : p.baris.toDouble();
           target += p.target;
@@ -197,7 +203,6 @@ class StandarKetuntasan {
     }
     if (!ada) return '-';
     final checks = <bool>[
-      !gagalTanpaStandar,
       if (target > 0) baris + 1e-9 >= target,
       if (nilaiPekan.isNotEmpty) NilaiAverage.mean(nilaiPekan)! >= kkm,
     ];
@@ -205,7 +210,7 @@ class StandarKetuntasan {
   }
 }
 
-enum _Jenis { tahfizh, tahsin, lulus, gagal }
+enum _Jenis { tahfizh, tahsin, lulus }
 
 class _Pekan {
   final bool kosong;
@@ -234,14 +239,6 @@ class _Pekan {
         nilai = 0.0,
         kkm = 80.0,
         override = false;
-  const _Pekan.gagal()
-      : kosong = false,
-        jenis = _Jenis.gagal,
-        baris = 0,
-        target = 0.0,
-        nilai = 0.0,
-        kkm = 80.0,
-        override = false;
   const _Pekan.kosong()
       : kosong = true,
         jenis = _Jenis.lulus,
@@ -256,7 +253,6 @@ class _Pekan {
     if (override) return true;
     return switch (jenis) {
       _Jenis.lulus => true,
-      _Jenis.gagal => false,
       _Jenis.tahfizh => baris + 1e-9 >= target,
       _Jenis.tahsin => nilai >= kkm,
     };
