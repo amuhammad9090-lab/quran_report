@@ -3,13 +3,17 @@ import '../../data/models/santri_record.dart';
 import '../../data/services/ketuntasan_settings_service.dart';
 import 'nilai_average.dart';
 
-/// Standar ketuntasan siswa per pekan/bulan (dihitung otomatis, bukan dari tombol Tuntas harian).
-/// Jalur dipilih dari status laporan siswa di pekan itu, urutannya:
+/// Status ketuntasan siswa per pekan/bulan, dihitung otomatis (bukan tombol Tuntas harian).
+/// Acuan utama = standar yang diisi admin (lihat [KetuntasanConfig]):
 /// - Tahfizh: total baris sepekan >= target baris kelas/halaqoh.
 /// - Tahsin (termasuk Tahsin+Tahfizh): rata-rata nilai sepekan >= [kkmTahsin].
-/// - Muroja'ah/Tasmi' TIDAK masuk standar (guru menulisnya di catatan): pekan tanpa Tahfizh/Tahsin = "-".
-/// Hari Sakit/Izin/Lomba/Pelatihan/Alpa tidak dihitung; di jalur Tahfizh, target dikurangi sebanding
-/// hari itu dan hari Muroja'ah (baris memang 0).
+/// Aturan keterangan:
+/// - Sakit/Izin/Lomba/Pelatihan: harinya tidak dihitung (target dikurangi sebanding), dan kalau standar
+///   tetap tidak tercapai pekan itu tetap Tuntas, kecuali ada Alpa/Tidak Setoran/Tidak Tahsin.
+/// - Alpa/Tidak Setoran/Tidak Tahsin: harinya tetap dihitung (barisnya 0 / nilai Tidak Tahsin 0), jadi
+///   pekan Tidak Tuntas kecuali standar tetap tercapai.
+/// - Tidak Murojaah dan Muroja'ah/Tasmi' tidak punya aturan ketuntasan (tidak dihitung).
+/// Laporan Hadir tanpa isi sama sekali tidak dinilai.
 class StandarKetuntasan {
   StandarKetuntasan._();
 
@@ -43,9 +47,17 @@ class StandarKetuntasan {
   static double kkmTahsin(String halaqoh) =>
       KetuntasanSettingsService.instance.config.kkmTahsin;
 
-  /// Hanya "Tidak Setoran/Tahsin/Murojaah" yang ikut dihitung; Sakit, Izin, Lomba, Pelatihan, Alpa tidak.
-  static bool _dikecualikan(SantriRecord r) =>
-      r.keterangan != Keterangan.hadir && !r.keterangan.isSanksiTanpaSetoran;
+  /// Alpa, Tidak Setoran, Tidak Tahsin: harinya tetap dihitung, tapi menolak override Sakit/Izin.
+  static bool _gagal(SantriRecord r) => switch (r.keterangan) {
+        Keterangan.alpa || Keterangan.tidakSetoran || Keterangan.tidakTahsin => true,
+        _ => false,
+      };
+
+  /// Sakit/Izin/Lomba/Pelatihan: hari tidak dihitung dan menjamin Tuntas (selama tidak ada [_gagal]).
+  static bool _dikecualikan(SantriRecord r) => switch (r.keterangan) {
+        Keterangan.izinSakit || Keterangan.izin || Keterangan.izinLomba || Keterangan.izinPelatihan => true,
+        _ => false,
+      };
 
   /// Laporan "hadir" tapi tanpa isi sama sekali (0 baris, tanpa nilai/halaman/ayat) dan tanpa
   /// keterangan Tidak Setoran/Tahsin/Murojaah: guru tidak mengisi atau lupa, jadi tidak diketahui
@@ -63,17 +75,28 @@ class StandarKetuntasan {
 
   static _Pekan _evalPekan(List<SantriRecord> recs) {
     if (recs.isEmpty) return const _Pekan.kosong();
+    final adaGagal = recs.any(_gagal);
+    final adaIzin = recs.any(_dikecualikan);
+    // Standar tidak tercapai tapi ada Sakit/Izin/Lomba/Pelatihan tanpa Alpa/Tidak Setoran/Tidak Tahsin: Tuntas.
+    final override = adaIzin && !adaGagal;
+    // Tidak ada yang bisa dinilai dengan standar: Alpa/Tidak Setoran/Tidak Tahsin = Tidak Tuntas;
+    // Sakit/Izin/Lomba/Pelatihan = Tuntas; selain itu "-".
+    final _Pekan tanpaNilai = adaGagal
+        ? const _Pekan.gagal()
+        : adaIzin
+            ? const _Pekan.lulus()
+            : const _Pekan.kosong();
 
     final perHari = <String, List<SantriRecord>>{};
     for (final r in recs) {
       final t = r.tanggal;
       perHari.putIfAbsent('${t.year}-${t.month}-${t.day}', () => []).add(r);
     }
-    // Hari dikecualikan kalau SEMUA laporan hari itu Sakit/Izin/Lomba/Pelatihan/Alpa.
+    // Hari dikecualikan kalau SEMUA laporan hari itu Sakit/Izin/Lomba/Pelatihan.
     // Hari yang semua laporannya tanpa isi (lihat [_tanpaIsi]) juga tidak dinilai.
     final hariDinilai =
         perHari.values.where((d) => !d.every((r) => _dikecualikan(r) || _tanpaIsi(r))).toList();
-    if (hariDinilai.isEmpty) return const _Pekan.kosong();
+    if (hariDinilai.isEmpty) return tanpaNilai;
     final dinilai = [
       for (final d in hariDinilai) ...d.where((r) => !_tanpaIsi(r)),
     ];
@@ -91,12 +114,14 @@ class StandarKetuntasan {
     if (tahfizhRecs.isNotEmpty) {
       final first = tahfizhRecs.first;
       final target = targetBarisPekan(first.kelas, first.halaqoh);
-      if (target == null) return const _Pekan.kosong();
+      if (target == null) return tanpaNilai;
       // Hari Muroja'ah tidak ikut dihitung (barisnya memang 0).
       final hariTahfizh = hariDinilai.where((d) => !d.every(_hariMurojaah)).length;
       final rasio = hariTahfizh / perHari.length;
       final baris = dinilai.fold<int>(0, (s, r) => s + (r.totalBaris ?? 0));
-      return _Pekan(jenis: _Jenis.tahfizh, baris: baris, target: target * rasio);
+      final t = target * rasio;
+      // Override Sakit/Izin: pekan dianggap memenuhi target.
+      return _Pekan(jenis: _Jenis.tahfizh, baris: baris, target: t, override: override);
     }
 
     if (tahsinRecs.isNotEmpty) {
@@ -116,13 +141,13 @@ class StandarKetuntasan {
           jenis: _Jenis.tahsin,
           nilai: avg,
           kkm: kkmTahsin(tahsinRecs.first.halaqoh),
+          override: override,
         );
       }
     }
 
-    // Muroja'ah/Tasmi' tidak masuk standar ketuntasan (guru menulisnya di catatan): pekan tanpa
-    // Tahfizh/Tahsin yang bisa dinilai = "-".
-    return const _Pekan.kosong();
+    // Muroja'ah/Tasmi' tidak punya aturan ketuntasan.
+    return tanpaNilai;
   }
 
   static String _label(bool? tuntas) => switch (tuntas) {
@@ -131,33 +156,48 @@ class StandarKetuntasan {
         null => '-',
       };
 
+  /// Kolom Status harian: standar baris/nilai berlaku per PEKAN, jadi per laporan hanya keterangan yang
+  /// terbaca: Sakit/Izin/Lomba/Pelatihan = Tuntas, Alpa/Tidak Setoran/Tidak Tahsin = Tidak Tuntas,
+  /// selain itu '-' (ditentukan di rekap pekanan).
+  static String harianText(SantriRecord r) => _dikecualikan(r)
+      ? _label(true)
+      : _gagal(r)
+          ? _label(false)
+          : _label(null);
+
   /// Status satu siswa untuk satu pekan: 'Tuntas' / 'Tidak Tuntas' / '-'.
   static String pekanText(List<SantriRecord> recs) => _label(_evalPekan(recs).tuntas);
 
-  /// Status satu siswa untuk satu bulan, dari laporan per pekan.
-  /// Tahfizh: total baris >= total target semua pekan Tahfizh; Tahsin: rata-rata nilai pekanan >= KKM;
-  /// Muroja'ah: tidak ada pekan yang gagal. Kalau bulan itu ada beberapa jalur, semuanya harus terpenuhi.
+  /// Status satu siswa untuk satu bulan, dari laporan per pekan: total baris >= total target pekan Tahfizh,
+  /// rata-rata nilai pekanan >= KKM; pekan yang memenuhi lewat override Sakit/Izin dihitung terpenuhi.
+  /// Semua jalur yang ada di bulan itu harus terpenuhi.
   static String bulanText(Map<int, List<SantriRecord>> byWeek) {
-    var baris = 0;
+    var baris = 0.0;
     var target = 0.0;
     final nilaiPekan = <double>[];
     var kkm = 80.0;
     var ada = false;
+    var gagalTanpaStandar = false;
     for (final recs in byWeek.values) {
       final p = _evalPekan(recs);
       if (p.kosong) continue;
       ada = true;
       switch (p.jenis) {
+        case _Jenis.lulus:
+          break;
+        case _Jenis.gagal:
+          gagalTanpaStandar = true;
         case _Jenis.tahfizh:
-          baris += p.baris;
+          baris += p.override && p.baris < p.target ? p.target : p.baris.toDouble();
           target += p.target;
         case _Jenis.tahsin:
-          nilaiPekan.add(p.nilai);
+          nilaiPekan.add(p.override && p.nilai < p.kkm ? p.kkm : p.nilai);
           kkm = p.kkm;
       }
     }
     if (!ada) return '-';
     final checks = <bool>[
+      !gagalTanpaStandar,
       if (target > 0) baris + 1e-9 >= target,
       if (nilaiPekan.isNotEmpty) NilaiAverage.mean(nilaiPekan)! >= kkm,
     ];
@@ -165,7 +205,7 @@ class StandarKetuntasan {
   }
 }
 
-enum _Jenis { tahfizh, tahsin }
+enum _Jenis { tahfizh, tahsin, lulus, gagal }
 
 class _Pekan {
   final bool kosong;
@@ -175,24 +215,48 @@ class _Pekan {
   final double nilai;
   final double kkm;
 
+  /// True kalau pekan ini Tuntas lewat Sakit/Izin/Lomba/Pelatihan walau standar belum tercapai.
+  final bool override;
+
   const _Pekan({
     required this.jenis,
     this.baris = 0,
     this.target = 0.0,
     this.nilai = 0.0,
     this.kkm = 80.0,
+    this.override = false,
   }) : kosong = false;
-  const _Pekan.kosong()
-      : kosong = true,
-        jenis = _Jenis.tahfizh,
+  const _Pekan.lulus()
+      : kosong = false,
+        jenis = _Jenis.lulus,
         baris = 0,
         target = 0.0,
         nilai = 0.0,
-        kkm = 80.0;
+        kkm = 80.0,
+        override = false;
+  const _Pekan.gagal()
+      : kosong = false,
+        jenis = _Jenis.gagal,
+        baris = 0,
+        target = 0.0,
+        nilai = 0.0,
+        kkm = 80.0,
+        override = false;
+  const _Pekan.kosong()
+      : kosong = true,
+        jenis = _Jenis.lulus,
+        baris = 0,
+        target = 0.0,
+        nilai = 0.0,
+        kkm = 80.0,
+        override = false;
 
   bool? get tuntas {
     if (kosong) return null;
+    if (override) return true;
     return switch (jenis) {
+      _Jenis.lulus => true,
+      _Jenis.gagal => false,
       _Jenis.tahfizh => baris + 1e-9 >= target,
       _Jenis.tahsin => nilai >= kkm,
     };

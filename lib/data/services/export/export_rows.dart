@@ -242,25 +242,8 @@ class ExportRows {
   /// Nilai 1 siswa dalam 1 pekan = rata-rata nilai harian ('-' kalau tidak ada nilai).
   String nilaiSummaryFor(List<SantriRecord> recs) => NilaiAverage.summaryText(recs.map((r) => r.nilai));
 
-  /// Kolom Status = KETUNTASAN setoran (tombol Tuntas/Tidak Tuntas di form laporan); '-' kalau belum ditandai.
-  String _statusText(SantriRecord r) => switch (r.tuntas) {
-        true => 'Tuntas',
-        false => 'Tidak Tuntas',
-        null => '-',
-      };
-
-  /// Ringkasan ketuntasan banyak laporan (1 siswa dalam 1 pekan/bulan): 1 laporan -> labelnya saja,
-  /// lebih dari itu "2x Tuntas, 1x Tidak Tuntas" (yang belum ditandai tidak dihitung), '-' kalau kosong.
-  String tuntasSummaryFor(List<SantriRecord> recs) {
-    final tuntas = recs.where((r) => r.tuntas == true).length;
-    final tidak = recs.where((r) => r.tuntas == false).length;
-    if (tuntas == 0 && tidak == 0) return '-';
-    if (recs.length == 1) return tuntas == 1 ? 'Tuntas' : 'Tidak Tuntas';
-    return [
-      if (tuntas > 0) '${tuntas}x Tuntas',
-      if (tidak > 0) '${tidak}x Tidak Tuntas',
-    ].join(', ');
-  }
+  /// Kolom Status harian = ketuntasan dari keterangan laporan (lihat [StandarKetuntasan]).
+  String _statusText(SantriRecord r) => StandarKetuntasan.harianText(r);
 
   String joinUnique(Iterable<String> values) {
     final set = values.map((v) => v.trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
