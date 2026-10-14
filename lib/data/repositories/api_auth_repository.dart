@@ -306,6 +306,30 @@ class ApiAuthRepository implements AuthRepository {
     return true;
   }
 
+  /// Buat akun BARU (role awal Guru Pembimbing, tanpa assignment & tanpa email Google). Role,
+  /// email Google, dan assignment diisi sesudahnya lewat sheet edit di Kelola Akun Guru.
+  /// Gagal kalau [username] sudah dipakai akun lain.
+  Future<UserAccount> createAccount({required String displayName, required String username}) async {
+    final uname = username.trim().toLowerCase();
+    final all = await _accounts();
+    if (all.any((a) => a.username.toLowerCase() == uname)) {
+      throw StateError('Username @$uname sudah dipakai akun lain.');
+    }
+    final acc = UserAccount(
+      id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
+      username: uname,
+      displayName: displayName.trim(),
+      passwordHash: '',
+      role: UserRole.guruPembimbing,
+      schoolId: kSchoolId,
+    );
+    await _collection.doc(acc.id).set(acc.toJson()).timeout(const Duration(seconds: 15));
+    final box = await _openBox();
+    await box.put(acc.id, jsonEncode(acc.toJson()));
+    _memCache = [...?_memCache, acc];
+    return acc;
+  }
+
   /// Ubah displayName & assignment (kelas+halaqoh) satu akun guru.
   /// SENGAJA TIDAK menyentuh `passwordHash`/`role` -- itu tetap lewat
   /// alur ganti password yang sudah ada, bukan dari sini. HANYA dipanggil

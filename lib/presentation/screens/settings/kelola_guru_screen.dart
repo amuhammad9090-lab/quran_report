@@ -61,6 +61,59 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
     }
   }
 
+  /// Dialog nama + username -> buat akun -> langsung buka sheet edit (isi email Google, pilih role).
+  Future<void> _tambahAkun(BuildContext context) async {
+    final nameCtrl = TextEditingController();
+    final userCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tambah Akun'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Nama lengkap'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: userCtrl,
+              autocorrect: false,
+              decoration: const InputDecoration(labelText: 'Username (tanpa spasi)', prefixText: '@'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Buat')),
+        ],
+      ),
+    );
+    final name = nameCtrl.text.trim();
+    final user = userCtrl.text.trim().replaceAll(RegExp(r'\s+'), '');
+    nameCtrl.dispose();
+    userCtrl.dispose();
+    if (ok != true || !context.mounted) return;
+    if (name.isEmpty || user.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama dan username wajib diisi.')),
+      );
+      return;
+    }
+    try {
+      final acc = await ApiAuthRepository.instance.createAccount(displayName: name, username: user);
+      if (!context.mounted) return;
+      await context.read<AuthProvider>().reloadAccounts();
+      if (!context.mounted) return;
+      await _editAccount(context, acc);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal membuat akun: $e')));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -94,6 +147,11 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.userPlus),
+                    onPressed: () => _tambahAkun(context),
+                    tooltip: 'Tambah akun (guru / pengawas / admin)',
+                  ),
                   IconButton(
                     icon: _syncingGuruAccountId
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
