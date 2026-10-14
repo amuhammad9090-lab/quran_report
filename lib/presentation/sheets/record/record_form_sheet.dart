@@ -139,7 +139,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
 
   final _catatanCtrl = TextEditingController();
 
-  // Nilai (ketik bebas). Ketuntasan dihitung otomatis di rekap pekanan/bulanan.
+  // Nilai (ketik bebas). Ketuntasan diputuskan guru lewat tombol di Generate Laporan Pekanan.
   final _nilaiCtrl = TextEditingController();
 
   // Pembatasan admin kini mengikuti toggle GLOBAL "Mode Admin" di Profil (AccessScope.adminModeActive,

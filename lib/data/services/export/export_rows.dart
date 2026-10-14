@@ -434,7 +434,7 @@ class ExportRows {
       totalBaris: recs.fold<int>(0, (sum, r) => sum + (r.totalBaris ?? 0)),
       keterangan: _weeklyKeteranganForSantri(recs),
       nilai: nilaiSummaryFor(recs),
-      status: StandarKetuntasan.pekanText(recs),
+      status: StandarKetuntasan.manualPekan(recs),
       catatan: _weeklyCatatanForSantri(recs),
     );
   }

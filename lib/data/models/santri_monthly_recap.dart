@@ -89,8 +89,8 @@ class SantriMonthlyRecap {
     return parts.isEmpty ? '-' : parts.join(', ');
   }
 
-  /// Kolom Status bulan ini: Tuntas / Tidak Tuntas menurut standar (lihat [StandarKetuntasan]), '-' kalau tidak bisa dinilai.
-  String get tuntasSummaryText => StandarKetuntasan.bulanText(recordsByWeek);
+  /// Kolom Status bulan ini: Tuntas / Tidak Tuntas dari keputusan guru tiap pekan (lihat [StandarKetuntasan.manualBulan]), '-' kalau belum ada.
+  String get tuntasSummaryText => StandarKetuntasan.manualBulan(recordsByWeek);
 
   /// Kolom Nilai bulan ini = rata-rata dari rata-rata nilai tiap pekan ('-' kalau tidak ada nilai).
   String get nilaiSummaryText {

@@ -125,9 +125,39 @@ class _GenerateRekapPekananScreenState extends State<GenerateRekapPekananScreen>
     return ExportService.instance.hariTanggalTextFor(latest.tanggal);
   }
 
+  /// Simpan keputusan guru di laporan TERAKHIR santri pada pekan ini (keputusan lama di laporan lain dibersihkan).
+  Future<void> _setTuntas(List<SantriRecord> recs, bool? value) async {
+    if (recs.isEmpty) return;
+    final provider = context.read<RecordsProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final sorted = [...recs]..sort((a, b) {
+        final c = a.tanggal.compareTo(b.tanggal);
+        if (c != 0) return c;
+        return (a.createdAt ?? a.tanggal).compareTo(b.createdAt ?? b.tanggal);
+      });
+    final last = sorted.last;
+    try {
+      for (final r in sorted) {
+        if (r.id == last.id) {
+          if (r.tuntasPekan != value) {
+            await provider.upsert(
+              value == null ? r.copyWith(clearTuntasPekan: true) : r.copyWith(tuntasPekan: value),
+            );
+          }
+        } else if (r.tuntasPekan != null) {
+          await provider.upsert(r.copyWith(clearTuntasPekan: true));
+        }
+      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final records = widget.records;
+    // watch: tampilan ikut ter-update setelah keputusan Tuntas/Tidak Tuntas disimpan.
+    final latest = {for (final r in context.watch<RecordsProvider>().all) r.id: r};
+    final records = [for (final r in widget.records) latest[r.id] ?? r];
     final weekIndex = widget.weekIndex;
     final bulanLabel = widget.bulanLabel;
     final rangeLabel = widget.rangeLabel;
@@ -148,6 +178,7 @@ class _GenerateRekapPekananScreenState extends State<GenerateRekapPekananScreen>
       });
     final lastFilledLabel = _lastFilledLabel(sorted);
     final isAdminMode = authProvider.scope?.isAdmin ?? false;
+    final canEditTuntas = !(authProvider.scope?.isViewer ?? false);
     final tampilan = isAdminMode ? _tampilan : _Tampilan.kelasHalaqoh;
     final groups = _buildGroups(recordsProvider, sorted, tampilan);
     // Kirim ke Portal Ortu tetap per Kelas+Halaqoh, jadi tidak ada di tampilan gabungan.
@@ -304,6 +335,7 @@ class _GenerateRekapPekananScreenState extends State<GenerateRekapPekananScreen>
                       ),
                       WeeklySantriRecapTable(
                         records: groups[i].records,
+                        onSetTuntas: canEditTuntas ? _setTuntas : null,
                         // fixedTanggalLabel SENGAJA tidak diisi — lihat
                         // catatan bug di [_lastFilledLabel].
                       ),

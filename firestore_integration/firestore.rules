@@ -64,6 +64,11 @@ service cloud.firestore {
     match /{path=**}/folders/{folderId} {
       allow read: if isAdminRoot();
     }
+    // Notifikasi admin (ParentNoteService.watchAll) membaca catatan ortu lintas guru lewat
+    // collectionGroup('parentNotes'), jadi butuh rule {path=**} juga (read saja).
+    match /{path=**}/parentNotes/{noteId} {
+      allow read: if isAdminRoot();
+    }
 
     match /schools/{schoolId} {
 
@@ -219,6 +224,9 @@ service cloud.firestore {
         allow read: if isAdmin();
       }
       match /{path=**}/folders/{folderId} {
+        allow read: if isAdmin();
+      }
+      match /{path=**}/parentNotes/{noteId} {
         allow read: if isAdmin();
       }
 

@@ -36,7 +36,6 @@ void main() async {
     }
 
     // <-- BERUBAH: [FirebaseBootstrapStatus.ready] sekarang murni berarti
-    // "Firebase Core berhasil di-initialize" (SDK siap dipakai)
     FirebaseBootstrapStatus.markReady();
     if (kIsWeb) {
       FirebaseFirestore.instance.settings = const Settings(

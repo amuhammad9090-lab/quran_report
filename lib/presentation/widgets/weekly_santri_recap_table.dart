@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/utils/standar_ketuntasan.dart';
 import '../../data/models/santri_record.dart';
 import '../../data/services/export_service.dart';
 
@@ -33,12 +34,25 @@ class WeeklySantriRecapTable extends StatelessWidget {
   /// dengan hasil export-nya.
   final String? fixedTanggalLabel;
 
-  const WeeklySantriRecapTable({super.key, required this.records, this.fixedTanggalLabel});
+  /// Kalau diisi, kolom Status berisi tombol Tuntas / Tidak Tuntas yang diputuskan guru.
+  /// Menerima semua laporan santri itu pekan ini dan nilai baru (null = hapus keputusan).
+  /// Kalau null, kolom Status hanya teks (read-only).
+  final Future<void> Function(List<SantriRecord> santriRecords, bool? value)? onSetTuntas;
+
+  const WeeklySantriRecapTable({
+    super.key,
+    required this.records,
+    this.fixedTanggalLabel,
+    this.onSetTuntas,
+  });
+
+  /// Pengelompokan per santri, kunci sama seperti ExportService.weeklyRowsGroupedBySantriFor.
+  static String _key(SantriRecord r) => r.namaAnak.trim().toLowerCase();
 
   // Lebar tiap kolom (No, Hari/Tanggal, Nama Murid, Capaian, Baris,
   // Keterangan, Nilai, Status, Catatan) — tinggal diubah angkanya kalau mau lebih
   // lebar/sempit. Total = lebar tabel (di dalam horizontal scroll).
-  static const _colWidths = <double>[32, 100, 100, 190, 44, 110, 70, 90, 110];
+  static const _colWidths = <double>[32, 100, 100, 190, 44, 110, 70, 150, 110];
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +60,10 @@ class WeeklySantriRecapTable extends StatelessWidget {
     final rows = ExportService.instance
         .weeklyRowsGroupedBySantriFor(records, fixedTanggalLabel: fixedTanggalLabel);
     final totalWidth = _colWidths.reduce((a, b) => a + b);
+    final byKey = <String, List<SantriRecord>>{};
+    for (final r in records) {
+      byKey.putIfAbsent(_key(r), () => []).add(r);
+    }
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -86,7 +104,11 @@ class WeeklySantriRecapTable extends StatelessWidget {
                     _Cell('${rows[i].totalBaris}', bold: true),
                     _Cell(rows[i].keterangan),
                     _Cell(rows[i].nilai),
-                    _Cell(rows[i].status),
+                    _StatusCell(
+                      text: rows[i].status,
+                      recs: byKey[rows[i].namaAnak.trim().toLowerCase()] ?? const [],
+                      onSet: onSetTuntas,
+                    ),
                     _Cell(rows[i].catatan),
                   ],
                 ),
@@ -130,6 +152,88 @@ class _Cell extends StatelessWidget {
         style: TextStyle(
           fontSize: _fontSize,
           fontWeight: bold ? FontWeight.w700 : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+}
+
+/// Kolom Status: tombol Tuntas / Tidak Tuntas (diputuskan guru). Ketuk lagi tombol yang aktif untuk
+/// menghapus keputusan. Teks kecil "Saran standar" hanya sebagai acuan, tidak mengubah apa pun.
+class _StatusCell extends StatelessWidget {
+  final String text;
+  final List<SantriRecord> recs;
+  final Future<void> Function(List<SantriRecord>, bool?)? onSet;
+  const _StatusCell({required this.text, required this.recs, required this.onSet});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final value = StandarKetuntasan.manualPekanValue(recs);
+    if (onSet == null) return _Cell(text);
+    final saran = StandarKetuntasan.pekanText(recs);
+    return Padding(
+      padding: _cellPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              _Pill(
+                label: 'Tuntas',
+                selected: value == true,
+                color: Colors.green.shade700,
+                onTap: () => onSet!(recs, value == true ? null : true),
+              ),
+              _Pill(
+                label: 'Tidak',
+                selected: value == false,
+                color: Colors.red.shade700,
+                onTap: () => onSet!(recs, value == false ? null : false),
+              ),
+            ],
+          ),
+          if (saran != '-')
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text('Saran standar: $saran',
+                  style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+  const _Pill({required this.label, required this.selected, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? color : Colors.transparent,
+          border: Border.all(color: color),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : color,
+          ),
         ),
       ),
     );

@@ -119,7 +119,11 @@ class StandarKetuntasan {
       final target = targetBarisPekan(first.kelas, first.halaqoh);
       if (target == null) return tanpaNilai;
       // Hari Muroja'ah tidak ikut dihitung (barisnya memang 0).
-      final hariTahfizh = hariDinilai.where((d) => !d.every(_hariMurojaah)).length;
+      // Hari "tanpa isi/capaian" tetap dihitung sebagai hari target (tidak mengurangi target);
+      // hanya hari izin dan hari murojaah yang dikeluarkan.
+      final hariTahfizh = perHari.values
+          .where((d) => !d.every(_dikecualikan) && !d.every(_hariMurojaah))
+          .length;
       final rasio = hariTahfizh / perHari.length;
       final baris = dinilai.fold<int>(0, (s, r) => s + (r.totalBaris ?? 0));
       final t = target * rasio;
@@ -176,6 +180,24 @@ class StandarKetuntasan {
 
   /// Status satu siswa untuk satu pekan: 'Tuntas' / 'Tidak Tuntas' / '-'.
   static String pekanText(List<SantriRecord> recs) => _label(_evalPekan(recs).tuntas);
+
+  /// Keputusan guru untuk satu pekan (lihat [SantriRecord.tuntasPekan]): 'Tuntas' / 'Tidak Tuntas' / '-'.
+  static String manualPekan(List<SantriRecord> recs) => _label(manualPekanValue(recs));
+
+  /// Nilai keputusan guru pekan ini; diambil dari laporan terbaru yang sudah diberi keputusan.
+  static bool? manualPekanValue(List<SantriRecord> recs) {
+    final sorted = recs.where((r) => r.tuntasPekan != null).toList()
+      ..sort((a, b) => a.tanggal.compareTo(b.tanggal));
+    return sorted.isEmpty ? null : sorted.last.tuntasPekan;
+  }
+
+  /// Status bulan dari keputusan guru tiap pekan: ada yang Tidak Tuntas -> Tidak Tuntas;
+  /// semua pekan yang diputuskan Tuntas -> Tuntas; belum ada keputusan -> '-'.
+  static String manualBulan(Map<int, List<SantriRecord>> byWeek) {
+    final v = [for (final recs in byWeek.values) manualPekanValue(recs)].whereType<bool>().toList();
+    if (v.isEmpty) return '-';
+    return _label(v.every((e) => e));
+  }
 
   /// Status satu siswa untuk satu bulan, dari laporan per pekan: total baris >= total target pekan Tahfizh,
   /// rata-rata nilai pekanan >= KKM; pekan yang memenuhi lewat override Sakit/Izin dihitung terpenuhi.

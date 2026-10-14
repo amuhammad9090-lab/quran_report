@@ -134,6 +134,10 @@ class SantriRecord {
 
   final String? catatan;
 
+  // Keputusan guru: pekan ini Tuntas (true) / Tidak Tuntas (false) / belum diputuskan (null).
+  // Disimpan di laporan TERAKHIR santri pada pekan itu, diisi dari layar Generate Laporan Pekanan.
+  final bool? tuntasPekan;
+
   // Nilai bebas ketik (mis. "85", "A", "Mumtaz") — opsional, data lama null.
   final String? nilai;
 
@@ -174,6 +178,7 @@ class SantriRecord {
     this.tilawahAyatSelesai,
     this.tilawahSegments,
     this.catatan,
+    this.tuntasPekan,
     this.nilai,
     this.folderId,
     this.ownerId,
@@ -202,8 +207,10 @@ class SantriRecord {
     int? tilawahAyatSelesai,
     List<TilawahSegment>? tilawahSegments,
     String? catatan,
+    bool? tuntasPekan,
     String? nilai,
     String? folderId,
+    bool clearTuntasPekan = false,
     bool clearNilai = false,
     bool clearTahfizh = false,
     bool clearTahsin = false,
@@ -243,6 +250,7 @@ class SantriRecord {
           clearTilawah ? null : (tilawahAyatSelesai ?? this.tilawahAyatSelesai),
       tilawahSegments: clearTilawah ? null : (tilawahSegments ?? this.tilawahSegments),
       catatan: catatan ?? this.catatan,
+      tuntasPekan: clearTuntasPekan ? null : (tuntasPekan ?? this.tuntasPekan),
       nilai: clearNilai ? null : (nilai ?? this.nilai),
       folderId: clearFolder ? null : (folderId ?? this.folderId),
     );
@@ -395,6 +403,7 @@ class SantriRecord {
         'tilawahAyatSelesai': tilawahAyatSelesai,
         'tilawahSegments': tilawahSegments?.map((s) => s.toJson()).toList(),
         'catatan': catatan,
+        'tuntasPekan': tuntasPekan,
         'nilai': nilai,
         'folderId': folderId,
         'ownerId': ownerId,
@@ -450,6 +459,7 @@ class SantriRecord {
             ?.map((e) => TilawahSegment.fromJson(e as Map<String, dynamic>))
             .toList(),
         catatan: json['catatan'] as String?,
+        tuntasPekan: json['tuntasPekan'] as bool?,
         // Field baru — data lama belum punya key ini, default null aman.
         nilai: json['nilai'] as String?,
         folderId: json['folderId'] as String?,
