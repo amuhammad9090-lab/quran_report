@@ -124,6 +124,14 @@ class WeeklyRecapDeployService {
         'capaian': r.capaian,
         'totalBaris': r.totalBaris,
         'keterangan': r.keterangan,
+        // <-- BARU: [SantriWeeklyRow.nilai]/[.status] (status = teks
+        // "Tuntas"/"Tidak Tuntas"/"-", hasil `StandarKetuntasan.
+        // manualPekan` — keputusan guru, BUKAN saran otomatis) sudah lama
+        // dihitung buat kolom tabel/export pekanan, tapi dulu tidak ikut
+        // ditulis ke dokumen `weeklyRecaps` ini -- jadi Portal Ortu tidak
+        // pernah bisa menampilkannya walau datanya sudah ada.
+        'nilai': r.nilai,
+        'status': r.status,
         'catatan': r.catatan,
         'deployedAt': FieldValue.serverTimestamp(),
         'deployedByNama': deployedByNama,
