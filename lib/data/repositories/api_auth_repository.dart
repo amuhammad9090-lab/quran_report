@@ -330,6 +330,26 @@ class ApiAuthRepository implements AuthRepository {
     return acc;
   }
 
+  /// Hapus akun: dokumen `accounts/{id}` + index `accountsByEmail/{email}` (kalau ada) dalam satu
+  /// batch, lalu cache lokal. Subkoleksi laporan/folder milik akun itu di Firestore TIDAK ikut
+  /// terhapus (Firestore tidak menghapus subkoleksi otomatis), tapi tidak terjangkau lagi lewat akun ini.
+  /// Penjagaan (tidak boleh hapus akun sendiri / admin terakhir) ada di layer UI.
+  Future<void> deleteAccount(UserAccount account) async {
+    final batch = FirebaseFirestore.instance.batch();
+    batch.delete(_collection.doc(account.id));
+    final email = account.googleEmail;
+    if (email != null && email.isNotEmpty) {
+      batch.delete(_accountsByEmailCollection.doc(email));
+    }
+    await batch.commit().timeout(const Duration(seconds: 15));
+
+    final box = await _openBox();
+    await box.delete(account.id);
+    if (_memCache != null) {
+      _memCache = [for (final a in _memCache!) if (a.id != account.id) a];
+    }
+  }
+
   /// Ubah displayName & assignment (kelas+halaqoh) satu akun guru.
   /// SENGAJA TIDAK menyentuh `passwordHash`/`role` -- itu tetap lewat
   /// alur ganti password yang sudah ada, bukan dari sini. HANYA dipanggil

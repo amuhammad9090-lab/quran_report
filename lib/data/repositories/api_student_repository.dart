@@ -456,6 +456,25 @@ class ApiStudentRepository implements StudentRepository {
     return written;
   }
 
+  /// Hapus satu santri dari data master (dokumen `students/{id}` + cache lokal) dan naikkan versi
+  /// metadata dalam satu batch, supaya device lain ikut menarik daftar terbaru.
+  /// Laporan harian yang sudah ditulis guru TIDAK ikut terhapus (laporan memang berdiri sendiri).
+  Future<void> deleteStudent(Student student) async {
+    final version = DateTime.now().millisecondsSinceEpoch;
+    final batch = FirebaseFirestore.instance.batch();
+    batch.delete(_collection.doc(student.id));
+    batch.set(_metaDoc, {'version': version});
+    await batch.commit().timeout(const Duration(seconds: 15));
+
+    final box = await _openBox();
+    await box.delete(student.id);
+    await AppPrefsService.instance.setStudentsMetaVersion(version);
+    await AppPrefsService.instance.setStudentsLastSync(DateTime.now());
+    if (_memCache != null) {
+      _memCache = [for (final s in _memCache!) if (s.id != student.id) s];
+    }
+  }
+
   /// Migrasi SEKALI-JALAN: tulis [kSeedStudentsJson] ke Firestore.
   ///
   /// PENTING (fix): id yang SUDAH ADA di Firestore (mis. sudah pernah

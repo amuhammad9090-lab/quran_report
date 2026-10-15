@@ -314,7 +314,7 @@ class ExportService {
 
   /// Buka file lewat aplikasi bawaan perangkat (PDF viewer, Word, Excel, dst), dipanggil otomatis
   /// begitu file selesai dibuat. Di Web ini menjadi trigger download (lihat file_actions_web.dart).
-  Future<void> openFile(ExportedFile file) => openExportedFile(file);
+  Future<String?> openFile(ExportedFile file) => openExportedFile(file);
 
   Future<void> shareFile(ExportedFile file, {String? subject}) =>
       shareExportedFile(file, subject: subject);

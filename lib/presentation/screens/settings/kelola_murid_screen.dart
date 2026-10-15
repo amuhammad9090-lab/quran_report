@@ -8,6 +8,7 @@ import '../../../data/repositories/api_student_repository.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/manage_list_widgets.dart';
 import '../../widgets/common/pushed_page_header.dart';
 import '../../widgets/common/soft_icon_box.dart';
 import '../../widgets/forms/field_decoration.dart';
@@ -50,13 +51,38 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
     setState(() => _refreshing = false);
   }
 
+  Future<void> _hapusSiswa(BuildContext context, Student s) async {
+    final provider = context.read<StudentsProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await confirmDelete(
+      context,
+      title: 'Hapus ${s.nama}?',
+      message: 'Siswa ini akan dihapus dari data master (${s.kelas} • ${s.halaqoh}) '
+          'dan tidak muncul lagi di pilihan nama saat membuat laporan.\n\n'
+          'Laporan yang sudah pernah ditulis tidak ikut terhapus.\n\n'
+          'Tindakan ini tidak bisa dibatalkan.',
+    );
+    if (!ok || !context.mounted) return;
+    try {
+      await ApiStudentRepository.instance.deleteStudent(s);
+      await provider.load();
+      messenger.showSnackBar(SnackBar(content: Text('${s.nama} dihapus.')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Gagal menghapus: $e')));
+    }
+  }
+
+  String? _kelasFilter;
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final students = context.watch<StudentsProvider>().all;
-    final filtered = _query.trim().isEmpty
-        ? students
-        : students.where((s) => s.nama.toLowerCase().contains(_query.toLowerCase())).toList();
+    final q = _query.trim().toLowerCase();
+    final kelasList = students.map((s) => s.kelas).toSet().toList()..sort();
+    final filtered = students
+        .where((s) => (_kelasFilter == null || s.kelas == _kelasFilter) && (q.isEmpty || s.nama.toLowerCase().contains(q)))
+        .toList();
 
     // Urut biar gampang di-scan: kelas -> halaqoh -> nama.
     final sorted = [...filtered]..sort((a, b) {
@@ -64,8 +90,14 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
         if (byKelas != 0) return byKelas;
         final byHalaqoh = a.halaqoh.compareTo(b.halaqoh);
         if (byHalaqoh != 0) return byHalaqoh;
-        return a.nama.compareTo(b.nama);
+        return a.nama.toLowerCase().compareTo(b.nama.toLowerCase());
       });
+
+    // Kelompokkan per "Kelas • Halaqoh" (urutan tetap mengikuti sorted).
+    final groups = <String, List<Student>>{};
+    for (final s in sorted) {
+      groups.putIfAbsent('${s.kelas} • ${s.halaqoh}', () => []).add(s);
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -73,6 +105,9 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
           slivers: [
             PushedPageHeader(
               title: 'Kelola Data Siswa',
+              subtitle: _kelasFilter == null || q.isNotEmpty
+                  ? '${filtered.length} dari ${students.length} siswa'
+                  : '${filtered.length} siswa • Kelas $_kelasFilter',
               titleFontSize: 17,
               trailing: IconButton(
                 icon: _refreshing
@@ -84,7 +119,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: TextField(
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _query = v),
@@ -92,7 +127,36 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                 ),
               ),
             ),
-            if (sorted.isEmpty)
+            if (kelasList.length > 1)
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 40,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: const Text('Semua'),
+                          selected: _kelasFilter == null,
+                          onSelected: (_) => setState(() => _kelasFilter = null),
+                        ),
+                      ),
+                      for (final k in kelasList)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text('Kelas $k'),
+                            selected: _kelasFilter == k,
+                            onSelected: (_) => setState(() => _kelasFilter = _kelasFilter == k ? null : k),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            if (students.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
@@ -101,23 +165,54 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                   subtitle: 'Coba muat ulang, atau jalankan migrasi data di Pengaturan > Kelola Sekolah.',
                 ),
               )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.only(bottom: 24),
-                sliver: SliverList.builder(
-                  itemCount: sorted.length,
-                  itemBuilder: (context, i) {
-                    final s = sorted[i];
-                    return ListTile(
-                      leading: SoftIconBox(icon: LucideIcons.user, color: cs.primary),
-                      title: Text(s.nama, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text('${s.kelas} • ${s.halaqoh}'),
-                      trailing: const Icon(LucideIcons.penLine),
-                      onTap: () => _editStudent(context, s),
-                    );
-                  },
+            else if (sorted.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: EmptyState(
+                  icon: LucideIcons.search,
+                  title: 'Tidak ditemukan',
+                  subtitle: 'Coba kata kunci atau filter kelas lain.',
                 ),
-              ),
+              )
+            else ...[
+              for (final e in groups.entries)
+                SliverMainAxisGroup(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: ManageSectionHeader(title: 'KELAS ${e.key}'.toUpperCase(), count: e.value.length),
+                    ),
+                    SliverList.builder(
+                      itemCount: e.value.length,
+                      itemBuilder: (context, i) {
+                        final s = e.value[i];
+                        return ManageRowCard(
+                          leading: SoftIconBox(
+                            icon: LucideIcons.user,
+                            color: cs.primary,
+                            size: 20,
+                            padding: 10,
+                            radius: 14,
+                          ),
+                          title: s.nama,
+                          body: Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              ManageChip(label: 'Kelas ${s.kelas}', color: cs.onSurfaceVariant),
+                              ManageChip(label: s.halaqoh, color: cs.primary, icon: LucideIcons.usersRound),
+                            ],
+                          ),
+                          editLabel: 'Pindah kelas/halaqoh',
+                          onTap: () => _editStudent(context, s),
+                          onEdit: () => _editStudent(context, s),
+                          onDelete: () => _hapusSiswa(context, s),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            ],
           ],
         ),
       ),

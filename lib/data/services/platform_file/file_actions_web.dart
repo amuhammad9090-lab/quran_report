@@ -29,8 +29,9 @@ Future<ExportedFile> persistExportedFile(String filename, List<int> bytes) async
 /// treat sebagai download langsung, app/viewer yang membuka file hasil
 /// download itu sepenuhnya di luar kendali web app (tergantung OS/browser
 /// pengguna).
-Future<void> openExportedFile(ExportedFile file) async {
+Future<String?> openExportedFile(ExportedFile file) async {
   _downloadBlob(file.bytes, file.filename);
+  return null;
 }
 
 /// Web Share API (kalau browser & konteksnya support — umumnya cuma di

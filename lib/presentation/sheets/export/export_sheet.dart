@@ -216,10 +216,17 @@ class _ExportSheetState extends State<ExportSheet> with InlineMessageMixin<Expor
       if (!mounted) return;
       final file = await build(judul);
 
+      String? openError;
       try {
-        await ExportService.instance.openFile(file);
-      } catch (_) {
-
+        openError = await ExportService.instance.openFile(file);
+      } catch (e) {
+        openError = '$e';
+      }
+      if (openError != null && mounted) {
+        showInlineMessage(
+          'File jadi, tapi tidak bisa dibuka otomatis ($openError). '
+          'Pakai tombol Bagikan atau Simpan.',
+        );
       }
 
       if (!mounted) return;

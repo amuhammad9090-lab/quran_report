@@ -22,9 +22,15 @@ Future<ExportedFile> persistExportedFile(String filename, List<int> bytes) async
 
 /// Buka file langsung pakai aplikasi bawaan perangkat (PDF viewer, Word,
 /// Excel, dst).
-Future<void> openExportedFile(ExportedFile file) async {
-  if (file.path == null) return;
-  await OpenFilex.open(file.path!);
+///
+/// Mengembalikan null kalau berhasil dibuka, atau teks alasan kalau gagal (mis. tidak ada aplikasi
+/// pembuka, izin ditolak, file tidak ditemukan) supaya UI bisa memberi tahu pengguna.
+Future<String?> openExportedFile(ExportedFile file) async {
+  final path = file.path;
+  if (path == null) return 'Lokasi file tidak tersedia.';
+  final result = await OpenFilex.open(path);
+  if (result.type == ResultType.done) return null;
+  return result.message.isEmpty ? result.type.name : result.message;
 }
 
 Future<void> shareExportedFile(ExportedFile file, {String? subject}) async {

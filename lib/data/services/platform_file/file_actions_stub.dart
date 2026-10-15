@@ -10,7 +10,7 @@ Future<ExportedFile> persistExportedFile(String filename, List<int> bytes) async
   return ExportedFile(bytes: Uint8List.fromList(bytes), filename: filename, path: null);
 }
 
-Future<void> openExportedFile(ExportedFile file) async {}
+Future<String?> openExportedFile(ExportedFile file) async => null;
 
 Future<void> shareExportedFile(ExportedFile file, {String? subject}) async {}
 
