@@ -11,6 +11,24 @@
       ]
     },
     {
+      "collectionGroup": "laporan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "halaqoh", "order": "ASCENDING" },
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "namaAnak", "order": "ASCENDING" },
+        { "fieldPath": "totalBaris", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "parentNotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "studentId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "weeklyRecaps",
       "queryScope": "COLLECTION",
       "fields": [
