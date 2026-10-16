@@ -7,6 +7,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_notes_provider.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/common/app_icon_mark.dart';
+import '../../widgets/common/intro_animations.dart';
 import '../../widgets/common/smpit_logo_badge.dart';
 import '../home/main_shell.dart';
 
@@ -37,9 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context.read<ParentNotesProvider>().updateScope(auth.scope);
       StorageService.instance.updateScope(auth.scope);
       AppPrefsService.instance.updateScope(auth.scope);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainShell()),
-      );
+      Navigator.of(context).pushReplacement(fadeRoute(const MainShell()));
     } else if (auth.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(auth.error!)),
@@ -65,30 +64,42 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const AppIconMark(size: 68, borderRadius: 18),
-                            const SizedBox(width: 14),
-                            Container(height: 40, width: 1, color: cs.outlineVariant),
-                            const SizedBox(width: 14),
-                            const SmpitLogoBadge(size: 64, borderRadius: 14),
-                          ],
+                      FadeSlideIn(
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOutBack,
+                        offset: const Offset(0, 12),
+                        scaleFrom: 0.85,
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const AppIconMark(size: 68, borderRadius: 18),
+                              const SizedBox(width: 14),
+                              Container(height: 40, width: 1, color: cs.outlineVariant),
+                              const SizedBox(width: 14),
+                              const SmpitLogoBadge(size: 64, borderRadius: 14),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'Masuk ke Quran Report',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
+                      const FadeSlideIn(
+                        delay: Duration(milliseconds: 200),
+                        child: Text(
+                          'Masuk ke Quran Report',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
+                        ),
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        'Khusus akun yang sudah didaftarkan admin.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                      FadeSlideIn(
+                        delay: const Duration(milliseconds: 320),
+                        child: Text(
+                          'Khusus akun yang sudah didaftarkan admin.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                        ),
                       ),
                       const SizedBox(height: 36),
                       // <-- BERUBAH: warna tombol disamain sama gradient
@@ -98,7 +109,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       // juga fixed dark-green baik di light maupun dark mode
                       // -- jadi tombol ini ikut konsisten otomatis di kedua
                       // mode tanpa perlu dibedain per-theme.
-                      SizedBox(
+                      FadeSlideIn(
+                        delay: const Duration(milliseconds: 460),
+                        offset: const Offset(0, 24),
+                        child: SizedBox(
                         height: 52,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
@@ -164,6 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
+                      ),
+                      // Spacer bawah: menggeser seluruh isi sedikit ke atas dari titik tengah layar.
+                      const SizedBox(height: 120),
                     ],
                   ),
                 ),

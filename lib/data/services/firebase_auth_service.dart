@@ -33,9 +33,11 @@ class FirebaseAuthService {
   FirebaseAuthService._();
   static final FirebaseAuthService instance = FirebaseAuthService._();
 
-  // Instance tunggal (bukan GoogleSignIn() baru tiap panggil) agar state "akun terakhir
-  // terpilih" konsisten untuk retry/signOut setelah signIn() gagal di tengah jalan.
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: const ['email']);
+  // google_sign_in v7: singleton `GoogleSignIn.instance` yang wajib di-`initialize()` sekali
+  // sebelum dipakai. Future disimpan agar inisialisasi hanya jalan sekali.
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  Future<void>? _googleInit;
+  Future<void> _ensureGoogleInit() => _googleInit ??= _googleSignIn.initialize();
 
   /// Email (trim + lowercase) session Firebase yang dipulihkan SDK, atau null kalau belum login /
   /// email tidak valid. Memakai `authStateChanges().first` (bukan `currentUser` langsung) agar
@@ -61,17 +63,13 @@ class FirebaseAuthService {
       if (kIsWeb) {
         credential = await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
       } else {
-        final googleUser = await _googleSignIn.signIn();
-        if (googleUser == null) {
-          // User membatalkan pemilihan akun — bukan error.
-          return const GoogleSignInResult(GoogleSignInStatus.cancelled);
-        }
+        await _ensureGoogleInit();
+        final googleUser = await _googleSignIn.authenticate(scopeHint: const ['email']);
 
-        final googleAuth = await googleUser.authentication;
-        final oauthCredential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
+        // v7: `authentication` hanya berisi idToken (accessToken dipisah ke authorization
+        // client); idToken sudah cukup untuk credential Firebase.
+        final googleAuth = googleUser.authentication;
+        final oauthCredential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
         credential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
       }
     } on FirebaseAuthException catch (e) {
@@ -80,6 +78,13 @@ class FirebaseAuthService {
         return const GoogleSignInResult(GoogleSignInStatus.cancelled);
       }
       return const GoogleSignInResult(GoogleSignInStatus.firebaseError);
+    } on GoogleSignInException catch (e) {
+      // User membatalkan pemilihan akun — bukan error.
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          e.code == GoogleSignInExceptionCode.interrupted) {
+        return const GoogleSignInResult(GoogleSignInStatus.cancelled);
+      }
+      return const GoogleSignInResult(GoogleSignInStatus.platformError);
     } catch (_) {
       // Error platform Google Sign-In: kodenya beda per platform, jadi sengaja tak dibedakan.
       // Tidak ada user existing yang perlu di-signOut dan tidak ada anonymous fallback.
@@ -98,6 +103,7 @@ class FirebaseAuthService {
   /// diikuti signInAnonymously: user harus login ulang dengan Google.
   Future<void> signOut() async {
     try {
+      await _ensureGoogleInit();
       await _googleSignIn.signOut();
     } catch (_) {}
     try {

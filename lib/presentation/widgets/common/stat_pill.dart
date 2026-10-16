@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'motion_widgets.dart';
 
 class StatPill extends StatelessWidget {
   final String label;
@@ -29,7 +30,7 @@ class StatPill extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: color),
           const SizedBox(height: 6),
-          Text(
+          CountUpText(
             value,
             style: TextStyle(
                 fontWeight: FontWeight.w800,

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/records_provider.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/motion_widgets.dart';
 import '../../widgets/common/pushed_page_header.dart';
 import 'santri_detail_screen.dart';
 
@@ -85,11 +86,14 @@ class _SantriListScreenState extends State<SantriListScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
                     final s = list[i];
-                    return _SantriListCard(
-                      summary: s,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => SantriDetailScreen(namaAnak: s.nama),
+                    return StaggerItem(
+                      index: i,
+                      child: _SantriListCard(
+                        summary: s,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => SantriDetailScreen(namaAnak: s.nama),
+                          ),
                         ),
                       ),
                     );

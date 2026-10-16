@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../common/motion_widgets.dart';
 import '../common/soft_icon_box.dart';
 
 /// Satu item statistik polos (ikon + angka + label), dipakai berjajar
@@ -25,7 +26,7 @@ class StatItem extends StatelessWidget {
       children: [
         SoftIconBox(icon: icon, color: color),
         const SizedBox(height: 10),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
+        CountUpText(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
         const SizedBox(height: 2),
         Text(
           label,

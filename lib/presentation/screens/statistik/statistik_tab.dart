@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../providers/records_provider.dart';
+import '../../widgets/common/motion_widgets.dart';
 import '../../widgets/common/section_label.dart';
 import '../../widgets/statistik/distribusi_row.dart';
 import 'kehadiran_screen.dart';
@@ -335,8 +336,12 @@ class _WeekBar extends StatelessWidget {
         Expanded(
           child: Align(
             alignment: Alignment.bottomCenter,
-            child: FractionallySizedBox(
-              heightFactor: ratio.clamp(0.04, 1.0),
+            // Batang tumbuh dari bawah ke tinggi akhirnya.
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: ratio.clamp(0.04, 1.0)),
+              duration: const Duration(milliseconds: 750),
+              curve: Curves.easeOutCubic,
+              builder: (context, h, child) => FractionallySizedBox(heightFactor: h, child: child),
               child: Container(
                 decoration: BoxDecoration(
                   color: color,
@@ -398,7 +403,7 @@ class _MiniStatPill extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(value,
+              CountUpText(value,
                   style: TextStyle(
                       fontWeight: FontWeight.w800, fontSize: 19, color: cs.onSurface)),
               if (onTap != null) ...[

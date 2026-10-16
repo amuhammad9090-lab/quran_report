@@ -15,6 +15,7 @@ import '../../../data/services/app_prefs_service.dart';
 import '../../../data/services/quran_engine_service.dart';
 import '../../../providers/records_provider.dart';
 import '../../../providers/students_provider.dart';
+import '../../widgets/common/motion_widgets.dart';
 import '../../widgets/common/status_icons.dart';
 import '../../widgets/common/viewer_guard.dart';
 import '../../widgets/forms/field_decoration.dart';
@@ -744,6 +745,8 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
       // ada) udah nggak relevan lagi, bersihkan.
       if (!_isEdit) await _clearDraft();
       if (!mounted) return;
+      // Centang "berhasil" tampil di overlay root, jadi tetap terlihat walau sheet ini ditutup.
+      SaveSuccessCheck.show(context, label: _isEdit ? 'Perubahan tersimpan' : 'Laporan tersimpan');
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;

@@ -462,7 +462,7 @@ class ExportRows {
     ];
   }
 
-  /// Ringkasan "Nx <jenis>" per santri untuk semua Keterangan SELAIN Hadir
+  /// Ringkasan "Nx `<jenis>`" per santri untuk semua Keterangan SELAIN Hadir
   /// (Izin Sakit, Izin Lomba, Izin Pelatihan, Alpa)
   List<MapEntry<String, String>> keteranganSummaryPerSantri(List<SantriRecord> records) {
     final byName = <String, Map<Keterangan, int>>{};

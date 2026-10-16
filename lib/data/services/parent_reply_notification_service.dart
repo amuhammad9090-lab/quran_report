@@ -90,10 +90,10 @@ class ParentReplyNotificationService {
       styleInformation: BigTextStyleInformation(preview),
     );
     await _hub.plugin.show(
-      _notifIdFor(note.id),
-      'Balasan Orang Tua ${note.namaAnak}',
-      preview,
-      NotificationDetails(android: androidDetails),
+      id: _notifIdFor(note.id),
+      title: 'Balasan Orang Tua ${note.namaAnak}',
+      body: preview,
+      notificationDetails: NotificationDetails(android: androidDetails),
       payload: note.id,
     );
   }

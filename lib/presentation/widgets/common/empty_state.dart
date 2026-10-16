@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'intro_animations.dart';
+import 'motion_widgets.dart';
 
 class EmptyState extends StatelessWidget {
   final IconData icon;
@@ -21,13 +23,20 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
+            FadeSlideIn(
+              scaleFrom: 0.7,
+              curve: Curves.easeOutBack,
+              offset: const Offset(0, 8),
+              child: FloatingWidget(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 40, color: cs.primary),
+                ),
               ),
-              child: Icon(icon, size: 40, color: cs.primary),
             ),
             const SizedBox(height: 18),
             Text(

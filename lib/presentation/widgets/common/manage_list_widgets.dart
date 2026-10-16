@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'motion_widgets.dart';
+
 /// Komponen bersama untuk layar kelola (Kelola Guru & Kelola Siswa): dialog konfirmasi hapus,
 /// judul bagian, chip kecil, dan kartu baris dengan menu aksi.
 
@@ -29,6 +31,7 @@ Future<bool> confirmDelete(
       ],
     ),
   );
+  if (ok == true) Haptics.warning();
   return ok == true;
 }
 
@@ -114,6 +117,9 @@ class ManageRowCard extends StatelessWidget {
   final VoidCallback onDelete;
   final String editLabel;
 
+  /// Urutan baris di daftar; kalau diisi, kartu muncul bergantian (stagger).
+  final int? index;
+
   const ManageRowCard({
     super.key,
     required this.leading,
@@ -123,12 +129,13 @@ class ManageRowCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     this.editLabel = 'Edit',
+    this.index,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
+    final card = Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: Material(
         color: cs.surfaceContainerLow,
@@ -191,5 +198,7 @@ class ManageRowCard extends StatelessWidget {
         ),
       ),
     );
+    final i = index;
+    return i == null ? card : StaggerItem(index: i, child: card);
   }
 }

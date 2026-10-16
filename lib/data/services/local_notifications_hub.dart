@@ -34,7 +34,7 @@ class LocalNotificationsHub {
     const initSettings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
-    await plugin.initialize(initSettings, onDidReceiveNotificationResponse: _dispatch);
+    await plugin.initialize(settings: initSettings, onDidReceiveNotificationResponse: _dispatch);
     // Android 13+ butuh izin notifikasi runtime; di versi lama otomatis granted.
     await plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()

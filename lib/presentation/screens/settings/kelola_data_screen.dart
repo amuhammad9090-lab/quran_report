@@ -180,13 +180,12 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
   }
 
   Future<void> _importExcel(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['xlsx'],
-      withData: true,
     );
-    final bytes = result?.files.single.bytes;
-    if (bytes == null) return; // dibatalin user
+    if (result.isEmpty) return; // dibatalin user (v13: list kosong, bukan null)
+    final bytes = await result.first.readAsBytes();
 
     final (students, accounts) = await _refreshedData();
     if (!context.mounted) return;

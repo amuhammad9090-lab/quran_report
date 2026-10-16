@@ -13,6 +13,7 @@ import '../../sheets/folder/folder_form_sheet.dart';
 import '../../sheets/folder/move_to_folder_sheet.dart';
 import '../../widgets/common/app_snackbar.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/motion_widgets.dart';
 import '../../widgets/common/section_label.dart';
 import '../../widgets/common/selection_action_bar.dart';
 import '../../widgets/common/soft_icon_box.dart';
@@ -424,7 +425,9 @@ class _LaporanTabState extends State<LaporanTab> {
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, i) {
                         final c = cards[i];
-                        return SantriReportCard(
+                        return StaggerItem(
+                          index: i,
+                          child: SantriReportCard(
                           info: c,
                           onTapWeek: (weekIndex) => _openWeek(context, c, weekIndex),
                           onPindahkanKeFolder: () => _pindahkanCard(context, c),
@@ -436,6 +439,7 @@ class _LaporanTabState extends State<LaporanTab> {
                           onLongPressStartSelect: () => _startSelectingWith(c.identityKey),
                           expandedWeek: _expandedCardId == c.identityKey ? _expandedWeek : null,
                           onToggleWeek: (weekIndex) => _toggleCardWeek(c.identityKey, weekIndex),
+                        ),
                         );
                       },
                     ),

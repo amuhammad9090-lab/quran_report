@@ -76,10 +76,10 @@ class DownloadNotificationService {
       icon: '@mipmap/ic_launcher',
     );
     await _hub.plugin.show(
-      id,
-      'Unduhan selesai',
-      '$fileName tersimpan ke folder Download. Ketuk untuk membuka.',
-      const NotificationDetails(android: androidDetails),
+      id: id,
+      title: 'Unduhan selesai',
+      body: '$fileName tersimpan ke folder Download. Ketuk untuk membuka.',
+      notificationDetails: const NotificationDetails(android: androidDetails),
       payload: '${LocalNotificationsHub.downloadPayloadPrefix}$id',
     );
   }

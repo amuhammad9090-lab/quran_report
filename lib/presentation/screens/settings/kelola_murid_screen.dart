@@ -9,6 +9,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/manage_list_widgets.dart';
+import '../../widgets/common/motion_widgets.dart';
 import '../../widgets/common/pushed_page_header.dart';
 import '../../widgets/common/soft_icon_box.dart';
 import '../../widgets/forms/field_decoration.dart';
@@ -101,7 +102,10 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             PushedPageHeader(
               title: 'Kelola Data Siswa',
@@ -156,7 +160,9 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                   ),
                 ),
               ),
-            if (students.isEmpty)
+            if (students.isEmpty && _refreshing)
+              const SliverToBoxAdapter(child: SkeletonList())
+            else if (students.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
@@ -193,6 +199,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
                             padding: 10,
                             radius: 14,
                           ),
+                          index: i,
                           title: s.nama,
                           body: Wrap(
                             spacing: 6,
@@ -214,6 +221,7 @@ class _KelolaMuridScreenState extends State<KelolaMuridScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ],
+        ),
         ),
       ),
     );

@@ -10,6 +10,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/students_provider.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/manage_list_widgets.dart';
+import '../../widgets/common/motion_widgets.dart';
 import '../../widgets/common/pushed_page_header.dart';
 import '../../widgets/common/soft_icon_box.dart';
 import '../../widgets/forms/field_decoration.dart';
@@ -180,7 +181,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
 
   String _query = '';
 
-  Widget _accountCard(BuildContext context, UserAccount acc) {
+  Widget _accountCard(BuildContext context, UserAccount acc, int index) {
     final cs = Theme.of(context).colorScheme;
     final noGoogleEmail = acc.googleEmail == null;
     final roleColor = acc.isAdmin ? cs.tertiary : (acc.isPengawas ? cs.secondary : cs.primary);
@@ -192,6 +193,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
         padding: 11,
         radius: 14,
       ),
+      index: index,
       title: acc.displayName,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,7 +251,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
             SliverToBoxAdapter(child: ManageSectionHeader(title: title, count: list.length)),
             SliverList.builder(
               itemCount: list.length,
-              itemBuilder: (context, i) => _accountCard(context, list[i]),
+              itemBuilder: (context, i) => _accountCard(context, list[i], i),
             ),
           ],
         );
@@ -261,7 +263,10 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
         label: const Text('Tambah Akun'),
       ),
       body: SafeArea(
-        child: CustomScrollView(
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             PushedPageHeader(
               title: 'Kelola Akun Guru',
@@ -310,7 +315,9 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
                 ),
               ),
             ),
-            if (accounts.isEmpty)
+            if (accounts.isEmpty && _refreshing)
+              const SliverToBoxAdapter(child: SkeletonList())
+            else if (accounts.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
@@ -335,6 +342,7 @@ class _KelolaGuruScreenState extends State<KelolaGuruScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 96)),
             ],
           ],
+        ),
         ),
       ),
     );

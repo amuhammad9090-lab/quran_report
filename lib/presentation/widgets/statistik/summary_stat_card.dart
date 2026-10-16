@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../common/motion_widgets.dart';
 
 /// Kartu ringkas untuk baris "Ringkasan Hari Ini" — 3 kartu sejajar.
 class SummaryStatCard extends StatelessWidget {
@@ -38,7 +39,7 @@ class SummaryStatCard extends StatelessWidget {
             child: Icon(icon, size: 18, color: color),
           ),
           const SizedBox(height: 8),
-          Text(
+          CountUpText(
             value,
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
           ),

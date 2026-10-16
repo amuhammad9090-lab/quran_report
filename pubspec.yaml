@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  cupertino_icons: ^1.0.6
+  cupertino_icons: ^2.0.0
 
   # State management
   provider: ^6.1.2
@@ -26,13 +26,13 @@ dependencies:
   path_provider: ^2.1.3
 
   # Firestore Mirrors
-  firebase_core: ^3.6.0
-  cloud_firestore: ^5.4.4
-  firebase_auth: ^5.3.1
-  google_sign_in: ^6.2.1
+  firebase_core: ^5.0.0
+  cloud_firestore: ^7.0.0
+  firebase_auth: ^7.0.0
+  google_sign_in: ^7.2.0
 
   # Notification
-  flutter_local_notifications: ^18.0.0
+  flutter_local_notifications: ^22.3.2
 
   # IDs & formatting
   uuid: ^4.4.0
@@ -43,26 +43,26 @@ dependencies:
   printing: ^5.13.1
   excel: ^4.0.3
   archive: ^3.6.1
-  share_plus: ^11.0.0
-  open_filex: ^4.5.0
+  share_plus: ^13.3.1
+  open_filex: ^5.0.0
   media_store_plus: ^0.1.3
 
   # UI
-  flutter_slidable: ^3.1.1
-  file_picker: ^9.0.0
+  flutter_slidable: ^4.0.3
+  file_picker: ^13.1.0
 
   # Icons
-  lucide_icons_flutter: ^3.1.9
+  lucide_icons_flutter: ^4.0.0
 
   # In-app update (APK / web)
-  package_info_plus: ^9.0.1
+  package_info_plus: ^10.2.2
   ota_update: ^7.1.0
   web: ^1.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true

@@ -28,11 +28,16 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   int _index = 0;
   bool _laporanSelecting = false;
   int _snackbarHidingFab = 0;
   final _fabController = SpeedDialController();
+
+  // Transisi halus (memudar + naik tipis) tiap pindah tab.
+  late final AnimationController _tabFade =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 280), value: 1);
+  late final Animation<double> _tabFadeAnim = CurvedAnimation(parent: _tabFade, curve: Curves.easeOut);
 
   @override
   void initState() {
@@ -56,6 +61,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _fabController.dispose();
+    _tabFade.dispose();
     super.dispose();
   }
 
@@ -106,6 +112,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
     _fabController.close();
     setState(() => _index = index);
+    if (!MediaQuery.of(context).disableAnimations) _tabFade.forward(from: 0);
   }
 
   void _goToLaporan() => _switchTab(1);
@@ -157,7 +164,11 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                   ),
               ],
             ),
-            child: IndexedStack(
+            child: FadeTransition(
+              opacity: _tabFadeAnim,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0, 0.015), end: Offset.zero).animate(_tabFadeAnim),
+                child: IndexedStack(
               index: _index,
               children: [
                 BerandaTab(onLihatLaporan: _goToLaporan),
@@ -171,6 +182,8 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                 const StatistikTab(),
                 const SettingsScreen(),
               ],
+            ),
+              ),
             ),
           ),
           floatingActionButton: _index == 1 &&

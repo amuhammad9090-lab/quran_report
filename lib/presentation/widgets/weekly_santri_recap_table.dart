@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/utils/standar_ketuntasan.dart';
 import '../../data/models/santri_record.dart';
 import '../../data/services/export_service.dart';
+import 'common/motion_widgets.dart';
 
 /// Tabel preview "Generate Laporan Pekanan" versi gabungan PER SANTRI —
 /// beda dari [ExportStyleRecordsTable] (1 baris = 1 laporan, dipakai
@@ -186,13 +187,19 @@ class _StatusCell extends StatelessWidget {
                 label: 'Tuntas',
                 selected: value == true,
                 color: Colors.green.shade700,
-                onTap: () => onSet!(recs, value == true ? null : true),
+                onTap: () {
+                  Haptics.selection();
+                  onSet!(recs, value == true ? null : true);
+                },
               ),
               _Pill(
                 label: 'Tidak',
                 selected: value == false,
                 color: Colors.red.shade700,
-                onTap: () => onSet!(recs, value == false ? null : false),
+                onTap: () {
+                  Haptics.selection();
+                  onSet!(recs, value == false ? null : false);
+                },
               ),
             ],
           ),
@@ -220,20 +227,39 @@ class _Pill extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
         decoration: BoxDecoration(
           color: selected ? color : Colors.transparent,
           border: Border.all(color: color),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: selected ? Colors.white : color,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Centang kecil menyembul saat dipilih (menandakan keputusan tersimpan).
+            AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              child: selected
+                  ? const Padding(
+                      padding: EdgeInsets.only(right: 4),
+                      child: Icon(Icons.check_rounded, size: 13, color: Colors.white),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 220),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : color,
+              ),
+              child: Text(label),
+            ),
+          ],
         ),
       ),
     );
