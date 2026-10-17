@@ -1,4 +1,3 @@
-import 'package:printing/printing.dart';
 
 import '../models/enums.dart';
 import '../models/santri_monthly_recap.dart';
@@ -323,9 +322,4 @@ class ExportService {
   /// pilihan user di iOS / trigger download browser di Web).
   Future<void> saveToDevice(ExportedFile file, {required String filename, required String ext}) =>
       saveExportedFileToDevice(file, filename: filename, ext: ext);
-
-  Future<void> printPdfDirectly(List<SantriRecord> records, {required String judul}) async {
-    final file = await exportPdf(records, judul: judul);
-    await Printing.layoutPdf(onLayout: (_) async => file.bytes);
-  }
 }

@@ -35,7 +35,6 @@ class GeneratedLinesResult {
   });
 
   int get totalBaris => newLines.length;
-  int get totalPhysicalLines => newLines.length + alreadyCountedLines.length;
   List<String> get newLineIds => newLines.map((e) => e.lineId).toList();
 
   static final empty =
@@ -219,8 +218,6 @@ class QuranEngineService {
 
     _loaded = true;
   }
-
-  bool isSurahCovered(int surahNumber) => _coveredSurahs.contains(surahNumber);
 
   /// Generate baris setoran untuk surah [surah], ayat [start] s.d [end],
   /// mengikuti persis logic `get_lines_for_range()`:

@@ -84,9 +84,6 @@ enum Keterangan {
       this == Keterangan.tidakSetoran ||
       this == Keterangan.tidakTahsin ||
       this == Keterangan.tidakMurojaah;
-
-  static Keterangan fromLabel(String label) =>
-      Keterangan.values.firstWhere((e) => e.label == label, orElse: () => Keterangan.hadir);
 }
 
 /// Jenjang WAFA untuk santri tahsin.

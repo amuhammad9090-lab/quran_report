@@ -198,38 +198,6 @@ class StandarKetuntasan {
     if (v.isEmpty) return '-';
     return _label(v.every((e) => e));
   }
-
-  /// Status satu siswa untuk satu bulan, dari laporan per pekan: total baris >= total target pekan Tahfizh,
-  /// rata-rata nilai pekanan >= KKM; pekan yang memenuhi lewat override Sakit/Izin dihitung terpenuhi.
-  /// Semua jalur yang ada di bulan itu harus terpenuhi.
-  static String bulanText(Map<int, List<SantriRecord>> byWeek) {
-    var baris = 0.0;
-    var target = 0.0;
-    final nilaiPekan = <double>[];
-    var kkm = 80.0;
-    var ada = false;
-    for (final recs in byWeek.values) {
-      final p = _evalPekan(recs);
-      if (p.kosong) continue;
-      ada = true;
-      switch (p.jenis) {
-        case _Jenis.lulus:
-          break;
-        case _Jenis.tahfizh:
-          baris += p.override && p.baris < p.target ? p.target : p.baris.toDouble();
-          target += p.target;
-        case _Jenis.tahsin:
-          nilaiPekan.add(p.override && p.nilai < p.kkm ? p.kkm : p.nilai);
-          kkm = p.kkm;
-      }
-    }
-    if (!ada) return '-';
-    final checks = <bool>[
-      if (target > 0) baris + 1e-9 >= target,
-      if (nilaiPekan.isNotEmpty) NilaiAverage.mean(nilaiPekan)! >= kkm,
-    ];
-    return _label(checks.every((c) => c));
-  }
 }
 
 enum _Jenis { tahfizh, tahsin, lulus }

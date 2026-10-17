@@ -13,10 +13,6 @@ class WeekUtils {
     return d.subtract(Duration(days: d.weekday - 1));
   }
 
-  /// Tanggal Minggu dari pekan yang memuat [date].
-  static DateTime endOfWeek(DateTime date) =>
-      startOfWeek(date).add(const Duration(days: 6));
-
   /// Nomor pekan ISO-8601 (1-53) — tidak lagi dipakai di [weekLabel] (diganti
   /// tanggal mulai pekan biar lebih gampang dikenali orang), tapi tetap
   /// disimpan kalau nanti ada kebutuhan lain yang butuh angka pekan.
@@ -110,9 +106,6 @@ class WeekUtils {
         .add(Duration(days: (weekIndex - 1) * 7));
     return MonthWeekRange(start: start, end: start.add(const Duration(days: 6)));
   }
-
-  /// Label pendek "Pekan 1", "Pekan 2", dst.
-  static String monthWeekLabel(int weekIndex) => 'Pekan $weekIndex';
 
   static const _bulanPendek = [
     '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',

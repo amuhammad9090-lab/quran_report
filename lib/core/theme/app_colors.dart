@@ -22,7 +22,6 @@ class AppColors {
 
   // Brand
   static const seed = Color(0xFF0E7C61);
-  static const seedDark = Color(0xFF14A085);
   static const splashGradientStart = Color(0xFF52AD65);
   static const splashGradientEnd = Color(0xFF0B4A38);
 

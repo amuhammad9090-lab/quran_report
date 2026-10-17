@@ -124,7 +124,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                           final delta = (pos - i).clamp(-1.0, 1.0);
                           final away = delta.abs();
                           final bob = Curves.easeInOut.transform(_float.value) * 12 - 6;
-                          return Padding(
+                          return LayoutBuilder(
+                            builder: (context, box) => SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: box.maxHeight),
+                            child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 32),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -191,6 +195,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                                   ),
                                 ),
                               ],
+                            ),
+                          ),
+                          ),
                             ),
                           );
                         },
