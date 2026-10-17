@@ -70,16 +70,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         offset: const Offset(0, 12),
                         scaleFrom: 0.85,
                         child: Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              const AppIconMark(size: 68, borderRadius: 18),
-                              const SizedBox(width: 14),
-                              Container(height: 40, width: 1, color: cs.outlineVariant),
-                              const SizedBox(width: 14),
-                              const SmpitLogoBadge(size: 64, borderRadius: 14),
-                            ],
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const AppIconMark(size: 68, borderRadius: 18),
+                                const SizedBox(width: 14),
+                                Container(height: 40, width: 1, color: cs.outlineVariant),
+                                const SizedBox(width: 14),
+                                const SmpitLogoBadge(size: 64, borderRadius: 14),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -142,7 +145,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                           valueColor: AlwaysStoppedAnimation(Colors.white),
                                         ),
                                       )
-                                    : Row(
+                                    : FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
                                           Container(
@@ -172,6 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             ),
                                           ),
                                         ],
+                                      ),
                                       ),
                               ),
                             ),

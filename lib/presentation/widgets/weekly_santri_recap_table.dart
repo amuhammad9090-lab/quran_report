@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/utils/standar_ketuntasan.dart';
 import '../../data/models/santri_record.dart';
 import '../../data/services/export_service.dart';
@@ -186,7 +187,7 @@ class _StatusCell extends StatelessWidget {
               _Pill(
                 label: 'Tuntas',
                 selected: value == true,
-                color: Colors.green.shade700,
+                color: AppColors.greenOn(context),
                 onTap: () {
                   Haptics.selection();
                   onSet!(recs, value == true ? null : true);
@@ -195,7 +196,7 @@ class _StatusCell extends StatelessWidget {
               _Pill(
                 label: 'Tidak',
                 selected: value == false,
-                color: Colors.red.shade700,
+                color: AppColors.redOn(context),
                 onTap: () {
                   Haptics.selection();
                   onSet!(recs, value == false ? null : false);
@@ -224,6 +225,7 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onFill = color.computeLuminance() > 0.4 ? Colors.black87 : Colors.white;
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
@@ -244,9 +246,9 @@ class _Pill extends StatelessWidget {
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOut,
               child: selected
-                  ? const Padding(
-                      padding: EdgeInsets.only(right: 4),
-                      child: Icon(Icons.check_rounded, size: 13, color: Colors.white),
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(Icons.check_rounded, size: 13, color: onFill),
                     )
                   : const SizedBox.shrink(),
             ),
@@ -255,7 +257,7 @@ class _Pill extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : color,
+                color: selected ? onFill : color,
               ),
               child: Text(label),
             ),
