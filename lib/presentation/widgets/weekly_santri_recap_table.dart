@@ -6,19 +6,6 @@ import '../../data/models/santri_record.dart';
 import '../../data/services/export_service.dart';
 import 'common/motion_widgets.dart';
 
-/// Tabel preview "Generate Laporan Pekanan" versi gabungan PER SANTRI —
-/// beda dari [ExportStyleRecordsTable] (1 baris = 1 laporan, dipakai
-/// Rekap Harian), di sini 1 baris = 1 SANTRI: semua laporannya dalam
-/// pekan itu dihimpun jadi 1 baris — kolom Capaian dipecah per jenis
-/// (Tahsin/Tahfizh/Tahsin+Tahfizh/Muroja'ah, masing2 cuma tampil kalau
-/// memang ada laporan jenis itu tertulis di laporan hariannya), dan
-/// kolom Baris di-SUM dari SEMUA laporan santri itu sepekan.
-///
-/// Isinya diambil dari [ExportService.weeklyRowsGroupedBySantriFor] —
-/// sumber logic yang SAMA dipakai proses export sungguhan
-/// (exportGroupedPdf/Excel/Word), biar tampilan preview & hasil export
-/// identik (pola yang sama seperti [ExportStyleRecordsTable]).
-///
 /// Sengaja PAKAI [Table] bukan [DataTable]: [DataTable] maksa SEMUA
 /// baris punya tinggi yang sama (dataRowMaxHeight berlaku global), jadi
 /// kalau ada 1 santri dengan 3 jenis capaian sekaligus, baris santri lain
