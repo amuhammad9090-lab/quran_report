@@ -191,12 +191,24 @@ class StandarKetuntasan {
     return sorted.isEmpty ? null : sorted.last.tuntasPekan;
   }
 
-  /// Status bulan dari keputusan guru tiap pekan: ada yang Tidak Tuntas -> Tidak Tuntas;
-  /// semua pekan yang diputuskan Tuntas -> Tuntas; belum ada keputusan -> '-'.
+  /// Batas toleransi: sampai sekian pekan Tidak Tuntas dalam sebulan masih dimaafkan.
+  static const int toleransiTidakTuntasBulan = 1;
+
+  /// Pekan yang SELURUH laporannya Izin/Sakit/Lomba/Pelatihan: tidak ikut dinilai.
+  static bool _pekanDikecualikan(List<SantriRecord> recs) =>
+      recs.isNotEmpty && recs.every(_dikecualikan);
+
+  /// Status bulan dari keputusan guru: pekan dihitung Tidak Tuntas kalau guru menekan Tidak Tuntas
+  /// (apa pun alasannya: nilai/target kurang, Alpa, Tidak Setoran, dst), KECUALI pekan yang seluruhnya
+  /// Izin/Sakit/Lomba/Pelatihan. Pekan yang belum diputuskan tidak dihitung. Bulan Tidak Tuntas kalau
+  /// jumlah pekan Tidak Tuntas MELEBIHI [toleransiTidakTuntasBulan] (1x dimaafkan, 2x Tidak Tuntas);
+  /// selain itu Tuntas. '-' hanya kalau tidak ada laporan sama sekali di bulan itu.
   static String manualBulan(Map<int, List<SantriRecord>> byWeek) {
-    final v = [for (final recs in byWeek.values) manualPekanValue(recs)].whereType<bool>().toList();
-    if (v.isEmpty) return '-';
-    return _label(v.every((e) => e));
+    if (byWeek.values.every((recs) => recs.isEmpty)) return '-';
+    final tidakTuntas = byWeek.values
+        .where((recs) => manualPekanValue(recs) == false && !_pekanDikecualikan(recs))
+        .length;
+    return _label(tidakTuntas <= toleransiTidakTuntasBulan);
   }
 }
 

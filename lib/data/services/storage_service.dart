@@ -297,7 +297,14 @@ class StorageService {
                   cloudRecord.createdAt ??
                   cloudRecord.tanggal;
 
-          if (!cloudTime.isAfter(localTime)) {
+          // Keputusan Tuntas/Tidak Tuntas (tuntasPekan) diubah tanpa mengubah editedAt, jadi
+          // cloudTime == localTime padahal isinya beda. Ambil versi cloud kalau keputusannya
+          // berbeda DAN salinan lokal tidak sedang menunggu sinkron (bukan perubahan lokal yang
+          // belum terkirim).
+          final tuntasBerubah = cloudRecord.tuntasPekan != localRecord.tuntasPekan &&
+              !cloudTime.isBefore(localTime) &&
+              !_pendingBox.containsKey(cloudRecord.id);
+          if (!cloudTime.isAfter(localTime) && !tuntasBerubah) {
             continue;
           }
         }

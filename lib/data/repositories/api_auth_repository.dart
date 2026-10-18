@@ -10,7 +10,6 @@ import '../local_seed/local_seed_data.dart';
 import '../models/kelas_halaqoh.dart';
 import '../models/user_account.dart';
 import '../services/app_prefs_service.dart';
-import '../services/auth_hash_service.dart';
 import '../services/firebase_auth_service.dart';
 import 'auth_repository.dart';
 
@@ -202,18 +201,6 @@ class ApiAuthRepository implements AuthRepository {
     final seeded = kSeedAccountsJson.map(UserAccount.fromJson).toList();
     _memCache = seeded;
     return seeded;
-  }
-
-  @override
-  Future<UserAccount?> login(String username, String password) async {
-    final normalizedUsername = username.trim().toLowerCase();
-    for (final acc in await _accounts()) {
-      if (acc.username.toLowerCase() == normalizedUsername) {
-        final valid = AuthHashService.instance.verify(password, acc.passwordHash);
-        return valid ? acc : null;
-      }
-    }
-    return null;
   }
 
   @override

@@ -12,7 +12,7 @@ import '../data/services/firebase_auth_service.dart';
 
 /// State authentication: user yang login, sekolahnya, dan restore session saat app dibuka.
 /// Authentication = Google Sign-In lewat [FirebaseAuthService]; authorization (role/assignment)
-/// lewat [AuthRepository.findByGoogleEmail]. [login] username+password tetap ada tapi tak dipakai UI.
+/// lewat [AuthRepository.findByGoogleEmail]. 
 class AuthProvider extends ChangeNotifier {
   // Default-nya [ApiAuthRepository] (Firestore + cache Hive untuk login offline, fallback seed):
   // assignment kelas/halaqoh guru bisa diedit admin dari dalam app tanpa build ulang APK.
@@ -94,30 +94,6 @@ class AuthProvider extends ChangeNotifier {
 
     _restoring = false;
     notifyListeners();
-  }
-
-  /// <-- BERUBAH: sudah tidak dipanggil dari [LoginScreen] manapun sejak
-  /// migrasi ke Google Sign-In (lihat [signInWithGoogle]) -- SENGAJA
-  /// TIDAK dihapus, lihat dokumentasi lengkap di [AuthRepository.login].
-  Future<bool> login(String username, String password) async {
-    _loggingIn = true;
-    _error = null;
-    notifyListeners();
-
-    final user = await _authRepo.login(username, password);
-    if (user == null) {
-      _loggingIn = false;
-      _error = 'Username atau kata sandi salah.';
-      notifyListeners();
-      return false;
-    }
-
-    _currentUser = user;
-    _currentSchool = await _schoolRepo.findById(user.schoolId);
-    await AppPrefsService.instance.setSessionUserId(user.id);
-    _loggingIn = false;
-    notifyListeners();
-    return true;
   }
 
   /// SATU-SATUNYA jalur login (lihat [LoginScreen]): Google Sign-In -> Firebase User

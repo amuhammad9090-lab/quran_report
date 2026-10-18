@@ -5,16 +5,6 @@ import '../models/user_account.dart';
 /// `ApiAuthRepository` (panggil backend) — kode di atas layer ini
 /// (`AuthProvider`, UI) tidak perlu tahu/berubah.
 abstract class AuthRepository {
-  /// Return [UserAccount] kalau username+password valid, null kalau tidak.
-  ///
-  /// <-- BERUBAH (migrasi auth): TIDAK lagi dipanggil dari jalur login
-  /// manapun di UI (lihat [findByGoogleEmail]) sejak migrasi ke Google
-  /// Sign-In -- SENGAJA TIDAK dihapus (bukan dead code yang "aman
-  /// dihapus", lihat AuthProvider.changePassword yang masih memverifikasi
-  /// [UserAccount.passwordHash] lewat mekanisme yang sama), cuma sudah
-  /// tidak ada pemanggil dari [LoginScreen] lagi.
-  Future<UserAccount?> login(String username, String password);
-
   /// <-- BARU (migrasi auth: Anonymous -> Google Sign-In). Cari akun yang
   /// [UserAccount.googleEmail]-nya cocok [email] (dibandingkan
   /// case-insensitive -- [email] SEBAIKNYA sudah di-lowercase pemanggil,
