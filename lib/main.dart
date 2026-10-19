@@ -87,6 +87,9 @@ void main() async {
 
   final studentsProvider = StudentsProvider();
   await studentsProvider.load();
+  // Kelas/halaqoh di laporan mengikuti data master santri (pindah halaqoh langsung berlaku).
+  recordsProvider.updateStudentDirectory(studentsProvider.all);
+  studentsProvider.addListener(() => recordsProvider.updateStudentDirectory(studentsProvider.all));
 
   final parentNotesProvider = ParentNotesProvider();
   parentNotesProvider.updateScope(authProvider.scope);

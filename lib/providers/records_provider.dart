@@ -8,6 +8,7 @@ import '../data/models/enums.dart';
 import '../data/models/records_view_models.dart';
 import '../data/models/santri_monthly_recap.dart';
 import '../data/models/santri_record.dart';
+import '../data/models/student.dart';
 import '../data/services/app_prefs_service.dart';
 import '../data/services/records_recap_service.dart';
 import '../data/services/storage_service.dart';
@@ -30,6 +31,14 @@ class RecordsProvider extends ChangeNotifier {
   int _scopedCacheVersion = -1;
   RecordsRecapService? _recapCache;
   int _recapCacheVersion = -1;
+
+  // Identitas TERKINI tiap santri menurut data master (kelas+halaqoh), kunci = nama huruf kecil.
+  // Hanya nama yang unik di master (nama kembar dilewati supaya tak salah pasang). Dipakai
+  // [_effectiveAll] supaya perubahan kelas/halaqoh di master (mis. lewat Import Excel) langsung
+  // berlaku di kartu, rekap, ekspor, dan filter tanpa menulis ulang laporan lama.
+  Map<String, ({String kelas, String halaqoh})> _studentIdentity = {};
+  List<SantriRecord>? _effectiveCache;
+  int _effectiveCacheVersion = -1;
 
   // Access scope user yang login — null = belum ada user (mis. saat testing).
   // Di-set dari luar lewat updateScope tiap status login berubah
@@ -72,10 +81,57 @@ class RecordsProvider extends ChangeNotifier {
   /// Di-cache per [_dataVersion].
   List<SantriRecord> get _scoped {
     if (_scopedCacheVersion != _dataVersion) {
-      _scopedCache = _scope == null ? _all : _scope!.scopeRecords(_all);
+      _scopedCache = _scope == null ? _effectiveAll : _scope!.scopeRecords(_effectiveAll);
       _scopedCacheVersion = _dataVersion;
     }
     return _scopedCache!;
+  }
+
+  /// [_all] dengan kelas/halaqoh disamakan ke data master santri (lihat [_studentIdentity]).
+  /// Laporan yang identitasnya sudah sama dipakai apa adanya; yang beda diganti salinan.
+  /// Di-cache per [_dataVersion].
+  List<SantriRecord> get _effectiveAll {
+    if (_effectiveCacheVersion != _dataVersion || _effectiveCache == null) {
+      _effectiveCache = _studentIdentity.isEmpty
+          ? _all
+          : [
+              for (final r in _all)
+                () {
+                  final id = _studentIdentity[r.namaAnak.trim().toLowerCase()];
+                  if (id == null || (id.kelas == r.kelas && id.halaqoh == r.halaqoh)) return r;
+                  return r.copyWith(kelas: id.kelas, halaqoh: id.halaqoh);
+                }(),
+            ];
+      _effectiveCacheVersion = _dataVersion;
+    }
+    return _effectiveCache!;
+  }
+
+  /// Dipanggil tiap data master santri dimuat/berubah (lihat main.dart). Kelas+halaqoh di
+  /// laporan lalu mengikuti master, jadi pindah halaqoh santri langsung tercermin di mana-mana.
+  void updateStudentDirectory(Iterable<Student> students) {
+    final byName = <String, List<Student>>{};
+    for (final s in students) {
+      byName.putIfAbsent(s.nama.trim().toLowerCase(), () => []).add(s);
+    }
+    final next = <String, ({String kelas, String halaqoh})>{
+      for (final e in byName.entries)
+        if (e.value.length == 1) e.key: (kelas: e.value.first.kelas, halaqoh: e.value.first.halaqoh),
+    };
+    var same = next.length == _studentIdentity.length;
+    if (same) {
+      for (final e in next.entries) {
+        final old = _studentIdentity[e.key];
+        if (old == null || old.kelas != e.value.kelas || old.halaqoh != e.value.halaqoh) {
+          same = false;
+          break;
+        }
+      }
+    }
+    if (same) return;
+    _studentIdentity = next;
+    _dataVersion++;
+    notifyListeners();
   }
 
   /// Kalkulasi baca-saja atas [_scoped]; instance baru dibuat tiap [_dataVersion]
@@ -119,7 +175,7 @@ class RecordsProvider extends ChangeNotifier {
   /// dibiarkan: kartu bisa kosong lagi bila laporan terakhirnya dihapus (lihat [deleteAllForSantri]).
   Future<void> _cleanupStaleActivatedFolders() async {
     if (_activatedFolders.isEmpty) return;
-    final withRecords = _all
+    final withRecords = _effectiveAll
         .map((r) => reportIdentityKey(r.kelas, r.halaqoh, r.namaAnak))
         .toSet();
     final staleFolders = _activatedFolders.keys.where(withRecords.contains).toList();
@@ -401,8 +457,10 @@ class RecordsProvider extends ChangeNotifier {
     final totalWeeksThisMonth = WeekUtils.weeksInMonth(thisMonth);
 
     final byKey = <String, SantriCardInfo>{};
+    final namesWithCards = <String>{};
 
     for (final s in santriList) {
+      namesWithCards.add(s.nama.trim().toLowerCase());
       final key = reportIdentityKey(s.kelas, s.halaqoh, s.nama);
       final santriRecords = recordsForSantri(s.nama);
       final latest = santriRecords.isEmpty ? null : santriRecords.first;
@@ -424,6 +482,9 @@ class RecordsProvider extends ChangeNotifier {
       if (byKey.containsKey(key)) continue;
       final parts = key.split('|');
       if (parts.length != 3) continue;
+      // Santri ini sudah punya kartu dari laporan (identitasnya bisa berbeda dari key lama kalau
+      // kelas/halaqoh di master berubah) -> jangan munculkan kartu kosong kembar.
+      if (namesWithCards.contains(parts[2])) continue;
       // Key disimpan lowercase; kapitalisasi asli hanya ada di [_lastActivatedDisplay]
       // (diisi saat aktivasi). BUG FIX: kalau tak ketemu (data lokal hilang, belum
       // "Pulihkan dari Cloud"), fallback di-title-case ([toTitleCase]) — bukan lowercase.
@@ -431,8 +492,8 @@ class RecordsProvider extends ChangeNotifier {
       byKey[key] = SantriCardInfo(
         identityKey: key,
         nama: display?.nama ?? toTitleCase(parts[2]),
-        kelas: display?.kelas ?? parts[0],
-        halaqoh: display?.halaqoh ?? parts[1],
+        kelas: _studentIdentity[parts[2]]?.kelas ?? display?.kelas ?? parts[0],
+        halaqoh: _studentIdentity[parts[2]]?.halaqoh ?? display?.halaqoh ?? parts[1],
         weeksWithReportThisMonth: const {},
         totalWeeksThisMonth: totalWeeksThisMonth,
         latestRecord: null,
