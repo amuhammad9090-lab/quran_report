@@ -8,13 +8,15 @@ import '../../core/utils/week_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/records_provider.dart';
 import 'common/edited_badge.dart';
+import 'santri_report_card_parts.dart';
+import 'santri_week_chip.dart';
 import 'status_badge.dart';
 
 /// Kartu "1 santri = 1 card laporan utama" di tab Laporan. Nunjukin
 /// identitas, progres pekan BULAN BERJALAN, progress bar, dan ringkasan
 /// laporan terakhir (capaian + tanggal + keterangan).
 ///
-/// Tap kolom pekan (_WeekChip) BUKA PANEL INFO pekan itu (di bawah baris
+/// Tap kolom pekan (WeekChip) BUKA PANEL INFO pekan itu (di bawah baris
 /// kolom pekan) dulu — bukan langsung buka form. Panel nunjukin status
 /// pekan itu (kosong / ringkasan laporan yang sudah ada) plus SATU tombol
 /// "Buat Laporan" / "Lihat & Ubah Laporan" yang baru manggil [onTapWeek].
@@ -118,202 +120,6 @@ class _SantriReportCardState extends State<SantriReportCard> {
   VoidCallback? get _onHapus => _readOnly ? null : widget.onHapus;
   VoidCallback? get _onPindah => _readOnly ? null : widget.onPindahkanKeFolder;
 
-  void _showActions(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    showModalBottomSheet(
-      context: context,
-      constraints: const BoxConstraints(maxWidth: 640),
-      useRootNavigator: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Material(
-            color: Theme.of(ctx).bottomSheetTheme.backgroundColor,
-            borderRadius: BorderRadius.circular(22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 10),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 17,
-                        backgroundColor: cs.primaryContainer,
-                        child: Text(
-                          widget.info.nama.isNotEmpty ? widget.info.nama[0].toUpperCase() : '?',
-                          style: TextStyle(
-                            color: cs.onPrimaryContainer,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          widget.info.nama,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 18, indent: 18, endIndent: 18),
-                if (_onPindah != null)
-                  ListTile(
-                    leading: Icon(
-                      widget.isInsideFolder ? LucideIcons.folderMinus : LucideIcons.folderInput,
-                      color: widget.isInsideFolder ? cs.error : cs.secondary,
-                    ),
-                    title: Text(
-                      widget.isInsideFolder ? 'Keluarkan dari Folder' : 'Pindahkan ke Folder',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _onPindah!();
-                    },
-                  ),
-                if (_onHapus != null)
-                  ListTile(
-                    leading: Icon(LucideIcons.trash2, color: cs.error),
-                    title: Text('Hapus',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: cs.error)),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _onHapus!();
-                    },
-                  ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeekInfoPanel(BuildContext context, ColorScheme cs, DateTime thisMonth, int weekIndex) {
-    // Tanggal yang beneran bakal disasar kalau tombol di panel ini
-    // ditekan (onTapWeek -> _openWeek di pemanggil) — SAMA PERSIS logic-nya
-    // (pekan berjalan -> hari ini, pekan lewat -> hari Senin pekan itu),
-    // biar info & tombol yang ditampilkan gak menjanjikan laporan yang
-    // ternyata gak kebuka pas ditekan. Makanya dicek per-HARI PERSIS
-    // ([recordForSantriOnDate]) — BUKAN ambil laporan terbaru di pekan itu
-    // (bisa beda hari dari yang akan dibuka) — lihat catatan panjang di
-    // RecordsProvider.recordForSantriOnDate.
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final currentWeek = WeekUtils.weekOfMonth(now);
-    final range = WeekUtils.monthWeekRange(thisMonth, weekIndex);
-    final isCurrentWeek = weekIndex == currentWeek &&
-        !today.isBefore(range.start) &&
-        !today.isAfter(range.end);
-    final targetDate = isCurrentWeek ? today : range.start;
-    final record = context.watch<RecordsProvider>().recordForSantriOnDate(
-          widget.info.nama,
-          targetDate,
-        );
-    final rangeStr = WeekUtils.rangeLabel(range);
-    final targetDateLabel = isCurrentWeek
-        ? 'Hari ini, ${DateFormat('d MMM yyyy', 'id_ID').format(targetDate)}'
-        : DateFormat('EEEE, d MMM yyyy', 'id_ID').format(targetDate);
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(LucideIcons.calendarDays, size: 14, color: cs.onSurfaceVariant),
-                const SizedBox(width: 6),
-                Text(
-                  'Pekan $weekIndex • $rangeStr',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              targetDateLabel,
-              style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            if (record == null)
-              Text(
-                'Belum ada laporan di hari itu.',
-                style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
-              )
-            else ...[
-              Row(
-                children: [
-                  Icon(LucideIcons.bookmark, size: 14, color: cs.primary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      record.capaianText,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (record.totalBaris != null) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      '${record.totalBaris} baris',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cs.primary),
-                    ),
-                  ],
-                ],
-              ),
-              if (record.nilai != null && record.nilai!.trim().isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(LucideIcons.hash, size: 13, color: cs.primary),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Nilai: ${record.nilai!.trim()}',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.tonalIcon(
-                onPressed: () => widget.onTapWeek(weekIndex),
-                icon: Icon(record == null ? LucideIcons.circlePlus : LucideIcons.penLine, size: 17),
-                label: Text(record == null ? 'Buat Laporan' : 'Lihat / Ubah Laporan'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildCard(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final now = DateTime.now();
@@ -338,10 +144,22 @@ class _SantriReportCardState extends State<SantriReportCard> {
             // panelnya emang udah ketutup.
             : (widget.expandedWeek != null
                 ? () => widget.onToggleWeek(widget.expandedWeek!)
-                : (canOpenActions ? () => _showActions(context) : null)),
+                : (canOpenActions ? () => showSantriCardActions(
+      context,
+      info: widget.info,
+      isInsideFolder: widget.isInsideFolder,
+      onPindah: _onPindah,
+      onHapus: _onHapus,
+    ) : null)),
         onLongPress: widget.selectionMode
             ? null
-            : (widget.onLongPressStartSelect ?? (canOpenActions ? () => _showActions(context) : null)),
+            : (widget.onLongPressStartSelect ?? (canOpenActions ? () => showSantriCardActions(
+      context,
+      info: widget.info,
+      isInsideFolder: widget.isInsideFolder,
+      onPindah: _onPindah,
+      onHapus: _onHapus,
+    ) : null)),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -416,7 +234,7 @@ class _SantriReportCardState extends State<SantriReportCard> {
                   return Expanded(
                     child: Padding(
                       padding: EdgeInsets.only(right: isLast ? 0 : 6),
-                      child: _WeekChip(
+                      child: WeekChip(
                         weekIndex: weekIndex,
                         filled: widget.info.weeksWithReportThisMonth.contains(weekIndex),
                         isCurrent: weekIndex == currentWeek,
@@ -437,7 +255,12 @@ class _SantriReportCardState extends State<SantriReportCard> {
                 alignment: Alignment.topCenter,
                 child: widget.expandedWeek == null
                     ? const SizedBox(width: double.infinity)
-                    : _buildWeekInfoPanel(context, cs, thisMonth, widget.expandedWeek!),
+                    : WeekInfoPanel(
+                info: widget.info,
+                thisMonth: thisMonth,
+                weekIndex: widget.expandedWeek!,
+                onTapWeek: widget.onTapWeek,
+              ),
               ),
               if (latest != null) ...[
                 const SizedBox(height: 12),
@@ -610,93 +433,3 @@ class _SantriReportCardState extends State<SantriReportCard> {
   }
 }
 
-/// Satu kolom "PEKAN N" — 3 kemungkinan tampilan: sudah ada laporan
-/// (centang hijau), pekan berjalan tapi belum diisi (outline "+", diajak
-/// isi), atau pekan lain yang belum diisi (netral, angka pekan biasa).
-/// Tap = toggle panel info pekan itu (lihat [SantriReportCard]), BUKAN
-/// langsung buka form lagi -- makanya outline ganti warna kalau
-/// [isExpanded] true, biar user tau panel yang lagi kebuka pekan mana.
-class _WeekChip extends StatelessWidget {
-  final int weekIndex;
-  final bool filled;
-  final bool isCurrent;
-  final bool isExpanded;
-  final MonthWeekRange range;
-  final VoidCallback? onTap;
-
-  const _WeekChip({
-    required this.weekIndex,
-    required this.filled,
-    required this.isCurrent,
-    required this.isExpanded,
-    required this.range,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final accent = (filled || isCurrent || isExpanded) ? cs.primary : cs.onSurfaceVariant;
-    // <-- BERUBAH: sebelumnya "filled" (pekan udah diisi) pakai tint yang
-    // SAMA level-nya (alpha 0.12) kayak _ActionChip (tombol "Buat
-    // Laporan"/"Tambah Laporan" di atasnya, alpha 0.08) — dua-duanya sama
-    // warna (cs.primary) dan sama-sama flat tanpa border, jadi kurang
-    // kebeda pas dipandang sekilas walau maksudnya beda (satu tombol aksi,
-    // satu status "sudah kelar"). Dinaikin tint-nya + dikasih border tipis
-    // KHUSUS pas filled, biar kerasa kayak badge yang "solid/mantap" —
-    // tetap satu keluarga warna (cs.primary/ijo brand), cuma levelnya
-    // dibedain, bukan gonta-ganti hue.
-    final bg = filled
-        ? cs.primary.withValues(alpha: 0.18)
-        : (isCurrent ? cs.primary.withValues(alpha: 0.06) : cs.surfaceContainerHighest.withValues(alpha: 0.35));
-
-    // Prioritas border: expanded (lagi dibuka) & current-belum-diisi
-    // (ajakan "isi sekarang") tetap paling nonjol seperti sebelumnya —
-    // border tebal solid. Filled (sudah diisi, kondisi diam/tidak lagi
-    // butuh perhatian) dapat border tipis transparan, sekadar penegas
-    // "badge", bukan ajakan aksi.
-    final Border? border;
-    if (isExpanded || (isCurrent && !filled)) {
-      border = Border.all(color: cs.primary, width: 1.3);
-    } else if (filled) {
-      border = Border.all(color: cs.primary.withValues(alpha: 0.35), width: 1);
-    } else {
-      border = null;
-    }
-
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: border,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                filled ? LucideIcons.circleCheck : (isCurrent ? LucideIcons.circlePlus : Icons.circle_outlined),
-                size: 15,
-                color: accent,
-              ),
-              const SizedBox(height: 3),
-              Text(
-                'P$weekIndex',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: accent),
-              ),
-              Text(
-                '${range.start.day}-${range.end.day}',
-                style: TextStyle(fontSize: 8.5, color: cs.onSurfaceVariant),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

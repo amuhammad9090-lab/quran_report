@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../core/access/access_scope.dart';
@@ -37,6 +40,14 @@ class AuthProvider extends ChangeNotifier {
   // Lihat AccessScope.adminModeActive & setAdminModeActive: hanya relevan untuk akun isAdmin,
   // tapi disimpan per device (lepas dari user) agar bisa di-load sebelum tahu siapa yang login.
   bool _adminModeActive = true;
+
+  // Pantau akun sendiri real-time: perubahan role/penugasan dari admin langsung berlaku tanpa login ulang.
+  StreamSubscription<UserAccount?>? _accountSub;
+  String? _watchedId;
+
+  /// Dipanggil setiap scope akun yang login berubah karena diubah dari luar (mis. admin mengganti role).
+  /// Diisi di main.dart supaya provider lain (RecordsProvider, dst) ikut memperbarui scope-nya.
+  void Function(AccessScope? scope)? onScopeChanged;
 
   UserAccount? get currentUser => _currentUser;
   School? get currentSchool => _currentSchool;
@@ -149,6 +160,7 @@ class AuthProvider extends ChangeNotifier {
     _loggingIn = false;
     _error = null;
     notifyListeners();
+    startWatchingAccount();
     return true;
   }
 
@@ -205,9 +217,60 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  @override
+  void dispose() {
+    _stopWatchingAccount();
+    super.dispose();
+  }
+
+  /// Mulai memantau dokumen akun yang sedang login (idempotent). Dipanggil setelah login dan saat app
+  /// dibuka dengan sesi tersimpan. Hanya jalan untuk [ApiAuthRepository] (butuh Firestore).
+  void startWatchingAccount() {
+    final user = _currentUser;
+    final repo = _authRepo;
+    if (user == null || repo is! ApiAuthRepository) return;
+    if (_watchedId == user.id && _accountSub != null) return;
+    _accountSub?.cancel();
+    _watchedId = user.id;
+    _accountSub = repo.watchAccount(user.id).listen(
+      _onAccountChanged,
+      onError: (Object e) => debugPrint('watchAccount error: $e'),
+    );
+  }
+
+  void _stopWatchingAccount() {
+    _accountSub?.cancel();
+    _accountSub = null;
+    _watchedId = null;
+  }
+
+  /// Kunci perbandingan: hanya field yang memengaruhi akses/tampilan (foto lokal sengaja diabaikan).
+  String _accessKey(UserAccount u) => jsonEncode({
+        'role': u.role.name,
+        'assignments': u.assignments.map((a) => a.toJson()).toList(),
+        'displayName': u.displayName,
+        'googleEmail': u.googleEmail,
+      });
+
+  Future<void> _onAccountChanged(UserAccount? fresh) async {
+    final current = _currentUser;
+    if (current == null || fresh == null || fresh.id != current.id) return;
+    if (_accessKey(fresh) == _accessKey(current)) return;
+
+    // Terapkan langsung data baru (foto lokal dipertahankan), lalu segarkan daftar akun lengkap:
+    // jadi admin butuh daftar semua akun, turun jadi guru cukup akunnya sendiri.
+    _currentUser = fresh.copyWith(photoPath: current.photoPath);
+    notifyListeners();
+    try {
+      await reloadAccounts(forceRefresh: true);
+    } catch (_) {}
+    onScopeChanged?.call(scope);
+  }
+
   /// Bersihkan session lokal DAN sign-out dari Firebase Auth + Google; tanpa signInAnonymously
   /// atau anonymous fallback apa pun — user harus login ulang dengan Google.
   Future<void> logout() async {
+    _stopWatchingAccount();
     _currentUser = null;
     _currentSchool = null;
     await AppPrefsService.instance.clearSession();

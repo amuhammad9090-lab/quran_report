@@ -1,6 +1,5 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
@@ -12,10 +11,10 @@ import '../../../data/services/platform_file/file_actions.dart';
 import '../../../data/services/school_data_excel_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/students_provider.dart';
-import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/pushed_page_header.dart';
-import '../../widgets/common/section_label.dart';
 import '../../widgets/common/soft_icon_box.dart';
+import 'kelola_data_import_preview.dart';
+import 'kelola_data_widgets.dart';
 import 'kelola_guru_screen.dart';
 import 'kelola_murid_screen.dart';
 
@@ -75,7 +74,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                     sliver: SliverList.list(
                       children: [
-                        _SectionCard(
+                        KelolaSectionCard(
                           title: 'Kelola Data',
                           children: [
                             ListTile(
@@ -99,7 +98,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                           ],
                         ),
                         const SizedBox(height: 20),
-                        _SectionCard(
+                        KelolaSectionCard(
                           title: 'Ekspor & Impor',
                           children: [
                             ListTile(
@@ -175,7 +174,7 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
     final code = SchoolDataExcelService.instance.buildSeedDartCode(students, accounts);
     if (!context.mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => _SeedCodeScreen(code: code)),
+      MaterialPageRoute(builder: (_) => SeedCodeScreen(code: code)),
     );
   }
 
@@ -221,8 +220,8 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
       return;
     }
 
-    final applied = await Navigator.of(context).push<_ImportSelection>(
-      MaterialPageRoute(builder: (_) => _ImportPreviewScreen(result: parsed)),
+    final applied = await Navigator.of(context).push<ImportSelection>(
+      MaterialPageRoute(builder: (_) => ImportPreviewScreen(result: parsed)),
     );
     if (applied == null || !context.mounted) return;
     if (applied.students.isEmpty && applied.accounts.isEmpty) return;
@@ -259,285 +258,3 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
   }
 }
 
-/// Hasil pilihan admin di [_ImportPreviewScreen] -- baris mana yang jadi
-/// beneran diterapkan (student & account bisa jalan independen, admin
-/// boleh cuma terapkan salah satu sheet doang).
-class _ImportSelection {
-  final List<Student> students;
-  final List<UserAccount> accounts;
-  const _ImportSelection({required this.students, required this.accounts});
-}
-
-/// Preview perubahan hasil parsing file Excel (sheet Murid & Guru)
-/// SEBELUM ditulis ke Firestore -- admin bisa uncheck baris tertentu per
-/// sheet, atau batal semua kalau salah file.
-class _ImportPreviewScreen extends StatefulWidget {
-  final SchoolDataImportResult result;
-  const _ImportPreviewScreen({required this.result});
-
-  @override
-  State<_ImportPreviewScreen> createState() => _ImportPreviewScreenState();
-}
-
-class _ImportPreviewScreenState extends State<_ImportPreviewScreen> {
-  late final Set<String> _excludedStudents = {};
-  late final Set<String> _excludedAccounts = {};
-
-  @override
-  Widget build(BuildContext context) {
-    final studentChanges = widget.result.students.changedRows;
-    final accountChanges = widget.result.accounts.changedRows;
-    final includedCount = (studentChanges.length - _excludedStudents.length) +
-        (accountChanges.length - _excludedAccounts.length);
-
-    return Scaffold(
-      appBar: AppBar(title: Text('Preview ($includedCount perubahan)')),
-      body: Column(
-        children: [
-          if (widget.result.students.unknownIds.isNotEmpty || widget.result.accounts.unknownIds.isNotEmpty)
-            _UnknownIdsBanner(
-              studentUnknownIds: widget.result.students.unknownIds,
-              accountUnknownIds: widget.result.accounts.unknownIds,
-            ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                if (accountChanges.isNotEmpty) ...[
-                  const _PreviewSectionLabel('Guru'),
-                  for (final row in accountChanges)
-                    CheckboxListTile(
-                      value: !_excludedAccounts.contains(row.current.id),
-                      onChanged: (v) => setState(() {
-                        if (v == true) {
-                          _excludedAccounts.remove(row.current.id);
-                        } else {
-                          _excludedAccounts.add(row.current.id);
-                        }
-                      }),
-                      title: Text(row.current.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        '${row.current.displayName} (${row.current.assignments.length} kelas/halaqoh)  →  '
-                        '${row.newDisplayName} (${row.newAssignments.length} kelas/halaqoh)',
-                      ),
-                    ),
-                ],
-                if (studentChanges.isNotEmpty) ...[
-                  const _PreviewSectionLabel('Siswa'),
-                  for (final row in studentChanges)
-                    CheckboxListTile(
-                      value: !_excludedStudents.contains(row.current.id),
-                      onChanged: (v) => setState(() {
-                        if (v == true) {
-                          _excludedStudents.remove(row.current.id);
-                        } else {
-                          _excludedStudents.add(row.current.id);
-                        }
-                      }),
-                      title: Text(row.current.nama, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        '${row.current.kelas} • ${row.current.halaqoh}  →  ${row.newKelas} • ${row.newHalaqoh}',
-                      ),
-                    ),
-                ],
-                if (studentChanges.isEmpty && accountChanges.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 40),
-                    child: EmptyState(
-                      icon: LucideIcons.folderLock,
-                      title: 'Tidak ada perubahan',
-                      subtitle: 'Semua baris di file sama persis dengan data sekarang.',
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          SafeArea(
-            minimum: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: includedCount == 0
-                    ? null
-                    : () => Navigator.of(context).pop(
-                          _ImportSelection(
-                            students: [
-                              for (final row in studentChanges)
-                                if (!_excludedStudents.contains(row.current.id)) row.toUpdatedStudent(),
-                            ],
-                            accounts: [
-                              for (final row in accountChanges)
-                                if (!_excludedAccounts.contains(row.current.id)) row.toUpdatedAccount(),
-                            ],
-                          ),
-                        ),
-                icon: const Icon(LucideIcons.circleCheck),
-                label: Text('Terapkan $includedCount Perubahan'),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreviewSectionLabel extends StatelessWidget {
-  final String title;
-  const _PreviewSectionLabel(this.title);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 12.5,
-          letterSpacing: 0.3,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      ),
-    );
-  }
-}
-
-class _UnknownIdsBanner extends StatelessWidget {
-  final List<String> studentUnknownIds;
-  final List<String> accountUnknownIds;
-  const _UnknownIdsBanner({required this.studentUnknownIds, required this.accountUnknownIds});
-
-  @override
-  Widget build(BuildContext context) {
-    final parts = <String>[
-      if (studentUnknownIds.isNotEmpty)
-        '${studentUnknownIds.length} baris siswa dengan ID tidak dikenali: '
-            '${studentUnknownIds.take(5).join(', ')}${studentUnknownIds.length > 5 ? ', ...' : ''}',
-      if (accountUnknownIds.isNotEmpty)
-        '${accountUnknownIds.length} baris guru dengan ID tidak dikenali: '
-            '${accountUnknownIds.take(5).join(', ')}${accountUnknownIds.length > 5 ? ', ...' : ''}',
-    ];
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(LucideIcons.triangleAlert, size: 18, color: Theme.of(context).colorScheme.error),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              parts.join('\n'),
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onErrorContainer),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Nampilin kode Dart hasil generate (kSeedAccountsJson + kSeedStudentsJson)
-/// buat di-copy manual sama developer ke local_seed_data.dart. Cuma
-/// preview + copy -- gak ada tombol "simpan otomatis ke project" karena
-/// app yang jalan di HP emang gak punya akses ke source code-nya sendiri.
-class _SeedCodeScreen extends StatelessWidget {
-  final String code;
-  const _SeedCodeScreen({required this.code});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kode Seed (.dart)'),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.copy),
-            tooltip: 'Salin semua',
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: code));
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Kode disalin.')),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.4),
-            child: const Text(
-              'Salin kode di bawah ke local_seed_data.dart (ganti isi kSeedAccountsJson '
-              'dan kSeedStudentsJson yang lama), lalu build ulang APK. Ini hanya '
-              'cadangan darurat; data yang dipakai sehari-hari tetap dari cloud.',
-              style: TextStyle(fontSize: 12.5),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(12),
-              child: SelectableText(
-                code,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Kartu section -- salinan kecil dari `_SectionCard` di settings_screen.dart.
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final List<Widget> children;
-  const _SectionCard({required this.title, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: SectionLabel(title),
-        ),
-        // BUG FIX: sama persis kayak _SectionCard di settings_screen.dart
-        // -- lihat catatan lengkap di sana. Card ini juga perlu clip
-        // biar ripple ListTile di dalamnya gak nembus keluar sudut
-        // rounded-nya.
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              children: [
-                for (int i = 0; i < children.length; i++) ...[
-                  children[i],
-                  if (i != children.length - 1)
-                    Divider(
-                      height: 1,
-                      indent: 60,
-                      endIndent: 16,
-                      color: Theme.of(context).dividerTheme.color,
-                    ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}

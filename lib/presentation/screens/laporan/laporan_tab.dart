@@ -1,28 +1,22 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/utils/week_utils.dart';
-import '../../../data/models/folder.dart';
 import '../../../providers/folders_provider.dart';
 import '../../../providers/records_provider.dart';
-import '../../sheets/filter/filter_sheet.dart';
-import '../../sheets/folder/folder_form_sheet.dart';
 import '../../sheets/folder/move_to_folder_sheet.dart';
 import '../../widgets/common/app_snackbar.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/motion_widgets.dart';
 import '../../widgets/common/section_label.dart';
 import '../../widgets/common/selection_action_bar.dart';
-import '../../widgets/common/soft_icon_box.dart';
-import '../../widgets/folder_card.dart';
 import '../../widgets/santri_report_card.dart';
-import '../folder/folder_detail_screen.dart';
 import '../folder/orphaned_records_screen.dart';
+import 'laporan_banners.dart';
+import 'laporan_filters.dart';
+import 'laporan_sections.dart';
 import 'open_week_action.dart';
-import 'search_results_screen.dart';
 
 /// Tab "Laporan" — pencarian, filter, section Folder, dan daftar kartu
 /// santri
@@ -181,63 +175,6 @@ class _LaporanTabState extends State<LaporanTab> {
     );
   }
 
-  /// Predikat pencocokan search + filter kelas/halaqoh/status/keterangan/
-  /// tanggal untuk SATU kartu — dipisah dari [_filteredCards] supaya bisa
-  /// dipakai ulang buat menghitung berapa kartu di DALAM sebuah folder
-  /// yang cocok filter aktif (lihat [_matchingCountInFolder]), tanpa
-  /// duplikat logic-nya.
-  bool _cardMatchesFilters(
-      SantriCardInfo c, RecordsProvider provider, DateTime thisMonth, String q) {
-    if (q.isNotEmpty && !c.nama.toLowerCase().contains(q)) return false;
-    if (provider.filterKelas != null && c.kelas != provider.filterKelas) return false;
-    if (provider.filterHalaqoh != null && c.halaqoh != provider.filterHalaqoh) return false;
-    if (provider.filterStatus != null ||
-        provider.filterKeterangan != null ||
-        provider.filterDate != null) {
-      final recs = provider.recordsInMonth(thisMonth).where(
-              (r) => r.namaAnak.trim().toLowerCase() == c.nama.trim().toLowerCase());
-      final matches = recs.any((r) =>
-      (provider.filterStatus == null || r.status == provider.filterStatus) &&
-          (provider.filterKeterangan == null || r.keterangan == provider.filterKeterangan) &&
-          (provider.filterDate == null ||
-              (r.tanggal.year == provider.filterDate!.year &&
-                  r.tanggal.month == provider.filterDate!.month &&
-                  r.tanggal.day == provider.filterDate!.day)));
-      if (!matches) return false;
-    }
-    return true;
-  }
-
-  /// Kartu santri yang cocok dengan pencarian & filter kelas/halaqoh aktif
-  /// (dipakai bersama dengan Bottom Sheet Filter yang sudah ada).
-  List<SantriCardInfo> _filteredCards(RecordsProvider provider) {
-    final q = provider.searchQuery.trim().toLowerCase();
-    final thisMonth = WeekUtils.ownerMonth(DateTime.now());
-    return provider.laporanCards.where((c) {
-      if (c.currentFolderId != null) return false;
-      return _cardMatchesFilters(c, provider, thisMonth, q);
-    }).toList();
-  }
-
-  /// Jumlah kartu DI DALAM folder [folderId] yang cocok filter/pencarian
-  /// aktif saat ini — dipakai buat badge di [FolderCard] (lihat
-  /// [_buildFolderSection]), supaya kartu yang "nyangkut" di dalam folder
-  /// (dan karena itu tidak ikut ditampilkan sebagai kartu lepas oleh
-  /// [_filteredCards]) tetap kelihatan ketauan ada yang cocok, tanpa harus
-  /// membuka folder itu satu-satu.
-  int _matchingCountInFolder(String folderId, RecordsProvider provider) {
-    // Null kalau tidak ada filter/pencarian aktif sama sekali -- badge-nya
-    // sengaja TIDAK ditampilkan dalam kondisi ini (lihat _buildFolderSection),
-    // jadi hitungannya juga tidak perlu dikerjakan.
-    if (!provider.hasActiveFilters) return 0;
-    final q = provider.searchQuery.trim().toLowerCase();
-    final thisMonth = WeekUtils.ownerMonth(DateTime.now());
-    return provider.laporanCards
-        .where((c) => c.currentFolderId == folderId)
-        .where((c) => _cardMatchesFilters(c, provider, thisMonth, q))
-        .length;
-  }
-
   /// Buka form laporan untuk pekan [weekIndex] (dalam bulan berjalan) milik
   /// santri [card]
   void _openWeek(BuildContext context, SantriCardInfo card, int weekIndex) {
@@ -303,7 +240,7 @@ class _LaporanTabState extends State<LaporanTab> {
   Widget build(BuildContext context) {
     final provider = context.watch<RecordsProvider>();
     final foldersProvider = context.watch<FoldersProvider>();
-    final cards = _filteredCards(provider);
+    final cards = filteredCards(provider);
     // <-- BARU: folder di-scope pakai AccessScope yang sama dengan santri
     // record (RecordsProvider.scope) -- mode guru cuma lihat folder
     // buatannya sendiri, mode admin lihat semua. Kalau scope belum ada
@@ -346,7 +283,7 @@ class _LaporanTabState extends State<LaporanTab> {
                   scrolledUnderElevation: 0,
                   toolbarHeight: 84,
                   titleSpacing: 20,
-                  title: _buildTitle(context),
+                  title: const LaporanTitle(),
                   actions: cards.isEmpty
                       ? null
                       : [
@@ -361,14 +298,14 @@ class _LaporanTabState extends State<LaporanTab> {
                   ],
                   bottom: PreferredSize(
                     preferredSize: const Size.fromHeight(76),
-                    child: _buildSearchAndFilter(context, provider),
+                    child: LaporanSearchBar(controller: _searchCtrl, provider: provider),
                   ),
                 ),
                 if (provider.filterDate != null)
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                     sliver: SliverToBoxAdapter(
-                      child: _DateFilterBanner(
+                      child: DateFilterBanner(
                         date: provider.filterDate!,
                         onClear: () => provider.setFilterDate(null),
                       ),
@@ -378,7 +315,7 @@ class _LaporanTabState extends State<LaporanTab> {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                     sliver: SliverToBoxAdapter(
-                      child: _OrphanedRecordsBanner(
+                      child: OrphanedRecordsBanner(
                         count: orphanedCount,
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -393,7 +330,12 @@ class _LaporanTabState extends State<LaporanTab> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
                   sliver: SliverToBoxAdapter(
-                    child: _buildFolderSection(context, folders, provider),
+                    child: LaporanFolderSection(
+                      folders: folders,
+                      provider: provider,
+                      onFabVisibilityChanged: widget.onFabVisibilityChanged,
+                      onMoveCard: (ctx, c, folderId) => _pindahkanCard(ctx, c, langsungKeFolderId: folderId),
+                    ),
                   ),
                 ),
                 const SliverPadding(
@@ -488,313 +430,5 @@ class _LaporanTabState extends State<LaporanTab> {
     );
   }
 
-  Widget _buildFolderSection(
-      BuildContext context, List<ReportFolder> folders, RecordsProvider provider) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionLabel(
-          'Folder',
-          trailing: IconButton(
-            onPressed: () => showFolderFormSheet(context),
-            icon: const Icon(LucideIcons.circlePlus, size: 20),
-            tooltip: 'Buat folder',
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-        ),
-        if (folders.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Text(
-                'Belum ada folder',
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5),
-              ),
-            ),
-          )
-        else
-          SizedBox(
-            height: 118,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: folders.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (context, i) {
-                final f = folders[i];
-                return SizedBox(
-                  width: 130,
-                  child: FolderCard(
-                    folder: f,
-                    recordCount: provider.countInFolder(f.id),
-                    matchingFilterCount: _matchingCountInFolder(f.id, provider),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => FolderDetailScreen(
-                          folderId: f.id,
-                          onFabVisibilityChanged: widget.onFabVisibilityChanged,
-                        ),
-                      ),
-                    ),
-                    onRename: () => showFolderFormSheet(context, existing: f),
-                    onDelete: () => _confirmDeleteFolder(context, f.id),
-                    // Drop hasil drag SantriReportCard
-                    onDropRecord: (identityKeys) async {
-                      for (final key in identityKeys) {
-                        if (!context.mounted) return;
-                        final c = provider.cardByIdentityKey(key);
-                        if (c != null) await _pindahkanCard(context, c, langsungKeFolderId: f.id);
-                      }
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-
-  Widget _buildTitle(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Laporan',
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          Text(
-            'Kelola kartu laporan hafalan siswa',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Bug fix: dulu ada halaman "Hasil Pencarian" ([SearchResultsScreen])
-  /// yang nyari ke SEMUA kartu santri.
-  void _openSearchResults(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SearchResultsScreen()),
-    );
-  }
-
-  Widget _buildSearchAndFilter(BuildContext context, RecordsProvider provider) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      child: Row(
-        children: [
-          Expanded(
-            // Bug fix: field ini sebelumnya TextField biasa yang langsung
-            // bisa diketik di tempat.
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _openSearchResults(context),
-              child: AbsorbPointer(
-                child: TextField(
-                  controller: _searchCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Cari nama siswa...',
-                    prefixIcon: Icon(LucideIcons.search),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton.filledTonal(
-                onPressed: () => showFilterSheet(context),
-                icon: const Icon(LucideIcons.slidersHorizontal),
-                style: IconButton.styleFrom(
-                  minimumSize: const Size(52, 52),
-                ),
-              ),
-              if (provider.hasActiveFilters)
-                Positioned(
-                  right: 6,
-                  top: 6,
-                  child: Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: cs.error,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDeleteFolder(BuildContext context, String folderId) {
-    final recordsProvider = context.read<RecordsProvider>();
-    final jumlahSantri = recordsProvider.countInFolder(folderId);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus folder?'),
-        content: Text(
-          jumlahSantri > 0
-              ? 'Folder berisi laporan $jumlahSantri siswa. Semuanya '
-                  'akan terhapus permanen dan tidak bisa dikembalikan.'
-              : 'Folder ini kosong dan akan dihapus.',
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () async {
-              await recordsProvider.deleteAllInFolder(folderId);
-              if (!ctx.mounted) return;
-              await context.read<FoldersProvider>().delete(folderId);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-/// Banner "lagi difilter tanggal X" — tampil kalau [RecordsProvider.filterDate]
-/// aktif (mis. abis tap "Lihat Semua" di kartu "Ringkasan Hari Ini" pada tab
-/// Home, lihat `BerandaTab.goToToday`).
-///
-/// BUG FIX: sebelumnya filter tanggal ini SAMA SEKALI tidak kelihatan di tab
-/// Laporan (cuma titik merah generik di ikon filter, dan filter tanggal juga
-/// tidak muncul sebagai chip apa pun di [FilterSheet]) — jadi begitu user
-/// tap "Lihat Semua" dari Home, tab Laporan diam-diam KETERUSAN cuma
-/// nampilin laporan hari itu doang, tapi user nggak sadar kenapa (kelihatan
-/// kayak tab Laporan "nyangkut" di satu tanggal terus tiap dibuka, sampai
-/// nggak sengaja ketemu tombol "Reset" di Filter Lainnya yang nge-reset
-/// SEMUA filter sekaligus, bukan cuma tanggalnya). Banner ini bikin filter
-/// tanggal EKSPLISIT kelihatan + ada tombol hapus KHUSUS buat filter ini
-/// saja (filter lain seperti Status/Kelas/Halaqoh tetap dibiarkan aktif).
-class _DateFilterBanner extends StatelessWidget {
-  final DateTime date;
-  final VoidCallback onClear;
-  const _DateFilterBanner({required this.date, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final now = DateTime.now();
-    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
-    final label = isToday
-        ? 'Hari ini — ${DateFormat('d MMMM yyyy', 'id_ID').format(date)}'
-        : DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date);
-
-    return Material(
-      color: cs.primary.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            Icon(LucideIcons.calendarDays, size: 18, color: cs.primary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Menampilkan laporan tanggal: $label',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: cs.primary),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            InkWell(
-              onTap: onClear,
-              borderRadius: BorderRadius.circular(999),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(LucideIcons.circleX, size: 16, color: cs.primary),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
-/// Banner peringatan yang tampil di tab Laporan begitu ada kartu santri
-/// yang folder tujuannya sudah tidak ada lagi (lihat
-/// [RecordsProvider.orphanedFolderCards] dan [OrphanedRecordsScreen]).
-class _OrphanedRecordsBanner extends StatelessWidget {
-  final int count;
-  final VoidCallback onTap;
-  const _OrphanedRecordsBanner({required this.count, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.errorContainer.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              SoftIconBox(icon: LucideIcons.folderMinus, color: cs.error),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$count kartu tanpa folder',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13.5,
-                        color: cs.onErrorContainer,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Laporannya masih aman. Tekan untuk pindahkan ke folder lain.',
-                      style: TextStyle(fontSize: 11.5, color: cs.onErrorContainer.withValues(alpha: 0.85)),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(LucideIcons.chevronRight, color: cs.onErrorContainer),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

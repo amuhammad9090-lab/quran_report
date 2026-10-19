@@ -92,6 +92,15 @@ void main() async {
   parentNotesProvider.updateScope(authProvider.scope);
   parentNotesProvider.start();
 
+  // Perubahan role/penugasan dari admin langsung berlaku di sesi yang sedang jalan (tanpa login ulang).
+  authProvider.onScopeChanged = (scope) {
+    recordsProvider.updateScope(scope);
+    parentNotesProvider.updateScope(scope);
+    StorageService.instance.updateScope(scope);
+    AppPrefsService.instance.updateScope(scope);
+  };
+  authProvider.startWatchingAccount();
+
   runApp(
     MultiProvider(
       providers: [
