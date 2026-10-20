@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/access/access_scope.dart';
@@ -14,7 +16,12 @@ class StudentsProvider extends ChangeNotifier {
   // diedit tanpa build ulang APK). Lihat catatan lengkap di
   // ApiStudentRepository.
   StudentsProvider({StudentRepository? repository})
-      : _repo = repository ?? ApiStudentRepository.instance;
+      : _repo = repository ?? ApiStudentRepository.instance {
+    // Refresh latar belakang repo selesai -> muat ulang, supaya daftar siswa terbaru langsung tampil.
+    if (repository == null) {
+      ApiStudentRepository.instance.onRefreshed = () => unawaited(load());
+    }
+  }
 
   final StudentRepository _repo;
   List<Student> _all = [];

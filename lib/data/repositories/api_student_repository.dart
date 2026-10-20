@@ -152,8 +152,14 @@ class ApiStudentRepository implements StudentRepository {
     }
     try {
       await refresh();
+      onRefreshed?.call();
     } catch (_) {}
   }
+
+  /// Dipanggil sesudah refresh latar belakang selesai (cache sudah diperbarui), supaya
+  /// StudentsProvider memuat ulang. Tanpa ini, device baru/cache kosong terus memakai data seed
+  /// lama (nama halaqoh usang) sampai app dibuka ulang.
+  void Function()? onRefreshed;
 
   /// <-- BERUBAH: dulu method ini SELALU melakukan full
   /// `students.get()` (±302 reads) tiap dipanggil. Sekarang lewat

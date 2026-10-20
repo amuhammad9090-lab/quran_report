@@ -58,8 +58,12 @@ class AccessScope {
     return user.assignments.contains(KelasHalaqoh(kelas: kelas, halaqoh: halaqoh));
   }
 
+  /// Laporan yang dibuat akun ini sendiri ([SantriRecord.ownerId]) SELALU boleh diakses, walau
+  /// kelas/halaqoh-nya tak lagi cocok dengan penugasan sekarang (mis. halaqoh dinamai ulang atau
+  /// penugasan guru diubah admin) — kalau tidak, laporan miliknya sendiri tiba-tiba "hilang".
   bool canAccessRecord(SantriRecord record) =>
-      canAccessKelasHalaqoh(record.kelas, record.halaqoh);
+      canAccessKelasHalaqoh(record.kelas, record.halaqoh) ||
+      (record.ownerId != null && record.ownerId == user.id);
 
   bool canAccessStudent(Student student) =>
       canAccessKelasHalaqoh(student.kelas, student.halaqoh);

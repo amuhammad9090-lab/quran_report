@@ -273,9 +273,11 @@ class StorageService {
         final cloudRecord =
         SantriRecord.fromJson(data);
 
-        if (scope != null && !scope.canAccessRecord(cloudRecord)) {
-          continue;
-        }
+        // Tidak ada filter kelas/halaqoh di sini: guru hanya membaca subkoleksi akunnya SENDIRI
+        // (lihat RecordsRemoteSource), jadi semua dokumen memang miliknya. Filter lama membuang
+        // laporan yang halaqoh-nya sudah dinamai ulang di data master (mis. "A" -> "Tahfizh 1")
+        // padahal penugasan guru sudah memakai nama baru. Pembatasan tampilan tetap ditangani
+        // RecordsProvider (scope + identitas master).
 
         final localRaw =
         _box.get(cloudRecord.id);
