@@ -152,6 +152,12 @@ class SantriRecord {
   // field ini (lihat AccessScope — scoping dari kelas+halaqoh).
   final String? ownerId;
 
+  // Id siswa di data master (Student.id) — penanda TETAP siswa pemilik laporan ini. Kelas/halaqoh
+  // di laporan hanyalah label yang bisa basi saat halaqoh dinamai ulang atau siswa pindah;
+  // identitas terkini selalu diambil dari master lewat id ini (lihat RecordsProvider). Nullable:
+  // laporan lama belum punya, dihubungkan otomatis lewat nama.
+  final String? studentId;
+
   SantriRecord({
     required this.id,
     required this.tanggal,
@@ -182,6 +188,7 @@ class SantriRecord {
     this.nilai,
     this.folderId,
     this.ownerId,
+    this.studentId,
   });
 
   SantriRecord copyWith({
@@ -210,6 +217,7 @@ class SantriRecord {
     bool? tuntasPekan,
     String? nilai,
     String? folderId,
+    String? studentId,
     bool clearTuntasPekan = false,
     bool clearNilai = false,
     bool clearTahfizh = false,
@@ -253,6 +261,7 @@ class SantriRecord {
       tuntasPekan: clearTuntasPekan ? null : (tuntasPekan ?? this.tuntasPekan),
       nilai: clearNilai ? null : (nilai ?? this.nilai),
       folderId: clearFolder ? null : (folderId ?? this.folderId),
+      studentId: studentId ?? this.studentId,
     );
   }
 
@@ -407,6 +416,7 @@ class SantriRecord {
         'nilai': nilai,
         'folderId': folderId,
         'ownerId': ownerId,
+        'studentId': studentId,
         // <-- BARU: lihat dokumentasi di getter [kelasHalaqohKey] di atas.
         'kelasHalaqoh': kelasHalaqohKey,
       };
@@ -466,5 +476,6 @@ class SantriRecord {
         // Field baru — data lama pasti belum punya ini, default null aman
         // (backward compatible, tidak ada migration destructive).
         ownerId: json['ownerId'] as String?,
+        studentId: json['studentId'] as String?,
       );
 }

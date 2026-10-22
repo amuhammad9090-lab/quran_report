@@ -15,6 +15,7 @@ SantriRecord buildRecordFromForm({
   required SantriRecord? existing,
   required String? initialFolderId,
   required String? ownerId,
+  required String? studentId,
   required DateTime tanggal,
   required String kelas,
   required String halaqoh,
@@ -81,5 +82,7 @@ SantriRecord buildRecordFromForm({
     // Dicatat untuk audit "siapa yang input laporan ini". Laporan lama yang diedit tetap memakai
     // ownerId aslinya agar jejak pembuat PERTAMA tidak tertimpa.
     ownerId: existing?.ownerId ?? ownerId,
+    // Id siswa dari master (kalau ketemu); laporan yang diedit mempertahankan id lamanya.
+    studentId: studentId ?? existing?.studentId,
   );
 }

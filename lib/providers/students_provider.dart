@@ -33,6 +33,19 @@ class StudentsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Cek data siswa terbaru di cloud SEKARANG (tanpa menunggu jendela 6 jam), lalu muat ulang.
+  /// Murah: 1 read dokumen metadata; daftar siswa penuh baru diunduh kalau memang berubah. Dipanggil
+  /// saat app dibuka, login, dan penugasan guru berubah, supaya label halaqoh tak basi.
+  Future<void> refreshFromCloud() async {
+    final repo = _repo;
+    if (repo is ApiStudentRepository) {
+      try {
+        await repo.refresh();
+      } catch (_) {}
+    }
+    await load();
+  }
+
   /// Santri yang boleh diakses [scope] (null/admin = semua).
   List<Student> accessibleFor(AccessScope? scope) =>
       scope == null ? _all : scope.scopeStudents(_all);

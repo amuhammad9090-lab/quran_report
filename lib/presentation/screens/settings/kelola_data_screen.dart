@@ -8,6 +8,7 @@ import '../../../data/models/user_account.dart';
 import '../../../data/repositories/api_auth_repository.dart';
 import '../../../data/repositories/api_student_repository.dart';
 import '../../../data/services/platform_file/file_actions.dart';
+import '../../../data/services/record_alignment_service.dart';
 import '../../../data/services/school_data_excel_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/students_provider.dart';
@@ -52,6 +53,61 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
     if (!mounted) return (students, accounts);
     await context.read<AuthProvider>().reloadAccounts();
     return (students, accounts);
+  }
+
+  /// Selaraskan laporan di cloud dengan data master: label kelas/halaqoh/nama + id siswa
+  /// diperbarui, laporan dipindah ke guru yang sekarang memegang halaqoh (serah terima), dan
+  /// salinan dobel dibersihkan. Selalu tampil ringkasan dulu sebelum menulis apa pun.
+  Future<void> _alignRecords(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final (students, accounts) = await _refreshedData();
+      final plan = await RecordAlignmentService.instance.plan(students: students, accounts: accounts);
+      if (!context.mounted) return;
+
+      if (plan.isEmpty) {
+        messenger.showSnackBar(SnackBar(
+          content: Text('Sudah selaras: ${plan.checked} laporan dicek, tidak ada yang perlu diubah.'
+              '${plan.unmatched > 0 ? ' ${plan.unmatched} laporan tidak cocok siswa mana pun (dilewati).' : ''}'),
+        ));
+        return;
+      }
+
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Selaraskan laporan?'),
+          content: Text(
+            '${plan.checked} laporan dicek.\n\n'
+            '• ${plan.relabel} diperbarui labelnya (kelas/halaqoh/nama)\n'
+            '• ${plan.move} dipindah ke guru yang sekarang memegang halaqoh-nya\n'
+            '• ${plan.duplicates} salinan dobel dibersihkan\n'
+            '• ${plan.noGuru} halaqoh belum punya guru (tidak dipindah)\n'
+            '• ${plan.unmatched} tidak cocok siswa mana pun (dilewati)\n'
+            '• ${plan.recapOps.length} rekap pekanan (Portal Ortu) disesuaikan\n\n'
+            'Laporan yang dipindah keluar dari folder lamanya. Guru perlu membuka app dan '
+            'memakai Pulihkan dari Cloud agar perubahan masuk ke HP mereka.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Batal')),
+            FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Selaraskan')),
+          ],
+        ),
+      );
+      if (ok != true || !context.mounted) return;
+
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Menyelaraskan laporan...'), duration: Duration(seconds: 60)),
+      );
+      final written = await RecordAlignmentService.instance.apply(plan);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('Berhasil! $written laporan diselaraskan.')));
+    } catch (e) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('Gagal menyelaraskan: $e')));
+    }
   }
 
   @override
@@ -118,6 +174,19 @@ class _KelolaDataScreenState extends State<KelolaDataScreen> {
                               title: const Text('Export sebagai kode seed (.dart)'),
                               subtitle: const Text('Untuk developer: cadangan data awal di dalam app'),
                               onTap: () => _withBusy(() => _exportSeedCode(context)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        KelolaSectionCard(
+                          title: 'Rapikan Data',
+                          children: [
+                            ListTile(
+                              leading: SoftIconBox(icon: LucideIcons.refreshCw, color: cs.primary),
+                              title: const Text('Selaraskan laporan dengan data master'),
+                              subtitle: const Text(
+                                  'Jalankan setelah ganti nama halaqoh, pindah siswa, atau ganti guru'),
+                              onTap: () => _withBusy(() => _alignRecords(context)),
                             ),
                           ],
                         ),

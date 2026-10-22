@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/santri_record.dart';
+import '../../../data/models/student.dart';
 import '../../../data/services/quran_engine_service.dart';
 import '../../../providers/records_provider.dart';
 import '../../widgets/record/segment_states.dart';
@@ -35,6 +36,17 @@ Future<void> confirmDeleteRecord(BuildContext context, SantriRecord existing, St
   if (confirmed != true || !context.mounted) return;
   await context.read<RecordsProvider>().delete(existing.id);
   if (context.mounted) Navigator.of(context).pop();
+}
+
+/// Id siswa di data master untuk pilihan form ini: cocok persis nama+kelas+halaqoh dulu, lalu
+/// (kalau tak ada) nama yang unik di master. Null bila tak ketemu atau namanya kembar.
+String? findStudentId(List<Student> students, String nama, String kelas, String halaqoh) {
+  final n = nama.trim().toLowerCase();
+  final byName = students.where((s) => s.nama.trim().toLowerCase() == n).toList();
+  for (final s in byName) {
+    if (s.kelas == kelas.trim() && s.halaqoh == halaqoh.trim()) return s.id;
+  }
+  return byName.length == 1 ? byName.first.id : null;
 }
 
 /// Validasi nama + rentang ayat semua segmen Tahfizh sebelum generate baris. Hasil: [ranges]

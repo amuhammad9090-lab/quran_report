@@ -223,6 +223,7 @@ mixin _RecordFormLogic on State<RecordFormSheet>, _RecordFormFields {
       // Dicatat untuk audit "siapa yang input laporan ini" (terutama admin di luar kelas/halaqoh-nya,
       // lihat _maybeWarnOwnership).
       ownerId: _scope?.user.id,
+      studentId: findStudentId(context.read<StudentsProvider>().all, _nama!, _kelas!, _halaqoh!),
       tanggal: _tanggal,
       kelas: _kelas!,
       halaqoh: _halaqoh!,

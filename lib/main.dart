@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -90,6 +92,8 @@ void main() async {
   // Kelas/halaqoh di laporan mengikuti data master santri (pindah halaqoh langsung berlaku).
   recordsProvider.updateStudentDirectory(studentsProvider.all);
   studentsProvider.addListener(() => recordsProvider.updateStudentDirectory(studentsProvider.all));
+  // Cek data siswa terbaru di cloud tiap app dibuka (1 read metadata), tanpa menunggu 6 jam.
+  unawaited(studentsProvider.refreshFromCloud());
 
   final parentNotesProvider = ParentNotesProvider();
   parentNotesProvider.updateScope(authProvider.scope);
@@ -101,6 +105,7 @@ void main() async {
     parentNotesProvider.updateScope(scope);
     StorageService.instance.updateScope(scope);
     AppPrefsService.instance.updateScope(scope);
+    unawaited(studentsProvider.refreshFromCloud());
   };
   authProvider.startWatchingAccount();
 

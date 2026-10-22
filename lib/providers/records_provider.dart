@@ -10,6 +10,7 @@ import '../data/models/santri_monthly_recap.dart';
 import '../data/models/santri_record.dart';
 import '../data/models/student.dart';
 import '../data/services/app_prefs_service.dart';
+import '../data/services/record_identity_resolver.dart';
 import '../data/services/records_recap_service.dart';
 import '../data/services/storage_service.dart';
 
@@ -23,20 +24,15 @@ export '../data/models/records_view_models.dart';
 class RecordsProvider extends ChangeNotifier {
   List<SantriRecord> _all = [];
 
-  // Naik tiap `load()`/`updateScope()` (satu-satunya jalan mutasi `_all`/`_scope`), jadi
-  // cache turunan cukup dibandingkan ke versi ini dan tidak dihitung ulang tiap
-  // notifyListeners() yang tak menyentuh data (mis. ganti filter/search).
+  // Naik tiap data/scope berubah; cache turunan dibandingkan ke versi ini.
   int _dataVersion = 0;
   List<SantriRecord>? _scopedCache;
   int _scopedCacheVersion = -1;
   RecordsRecapService? _recapCache;
   int _recapCacheVersion = -1;
 
-  // Identitas TERKINI tiap santri menurut data master (kelas+halaqoh), kunci = nama huruf kecil.
-  // Hanya nama yang unik di master (nama kembar dilewati supaya tak salah pasang). Dipakai
-  // [_effectiveAll] supaya perubahan kelas/halaqoh di master (mis. lewat Import Excel) langsung
-  // berlaku di kartu, rekap, ekspor, dan filter tanpa menulis ulang laporan lama.
-  Map<String, ({String kelas, String halaqoh})> _studentIdentity = {};
+  // Menyamakan kelas/halaqoh/nama laporan dengan data master siswa (lihat RecordIdentityResolver).
+  final RecordIdentityResolver _identity = RecordIdentityResolver();
   List<SantriRecord>? _effectiveCache;
   int _effectiveCacheVersion = -1;
 
@@ -53,9 +49,7 @@ class RecordsProvider extends ChangeNotifier {
   Keterangan? _filterKeterangan;
   DateTime? _filterDate;
 
-  /// Data MENTAH tanpa scope — HATI-HATI, hanya untuk kebutuhan internal
-  /// (mis. admin tooling). UI biasa harus lewat getter lain di bawah yang
-  /// semuanya sudah discope.
+  /// Data laporan ter-scope (satu-satunya pintu baca untuk UI).
   List<SantriRecord> get all => _scoped;
 
   String get searchQuery => _searchQuery;
@@ -67,41 +61,35 @@ class RecordsProvider extends ChangeNotifier {
 
   AccessScope? get scope => _scope;
 
-  /// Dipanggil setiap status login berubah (restore session, login, logout).
-  /// Sengaja tanpa ProxyProvider supaya RecordsProvider tetap independen dan
-  /// gampang di-test — cukup dipanggil eksplisit dari flow auth.
+  /// Dipanggil tiap status login berubah (restore session, login, logout).
   void updateScope(AccessScope? scope) {
     _scope = scope;
     _dataVersion++;
     notifyListeners();
   }
 
-  /// Data laporan yang sudah difilter access scope — dipakai SEMUA getter/query
-  /// supaya guru pembimbing tak pernah melihat data kelas/halaqoh lain.
-  /// Di-cache per [_dataVersion].
+  /// Laporan yang sudah difilter access scope. Di-cache per [_dataVersion].
   List<SantriRecord> get _scoped {
     if (_scopedCacheVersion != _dataVersion) {
-      _scopedCache = _scope == null ? _effectiveAll : _scope!.scopeRecords(_effectiveAll);
+      final all = _effectiveAll;
+      final scope = _scope;
+      _scopedCache = scope == null || scope.canSeeAll
+          ? all
+          : all
+              .where((r) =>
+                  scope.canAccessRecord(r) ||
+                  // Laporan yang tak bisa dihubungkan ke siswa master: jangan sembunyikan dari pemiliknya.
+                  (!_identity.isMatched(r.id) && scope.isOwnRecord(r)))
+              .toList();
       _scopedCacheVersion = _dataVersion;
     }
     return _scopedCache!;
   }
 
-  /// [_all] dengan kelas/halaqoh disamakan ke data master santri (lihat [_studentIdentity]).
-  /// Laporan yang identitasnya sudah sama dipakai apa adanya; yang beda diganti salinan.
-  /// Di-cache per [_dataVersion].
+  /// [_all] dengan kelas/halaqoh/nama disamakan ke data master santri. Di-cache per [_dataVersion].
   List<SantriRecord> get _effectiveAll {
     if (_effectiveCacheVersion != _dataVersion || _effectiveCache == null) {
-      _effectiveCache = _studentIdentity.isEmpty
-          ? _all
-          : [
-              for (final r in _all)
-                () {
-                  final id = _studentIdentity[r.namaAnak.trim().toLowerCase()];
-                  if (id == null || (id.kelas == r.kelas && id.halaqoh == r.halaqoh)) return r;
-                  return r.copyWith(kelas: id.kelas, halaqoh: id.halaqoh);
-                }(),
-            ];
+      _effectiveCache = _identity.apply(_all);
       _effectiveCacheVersion = _dataVersion;
     }
     return _effectiveCache!;
@@ -110,26 +98,7 @@ class RecordsProvider extends ChangeNotifier {
   /// Dipanggil tiap data master santri dimuat/berubah (lihat main.dart). Kelas+halaqoh di
   /// laporan lalu mengikuti master, jadi pindah halaqoh santri langsung tercermin di mana-mana.
   void updateStudentDirectory(Iterable<Student> students) {
-    final byName = <String, List<Student>>{};
-    for (final s in students) {
-      byName.putIfAbsent(s.nama.trim().toLowerCase(), () => []).add(s);
-    }
-    final next = <String, ({String kelas, String halaqoh})>{
-      for (final e in byName.entries)
-        if (e.value.length == 1) e.key: (kelas: e.value.first.kelas, halaqoh: e.value.first.halaqoh),
-    };
-    var same = next.length == _studentIdentity.length;
-    if (same) {
-      for (final e in next.entries) {
-        final old = _studentIdentity[e.key];
-        if (old == null || old.kelas != e.value.kelas || old.halaqoh != e.value.halaqoh) {
-          same = false;
-          break;
-        }
-      }
-    }
-    if (same) return;
-    _studentIdentity = next;
+    if (!_identity.updateDirectory(students)) return;
     _dataVersion++;
     notifyListeners();
   }
@@ -170,9 +139,7 @@ class RecordsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Bersihkan mapping folder sementara identitas kosong yang sudah punya laporan asli
-  /// (folder-nya kini mengikuti `record.folderId`). [_lastActivatedDisplay] sengaja
-  /// dibiarkan: kartu bisa kosong lagi bila laporan terakhirnya dihapus (lihat [deleteAllForSantri]).
+  /// Bersihkan mapping folder sementara identitas kosong yang sudah punya laporan asli.
   Future<void> _cleanupStaleActivatedFolders() async {
     if (_activatedFolders.isEmpty) return;
     final withRecords = _effectiveAll
@@ -185,9 +152,7 @@ class RecordsProvider extends ChangeNotifier {
     }
   }
 
-  /// Aktifkan kartu Laporan untuk santri TANPA membuat SantriRecord (flow "Buat Laporan").
-  /// Ditolak bila di luar scope akses user; [folderId] opsional langsung "memarkir"
-  /// kartu di folder itu (lihat [SantriCardInfo.emptyCardFolderId]).
+  /// Aktifkan kartu tanpa SantriRecord (flow "Buat Laporan"); ditolak di luar scope.
   Future<void> activateIdentity({
     required String kelas,
     required String halaqoh,
@@ -282,9 +247,7 @@ class RecordsProvider extends ChangeNotifier {
       _filterKeterangan != null ||
       _filterDate != null;
 
-  /// Simpan laporan baru/edit. Guru pembimbing yang menyimpan di luar assignment-nya
-  /// ditolak di sini — enforcement access-control yang sesungguhnya, bukan
-  /// sekadar UI yang membatasi pilihan.
+  /// Simpan laporan baru/edit; di luar assignment guru ditolak (enforcement access-control).
   Future<void> upsert(SantriRecord record) async {
     if (_scope?.isViewer ?? false) throw ScopeViolationException('Akun Pengawas hanya bisa melihat data.');
     if (_scope != null && !_scope!.canAccessRecord(record)) {
@@ -314,8 +277,7 @@ class RecordsProvider extends ChangeNotifier {
     return _scoped.where((r) => r.folderId == folderId).map(key).toSet().length;
   }
 
-  /// Hapus PERMANEN semua laporan di folder [folderId] — dipakai saat folder
-  /// dihapus (ikut menghapus isinya, bukan cuma mengeluarkan dari folder).
+  /// Hapus PERMANEN semua laporan di folder [folderId] (dipakai saat folder dihapus).
   Future<void> deleteAllInFolder(String folderId) async {
     if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     final ids = _scoped.where((r) => r.folderId == folderId).map((r) => r.id).toList();
@@ -344,18 +306,14 @@ class RecordsProvider extends ChangeNotifier {
     await load();
   }
 
-  /// Pindahkan SEMUA laporan (semua pekan) santri [namaAnak] ke [folderId]
-  /// (null = keluarkan) — dipakai [SantriReportCard]; beda dari [moveManyToFolder]
-  /// yang per-id laporan.
+  /// Pindahkan SEMUA laporan santri [namaAnak] ke [folderId] (null = keluarkan).
   Future<void> moveAllForSantriToFolder(String namaAnak, String? folderId) async {
     if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     final ids = recordsForSantri(namaAnak).map((r) => r.id).toList();
     await moveManyToFolder(ids, folderId);
   }
 
-  /// Hapus SEMUA laporan santri [namaAnak] + lepas [identityKey]-nya dari identitas aktif.
-  /// Ikut menghapus dokumen `weeklyRecaps` (rekap yang di-"Deploy" ke Portal Ortu)
-  /// supaya tak jadi dokumen yatim di Firestore.
+  /// Hapus SEMUA laporan santri [namaAnak], identitas aktifnya, dan `weeklyRecaps`-nya.
   Future<void> deleteAllForSantri(String namaAnak, String identityKey) async {
     if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     final ids = recordsForSantri(namaAnak).map((r) => r.id).toList();
@@ -371,9 +329,7 @@ class RecordsProvider extends ChangeNotifier {
     await load();
   }
 
-  /// Pindahkan kartu [card] ke [folderId] (null = keluarkan). Kartu ber-laporan: semua
-  /// laporannya dipindah; kartu KOSONG: disimpan sebagai mapping identitas sementara
-  /// (lihat [SantriCardInfo.emptyCardFolderId]) yang basi begitu laporan pertama dibuat.
+  /// Pindahkan kartu [card] ke [folderId]; kartu kosong disimpan sebagai mapping sementara.
   Future<void> moveIdentityToFolder(SantriCardInfo card, String? folderId) async {
     if (_scope?.isViewer ?? false) return; // pengawas read-only: aksi ini diabaikan
     if (card.hasAnyReport) {
@@ -446,9 +402,7 @@ class RecordsProvider extends ChangeNotifier {
 
   // --- Kartu santri tab Laporan (butuh state identitas aktif, jadi tetap di provider) ---
 
-  /// Kartu santri tab Laporan — SATU kartu per santri: gabungan santri yang punya
-  /// laporan ([santriList]) dan identitas "diaktifkan" tanpa laporan ([_activatedKeys]).
-  /// Terurut nama.
+  /// Kartu santri tab Laporan — satu per santri (punya laporan atau diaktifkan), terurut nama.
   List<SantriCardInfo> get laporanCards {
     final now = DateTime.now();
     // Bulan PEMILIK pekan hari ini (bisa beda dari now.month di ujung bulan),
@@ -492,8 +446,8 @@ class RecordsProvider extends ChangeNotifier {
       byKey[key] = SantriCardInfo(
         identityKey: key,
         nama: display?.nama ?? toTitleCase(parts[2]),
-        kelas: _studentIdentity[parts[2]]?.kelas ?? display?.kelas ?? parts[0],
-        halaqoh: _studentIdentity[parts[2]]?.halaqoh ?? display?.halaqoh ?? parts[1],
+        kelas: display?.kelas ?? parts[0],
+        halaqoh: display?.halaqoh ?? parts[1],
         weeksWithReportThisMonth: const {},
         totalWeeksThisMonth: totalWeeksThisMonth,
         latestRecord: null,
@@ -510,9 +464,7 @@ class RecordsProvider extends ChangeNotifier {
     return list.where((c) => _scope!.canAccessKelasHalaqoh(c.kelas, c.halaqoh)).toList();
   }
 
-  /// Kartu [SantriCardInfo] yang identityKey-nya [key] — dipakai buat
-  /// nemu kartu lengkap dari payload drag (yang cuma bawa identityKey,
-  /// lihat [SantriReportCard]).
+  /// Kartu dengan identityKey [key] (dipakai payload drag).
   SantriCardInfo? cardByIdentityKey(String key) {
     for (final c in laporanCards) {
       if (c.identityKey == key) return c;
@@ -520,9 +472,7 @@ class RecordsProvider extends ChangeNotifier {
     return null;
   }
 
-  /// Semua kartu santri yang "rumahnya" folder [folderId] saat ini — lihat
-  /// [SantriCardInfo.currentFolderId]. Dipakai [FolderDetailScreen] (isi
-  /// satu folder, sekarang per-santri bukan per-laporan lagi).
+  /// Semua kartu yang "rumahnya" folder [folderId] (lihat [SantriCardInfo.currentFolderId]).
   List<SantriCardInfo> cardsInFolder(String folderId) =>
       laporanCards.where((c) => c.currentFolderId == folderId).toList();
 

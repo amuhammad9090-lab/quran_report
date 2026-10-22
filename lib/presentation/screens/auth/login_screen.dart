@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,6 +8,7 @@ import '../../../data/services/storage_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_notes_provider.dart';
 import '../../../providers/records_provider.dart';
+import '../../../providers/students_provider.dart';
 import '../../widgets/common/app_icon_mark.dart';
 import '../../widgets/common/intro_animations.dart';
 import '../../widgets/common/smpit_logo_badge.dart';
@@ -38,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context.read<ParentNotesProvider>().updateScope(auth.scope);
       StorageService.instance.updateScope(auth.scope);
       AppPrefsService.instance.updateScope(auth.scope);
+      unawaited(context.read<StudentsProvider>().refreshFromCloud());
       Navigator.of(context).pushReplacement(fadeRoute(const MainShell()));
     } else if (auth.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
